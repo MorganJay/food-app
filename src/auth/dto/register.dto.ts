@@ -1,4 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsPhoneNumber } from 'class-validator';
+
 import { UserRole } from '../../schemas/user.schema';
 
 export class RegisterDto {

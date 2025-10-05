@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Injectable, BadRequestException } from '@nestjs/common';
 
-import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
 import { OtpService } from '../otp/otp.service';
+import { RegisterDto } from './dto/register.dto';
+import { UsersService } from '../users/users.service';
 import { DummySmsProvider } from './sms/dummy-sms.provider';
 
 @Injectable()
