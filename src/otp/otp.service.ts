@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Otp, OtpDocument } from '../schemas/otp.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Injectable, BadRequestException } from '@nestjs/common';
+
+import { Otp, OtpDocument } from '../schemas/Otp.schema';
 
 @Injectable()
 export class OtpService {
