@@ -13,9 +13,7 @@ import { UsersModule } from './users/users.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: seconds(60), limit: 10 }]), // generic rate limit
-    MongooseModule.forRoot(
-      process.env.MONGODB_URI ?? 'mongodb://localhost:27017/food-app',
-    ),
+    MongooseModule.forRoot(process.env.MONGO_URI),
     UsersModule,
     OtpModule,
     AuthModule,

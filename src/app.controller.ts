@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 
 import { AppService } from './app.service';
 
@@ -11,7 +11,7 @@ export class AppController {
     return this.appService.getHello();
   }
   @Get('/db')
-  getDb(): void {
-    return this.appService.getDb();
+  async getDb(@Query('collection') collection?: string) {
+    return this.appService.getDb(collection);
   }
 }
