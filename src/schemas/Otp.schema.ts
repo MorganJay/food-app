@@ -13,8 +13,8 @@ export class Otp {
 
   @Prop({
     required: true,
-    default: Date.now,
-    expires: 600, // 10 minutes
+    index: true,
+    expires: 0, // expire at the exact time stored in expiresAt
   })
   expiresAt: Date;
 

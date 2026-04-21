@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { OtpDeliveryService } from './otp-delivery.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     }),
     // Alternatively, you can use ConfigService to get the secret
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, OtpDeliveryService],
   controllers: [AuthController],
   exports: [AuthService],
 })

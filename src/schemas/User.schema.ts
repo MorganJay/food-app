@@ -1,15 +1,18 @@
 import { HydratedDocument } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { BaseEntity } from './BaseEntity';
 
 export type UserDocument = HydratedDocument<User>;
 
 export enum UserRole {
   CONSUMER = 'consumer',
   VENDOR = 'vendor',
+  ADMIN = 'admin',
+  RIDER = 'rider',
 }
 
 @Schema({ timestamps: true })
-export class User {
+export class User extends BaseEntity {
   @Prop({ required: true, unique: true })
   username: string;
 
@@ -30,6 +33,22 @@ export class User {
 
   @Prop({ required: true })
   role: UserRole;
+
+  @Prop({
+    unique: true,
+    default: () =>
+      `REF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+  })
+  referralCode: string;
+
+  @Prop()
+  referredBy: string;
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop()
+  password?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,0 +1,48 @@
+### Reviews API Tests
+### Base URL: http://localhost:3000
+
+# Create Review
+POST {{baseURL}}/reviews
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "vendorId": "vendor_id_here",
+  "foodId": "food_id_here",
+  "rating": 5,
+  "comment": "Great food! Highly recommended."
+}
+
+###
+
+# Get Reviews by Food
+GET {{baseURL}}/reviews/food/food_id_here
+
+###
+
+# Get Reviews by Vendor
+GET {{baseURL}}/reviews/vendor/vendor_id_here
+
+###
+
+# Get My Reviews
+GET {{baseURL}}/reviews/me
+Authorization: Bearer {{token}}
+
+###
+
+# Update Review (within 30 mins)
+PATCH {{baseURL}}/reviews/review_id_here
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "rating": 4,
+  "comment": "Updated comment"
+}
+
+###
+
+# Delete Review (within 30 mins or admin)
+DELETE {{baseURL}}/reviews/review_id_here
+Authorization: Bearer {{token}}

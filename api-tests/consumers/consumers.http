@@ -1,0 +1,43 @@
+### Consumers API Tests
+### Base URL: {{baseURL}}
+@baseURL = http://localhost:3000
+@token = 
+
+# Get Consumer Profile
+GET {{baseURL}}/consumers/profile
+Authorization: Bearer {{token}}
+
+###
+
+# Update Consumer Profile
+PATCH {{baseURL}}/consumers/profile
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "Updated",
+  "lastName": "Name"
+}
+
+###
+
+# Toggle Favorite Vendor
+POST {{baseURL}}/consumers/toggleFavorites
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "vendorId": "vendor_id_here"
+}
+
+###
+
+# Get Consumer Orders
+GET {{baseURL}}/consumers/orders
+Authorization: Bearer {{token}}
+
+###
+
+# Get Consumer Favorites
+GET {{baseURL}}/consumers/favorites
+Authorization: Bearer {{token}}

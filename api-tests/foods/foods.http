@@ -1,0 +1,44 @@
+### Foods API Tests
+### Base URL: http://localhost:3000
+
+# Search Foods (public)
+GET {{baseURL}}/foods/search?q=rice
+
+###
+
+# Get Foods by Vendor (public)
+GET {{baseURL}}/foods/vendor/vendor_id_here
+
+###
+
+# Create Food (vendor only)
+POST {{baseURL}}/foods
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "vendorId": "vendor_id_here",
+  "name": "Jollof Rice",
+  "unit": "plates",
+  "price": 1500,
+  "category": "Main",
+  "prepTime": 25
+}
+
+###
+
+# Update Food (vendor only)
+PATCH {{baseURL}}/foods/food_id_here
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "price": 1800,
+  "status": "ACTIVE"
+}
+
+###
+
+# Delete Food (vendor only)
+DELETE {{baseURL}}/foods/food_id_here
+Authorization: Bearer {{token}}

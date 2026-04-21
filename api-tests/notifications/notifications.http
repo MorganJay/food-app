@@ -1,0 +1,63 @@
+### Notifications API Tests
+### Base URL: http://localhost:3000
+
+# Send SMS (admin only)
+POST {{baseURL}}/notifications/send-sms
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "to": "+2348012345678",
+  "message": "Hello from the food app!"
+}
+
+###
+
+# Send Email (admin only)
+POST {{baseURL}}/notifications/send-email
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "to": "user@example.com",
+  "subject": "Test Email",
+  "body": "This is a test email from the food app."
+}
+
+###
+
+# Send Push Notification (admin only)
+POST {{baseURL}}/notifications/send-push
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "token": "firebase_token_here",
+  "title": "New Order",
+  "body": "You have a new order!",
+  "data": {
+    "orderId": "order_123"
+  }
+}
+
+###
+
+# Send Bulk SMS (admin only)
+POST {{baseURL}}/notifications/bulk-sms
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+[
+  {
+    "to": "+2348012345678",
+    "message": "Message 1"
+  },
+  {
+    "to": "+2348012345679",
+    "message": "Message 2"
+  },
+  {
+    "to": "+2348012345680",
+    "message": "Message 3"
+  }
+]

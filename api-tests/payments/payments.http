@@ -1,0 +1,42 @@
+### Payments API Tests
+### Base URL: http://localhost:3000
+
+# Initialize Payment
+POST {{baseURL}}/payments/initialize
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "orderId": "order_id_here",
+  "amount": 5000,
+  "currency": "NGN",
+  "paymentMethod": "CARD"
+}
+
+###
+
+# Verify Payment
+POST {{baseURL}}/payments/verify
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionRef": "paystack_ref_here"
+}
+
+###
+
+# Get Payment History
+GET {{baseURL}}/payments/history
+Authorization: Bearer {{token}}
+
+###
+
+# Request Refund (admin)
+PATCH {{baseURL}}/payments/payment_id_here/refund
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "reason": "Customer request"
+}

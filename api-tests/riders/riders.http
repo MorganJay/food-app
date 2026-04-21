@@ -1,0 +1,29 @@
+### Riders API Tests
+### Base URL: http://localhost:3000
+
+# Update Online Status
+PATCH {{baseURL}}/riders/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "isOnline": true
+}
+
+###
+
+# Update Location
+PATCH {{baseURL}}/riders/location
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "latitude": 6.5244,
+  "longitude": 3.3792
+}
+
+###
+
+# Get My Deliveries
+GET {{baseURL}}/riders/deliveries
+Authorization: Bearer {{token}}

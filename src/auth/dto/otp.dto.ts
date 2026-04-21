@@ -6,5 +6,5 @@ export class VerifyOtpDto {
 }
 
 export class ResendOtpDto {
-  @IsPhoneNumber() phone: string;
+  @IsPhoneNumber() phoneNumber: string;
 }

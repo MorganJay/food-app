@@ -1,0 +1,80 @@
+### Admin API Tests
+
+@adminToken=xxx
+
+# List Users
+GET {{baseURL}}/admin/users?page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Suspend/Activate User
+PATCH {{baseURL}}/admin/users/user_id_here/status
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "isActive": false,
+  "reason": "Violation of terms"
+}
+
+###
+
+# Delete User (soft delete)
+DELETE {{baseURL}}/admin/users/user_id_here
+Authorization: Bearer {{adminToken}}
+
+###
+
+# List Vendors for Verification
+GET {{baseURL}}/admin/vendors?verified=false
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Verify Vendor
+PATCH {{baseURL}}/admin/vendors/vendor_id_here/verify
+Authorization: Bearer {{adminToken}}
+
+{}
+
+###
+
+# Get Rider Analytics
+GET {{baseURL}}/admin/analytics/riders
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Get All Orders
+GET {{baseURL}}/admin/orders?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Get Order Analytics
+GET {{baseURL}}/admin/orders/analytics?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Delete Review
+DELETE {{baseURL}}/admin/reviews/review_id_here
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Process Refund
+PATCH {{baseURL}}/admin/payments/payment_id_here/refund
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "reason": "Order cancelled"
+}
+
+###
+
+# Get All Payments
+GET {{baseURL}}/admin/payments?page=1&limit=20
+Authorization: Bearer {{adminToken}}

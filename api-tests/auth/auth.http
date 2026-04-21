@@ -1,0 +1,144 @@
+### Auth API Tests
+### Base URL: {{baseURL}}
+@baseURL = http://localhost:3000
+@token = 
+@adminToken =
+
+# Register a new consumer
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345678",
+  "username": "test_consumer",
+  "firstName": "Test",
+  "lastName": "User",
+  "email": "testconsumer@example.com",
+  "password": "password123",
+  "role": "consumer"
+}
+
+###
+
+# Register a new vendor
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345679",
+  "username": "test_vendor",
+  "firstName": "Vendor",
+  "lastName": "Test",
+  "email": "testvendor@example.com",
+  "password": "password123",
+  "role": "vendor"
+}
+
+###
+
+# Register a new rider
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345680",
+  "username": "test_rider",
+  "firstName": "Rider",
+  "lastName": "Test",
+  "email": "testrider@example.com",
+  "password": "password123",
+  "role": "rider"
+}
+
+###
+
+# Register admin
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345681",
+  "username": "test_admin",
+  "firstName": "Admin",
+  "lastName": "Test",
+  "email": "testadmin@example.com",
+  "password": "password123",
+  "role": "admin"
+}
+
+###
+
+# Verify OTP (use the code from registration response)
+POST {{baseURL}}/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345678",
+  "code": "123456"
+}
+
+###
+
+# Resend OTP
+POST {{baseURL}}/auth/resend-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345678"
+}
+
+###
+
+# Login
+POST {{baseURL}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "test_consumer",
+  "password": "password123"
+}
+
+###
+
+# Change Password
+POST {{baseURL}}/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "currentPassword": "password123",
+  "newPassword": "newpassword123"
+}
+
+###
+
+# Forgot Password
+POST {{baseURL}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345678"
+}
+
+###
+
+# Reset Password
+POST {{baseURL}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "phoneNumber": "+2348012345678",
+  "code": "123456",
+  "newPassword": "resetpassword123"
+}
+
+###
+
+# Apply Referral Code
+POST {{baseURL}}/auth/referrals/apply
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "referralCode": "REF123456"
+}

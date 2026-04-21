@@ -1,0 +1,70 @@
+### Orders API Tests
+### Base URL: http://localhost:3000
+
+# Create Order from Cart
+POST {{baseURL}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "deliveryAddress": "123 Lagos Street, Victoria Island",
+  "deliveryDate": "2024-12-20"
+}
+
+###
+
+# Get Order by ID
+GET {{baseURL}}/orders/order_id_here
+Authorization: Bearer {{token}}
+
+###
+
+# Get My Orders
+GET {{baseURL}}/orders
+Authorization: Bearer {{token}}
+
+###
+
+# Update Order Status (vendor/rider/admin)
+PATCH {{baseURL}}/orders/order_id_here/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "CONFIRMED"
+}
+
+###
+
+# Assign Rider to Order (admin)
+PATCH {{baseURL}}/orders/order_id_here/rider
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "riderId": "rider_id_here"
+}
+
+###
+
+# Cancel Order (consumer)
+POST {{baseURL}}/orders/order_id_here/cancel
+Authorization: Bearer {{token}}
+
+{}
+
+###
+
+# Accept Order (vendor)
+POST {{baseURL}}/orders/order_id_here/accept
+Authorization: Bearer {{token}}
+
+{}
+
+###
+
+# Decline Order (vendor)
+POST {{baseURL}}/orders/order_id_here/decline
+Authorization: Bearer {{token}}
+
+{}

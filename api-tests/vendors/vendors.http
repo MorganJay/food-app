@@ -1,0 +1,55 @@
+### Vendors API Tests
+### Base URL: http://localhost:3000
+
+# List Vendors (public)
+GET {{baseURL}}/vendors?page=1&limit=10
+
+###
+
+# Get Vendor by ID (public)
+GET {{baseURL}}/vendors/vendor_id_here
+
+###
+
+# Search Nearby Vendors (public)
+GET {{baseURL}}/vendors/nearby?lat=6.5244&lng=3.3792&radius=5000
+
+###
+
+# Get Vendor Profile (vendor only)
+GET {{baseURL}}/vendors/profile
+Authorization: Bearer {{token}}
+
+###
+
+# Update Vendor Profile (vendor only)
+PATCH {{baseURL}}/vendors/profile
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "businessName": "Updated Restaurant",
+  "description": "Updated description",
+  "openHours": "08:00",
+  "closeHours": "23:00"
+}
+
+###
+
+# Request Verification (vendor only)
+POST {{baseURL}}/vendors/request-verification
+Authorization: Bearer {{token}}
+
+{}
+
+###
+
+# Get Vendor Orders (vendor only)
+GET {{baseURL}}/vendors/orders
+Authorization: Bearer {{token}}
+
+###
+
+# Get Vendor Order Analytics (vendor only)
+GET {{baseURL}}/vendors/orders/analytics?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer {{token}}

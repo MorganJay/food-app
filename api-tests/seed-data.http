@@ -1,0 +1,143 @@
+### Seed Data for Testing
+### Use these phone numbers and data for API testing
+
+# Nigerian Phone Numbers for Testing
+# Format: +234XXXXXXXXX (11 digits after +234)
+
+CONSUMER_1: +2348012345678
+CONSUMER_2: +2348012345679
+CONSUMER_3: +2347012345678
+
+VENDOR_1: +2348012345680
+VENDOR_2: +2348012345681
+VENDOR_3: +2347012345680
+
+RIDER_1: +2348012345682
+RIDER_2: +2348012345683
+
+ADMIN: +2348012345684
+
+# Sample Data
+
+## Consumer Profile
+{
+  "username": "john_doe",
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "johndoe@example.com",
+  "phoneNumber": "+2348012345678"
+}
+
+## Vendor Profile
+{
+  "businessName": "Chopbaze Restaurant",
+  "description": "Best Nigerian cuisine in Lagos",
+  "location": {
+    "type": "Point",
+    "coordinates": [3.3792, 6.5244]  # Lagos coordinates
+  },
+  "openHours": "08:00",
+  "closeHours": "22:00"
+}
+
+## Food Items
+{
+  "name": "Jollof Rice",
+  "unit": "plates",
+  "price": 1500,
+  "category": "Main",
+  "prepTime": 25
+}
+
+{
+  "name": "Fried Rice",
+  "unit": "plates",
+  "price": 1500,
+  "category": "Main",
+  "prepTime": 25
+}
+
+{
+  "name": "Chicken Stew",
+  "unit": "plates",
+  "price": 1200,
+  "category": "Main",
+  "prepTime": 20
+}
+
+{
+  "name": "Egusi Soup",
+  "unit": "plates",
+  "price": 1800,
+  "category": "Soup",
+  "prepTime": 35
+}
+
+{
+  "name": "Pepper Soup",
+  "unit": "cups",
+  "price": 800,
+  "category": "Soup",
+  "prepTime": 15
+}
+
+{
+  "name": "Suya",
+  "unit": "sticks",
+  "price": 500,
+  "category": "Snack",
+  "prepTime": 10
+}
+
+{
+  "name": "Pounded Yam",
+  "unit": "plates",
+  "price": 1000,
+  "category": "Swallow",
+  "prepTime": 20
+}
+
+{
+  "name": "Fufu",
+  "unit": "plates",
+  "price": 800,
+  "category": "Swallow",
+  "prepTime": 20
+}
+
+{
+  "name": "Palm Wine",
+  "unit": "cups",
+  "price": 300,
+  "category": "Drink",
+  "prepTime": 0
+}
+
+{
+  "name": "Chapman",
+  "unit": "cups",
+  "price": 500,
+  "category": "Drink",
+  "prepTime": 5
+}
+
+## Rider Profile
+{
+  "vehicleType": "motorcycle",
+  "plateNumber": "LAG-123-XY"
+}
+
+## Order Status Flow
+PENDING -> CONFIRMED -> PREPARING -> READY -> OUT_FOR_DELIVERY -> DELIVERED
+
+## Payment Methods
+CARD, WALLET, TRANSFER
+
+## Lagos Locations (GeoJSON)
+Victoria Island: [3.3792, 6.5244]
+Ikoyi: [3.4300, 6.4500]
+Lekki: [3.4700, 6.4200]
+Ikeja: [3.3400, 6.5800]
+Surulere: [3.3500, 6.5000]
+Yaba: [3.3700, 6.5200]
+Apapa: [3.3600, 6.4800]

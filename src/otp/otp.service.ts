@@ -22,7 +22,8 @@ export class OtpService {
     await this.otpModel.create({
       phone,
       code,
-      expiresAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      consumed: false,
     });
     return code;
   }
@@ -32,8 +33,10 @@ export class OtpService {
       .findOne({ phone, code, consumed: false })
       .exec();
     if (!doc) throw new BadRequestException('Invalid or expired code');
+    if (doc.expiresAt && doc.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired code');
+    }
 
-    // optional: check createdAt or expiresAt manually
     doc.consumed = true;
     await doc.save();
     return true;

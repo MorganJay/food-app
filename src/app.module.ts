@@ -8,6 +8,19 @@ import { OtpModule } from './otp/otp.module';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
+import { RestaurantsModule } from './restaurants/restaurants.module';
+import { ProductsModule } from './products/products.module';
+import { CartsModule } from './carts/carts.module';
+import { OrdersModule } from './orders/orders.module';
+import { DeliveriesModule } from './deliveries/deliveries.module';
+import { ConsumersModule } from './consumers/consumers.module';
+import { VendorsModule } from './vendors/vendors.module';
+import { FoodsModule } from './foods/foods.module';
+import { RidersModule } from './riders/riders.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +30,19 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     OtpModule,
     AuthModule,
+    RestaurantsModule,
+    ProductsModule,
+    CartsModule,
+    OrdersModule,
+    DeliveriesModule,
+    ConsumersModule,
+    VendorsModule,
+    FoodsModule,
+    RidersModule,
+    NotificationsModule,
+    PaymentsModule,
+    ReviewsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

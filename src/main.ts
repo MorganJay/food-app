@@ -7,10 +7,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const config = new DocumentBuilder()
-    .setTitle('Food App API')
-    .setDescription('API documentation for the Food App')
+    .setTitle('Chopbase API')
+    .setDescription('API documentation for the Chopbase App')
     .setVersion('1.0')
-    .addTag('FoodApp')
+    .addTag('Chopbase')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, documentFactory);

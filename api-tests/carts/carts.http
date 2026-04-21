@@ -1,0 +1,41 @@
+### Carts API Tests
+### Base URL: http://localhost:3000
+
+# Get Cart
+GET {{baseURL}}/carts
+Authorization: Bearer {{token}}
+
+###
+
+# Add Item to Cart
+POST {{baseURL}}/carts/items
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "foodId": "food_id_here",
+  "quantity": 2
+}
+
+###
+
+# Update Cart Item Quantity
+PATCH {{baseURL}}/carts/items/food_id_here
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "quantity": 5
+}
+
+###
+
+# Remove Item from Cart
+DELETE {{baseURL}}/carts/items/food_id_here
+Authorization: Bearer {{token}}
+
+###
+
+# Clear Cart
+DELETE {{baseURL}}/carts
+Authorization: Bearer {{token}}
