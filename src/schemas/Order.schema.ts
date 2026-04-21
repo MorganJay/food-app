@@ -71,6 +71,5 @@ export class Order extends BaseEntity {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
-OrderSchema.index({ userId: 1 });
 OrderSchema.index({ vendorId: 1 });
 OrderSchema.index({ status: 1 });

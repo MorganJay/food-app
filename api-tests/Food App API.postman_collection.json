@@ -1,0 +1,1438 @@
+{
+  "info": {
+    "name": "Chopbaze API",
+    "description": "API collection for Chopbaze - includes Auth, Admin, Consumers, Vendors, Riders, Foods, Orders, Carts, Reviews, Payments, and Notifications endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseURL",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vendorToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "riderToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "consumerPhone",
+      "value": "+2348012345678",
+      "type": "string"
+    },
+    {
+      "key": "vendorPhone",
+      "value": "+2348012345680",
+      "type": "string"
+    },
+    {
+      "key": "riderPhone",
+      "value": "+2348012345682",
+      "type": "string"
+    },
+    {
+      "key": "adminPhone",
+      "value": "+2348012345684",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Consumer",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/register",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{consumerPhone}}\",\n  \"username\": \"test_consumer\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"email\": \"testconsumer@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"consumer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Vendor",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/register",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{vendorPhone}}\",\n  \"username\": \"test_vendor\",\n  \"firstName\": \"Vendor\",\n  \"lastName\": \"Test\",\n  \"email\": \"testvendor@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"vendor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Rider",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/register",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{riderPhone}}\",\n  \"username\": \"test_rider\",\n  \"firstName\": \"Rider\",\n  \"lastName\": \"Test\",\n  \"email\": \"testrider@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"rider\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/register",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{adminPhone}}\",\n  \"username\": \"test_admin\",\n  \"firstName\": \"Admin\",\n  \"lastName\": \"Test\",\n  \"email\": \"testadmin@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/verify-otp",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{consumerPhone}}\",\n  \"code\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/resend-otp",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "resend-otp"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{consumerPhone}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/auth/login",
+              "host": ["{{baseURL}}"],
+              "path": ["auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_consumer\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/users?page=1&limit=10",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update User Status",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/admin/users/:userId/status",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "users", ":userId", "status"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false,\n  \"reason\": \"Violation of terms\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/admin/users/:userId",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "users", ":userId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "List Vendors for Verification",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/vendors?verified=false",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "vendors"],
+              "query": [
+                { "key": "verified", "value": "false" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify Vendor",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/admin/vendors/:vendorId/verify",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "vendors", ":vendorId", "verify"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Rider Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/analytics/riders",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "analytics", "riders"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/orders?page=1&limit=20",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Order Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/orders/analytics?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "orders", "analytics"],
+              "query": [
+                { "key": "startDate", "value": "2024-01-01" },
+                { "key": "endDate", "value": "2024-12-31" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/admin/reviews/:reviewId",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "reviews", ":reviewId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Process Refund",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/admin/payments/:paymentId/refund",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "payments", ":paymentId", "refund"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Order cancelled\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Payments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/admin/payments?page=1&limit=20",
+              "host": ["{{baseURL}}"],
+              "path": ["admin", "payments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consumers",
+      "item": [
+        {
+          "name": "Get Consumer Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/consumers/profile",
+              "host": ["{{baseURL}}"],
+              "path": ["consumers", "profile"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Consumer Profile",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/consumers/profile",
+              "host": ["{{baseURL}}"],
+              "path": ["consumers", "profile"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Favorite Vendor",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/consumers/toggleFavorites",
+              "host": ["{{baseURL}}"],
+              "path": ["consumers", "toggleFavorites"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Consumer Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/consumers/orders",
+              "host": ["{{baseURL}}"],
+              "path": ["consumers", "orders"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Consumer Favorites",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/consumers/favorites",
+              "host": ["{{baseURL}}"],
+              "path": ["consumers", "favorites"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendors",
+      "item": [
+        {
+          "name": "List Vendors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors?page=1&limit=10",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors/:vendorId",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", ":vendorId"]
+            }
+          }
+        },
+        {
+          "name": "Search Nearby Vendors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors/nearby?lat=6.5244&lng=3.3792&radius=5000",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "nearby"],
+              "query": [
+                { "key": "lat", "value": "6.5244" },
+                { "key": "lng", "value": "3.3792" },
+                { "key": "radius", "value": "5000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors/profile",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "profile"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Vendor Profile",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/vendors/profile",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "profile"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Updated Restaurant\",\n  \"description\": \"Updated description\",\n  \"openHours\": \"08:00\",\n  \"closeHours\": \"23:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Request Verification",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/vendors/request-verification",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "request-verification"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Vendor Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors/orders",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "orders"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Vendor Order Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/vendors/orders/analytics?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{baseURL}}"],
+              "path": ["vendors", "orders", "analytics"],
+              "query": [
+                { "key": "startDate", "value": "2024-01-01" },
+                { "key": "endDate", "value": "2024-12-31" }
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Riders",
+      "item": [
+        {
+          "name": "Update Online Status",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/riders/status",
+              "host": ["{{baseURL}}"],
+              "path": ["riders", "status"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{riderToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isOnline\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Location",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/riders/location",
+              "host": ["{{baseURL}}"],
+              "path": ["riders", "location"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{riderToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 6.5244,\n  \"longitude\": 3.3792\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Deliveries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/riders/deliveries",
+              "host": ["{{baseURL}}"],
+              "path": ["riders", "deliveries"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{riderToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Foods",
+      "item": [
+        {
+          "name": "Search Foods",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/foods/search?q=rice",
+              "host": ["{{baseURL}}"],
+              "path": ["foods", "search"],
+              "query": [
+                { "key": "q", "value": "rice" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Foods by Vendor",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/foods/vendor/:vendorId",
+              "host": ["{{baseURL}}"],
+              "path": ["foods", "vendor", ":vendorId"]
+            }
+          }
+        },
+        {
+          "name": "Create Food",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/foods",
+              "host": ["{{baseURL}}"],
+              "path": ["foods"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\",\n  \"name\": \"Jollof Rice\",\n  \"unit\": \"plates\",\n  \"price\": 1500,\n  \"category\": \"Main\",\n  \"prepTime\": 25\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Food",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/foods/:foodId",
+              "host": ["{{baseURL}}"],
+              "path": ["foods", ":foodId"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 1800,\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Food",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/foods/:foodId",
+              "host": ["{{baseURL}}"],
+              "path": ["foods", ":foodId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order from Cart",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/orders",
+              "host": ["{{baseURL}}"],
+              "path": ["orders"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deliveryAddress\": \"123 Lagos Street, Victoria Island\",\n  \"deliveryDate\": \"2024-12-20\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/orders",
+              "host": ["{{baseURL}}"],
+              "path": ["orders"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId/status",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId", "status"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Rider to Order",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId/rider",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId", "rider"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"{{riderId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId/cancel",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId", "cancel"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Accept Order",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId/accept",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId", "accept"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Decline Order",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/orders/:orderId/decline",
+              "host": ["{{baseURL}}"],
+              "path": ["orders", ":orderId", "decline"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendorToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Carts",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/carts",
+              "host": ["{{baseURL}}"],
+              "path": ["carts"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/carts/items",
+              "host": ["{{baseURL}}"],
+              "path": ["carts", "items"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodId\": \"{{foodId}}\",\n  \"quantity\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Cart Item Quantity",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/carts/items/:foodId",
+              "host": ["{{baseURL}}"],
+              "path": ["carts", "items", ":foodId"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Item from Cart",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/carts/items/:foodId",
+              "host": ["{{baseURL}}"],
+              "path": ["carts", "items", ":foodId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/carts",
+              "host": ["{{baseURL}}"],
+              "path": ["carts"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/reviews",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\",\n  \"foodId\": \"{{foodId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great food! Highly recommended.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Reviews by Food",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/reviews/food/:foodId",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews", "food", ":foodId"]
+            }
+          }
+        },
+        {
+          "name": "Get Reviews by Vendor",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/reviews/vendor/:vendorId",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews", "vendor", ":vendorId"]
+            }
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/reviews/me",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews", "me"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/reviews/:reviewId",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews", ":reviewId"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated comment\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseURL}}/reviews/:reviewId",
+              "host": ["{{baseURL}}"],
+              "path": ["reviews", ":reviewId"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initialize Payment",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/payments/initialize",
+              "host": ["{{baseURL}}"],
+              "path": ["payments", "initialize"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 5000,\n  \"currency\": \"NGN\",\n  \"paymentMethod\": \"CARD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/payments/verify",
+              "host": ["{{baseURL}}"],
+              "path": ["payments", "verify"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionRef\": \"{{transactionRef}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseURL}}/payments/history",
+              "host": ["{{baseURL}}"],
+              "path": ["payments", "history"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Request Refund",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseURL}}/payments/:paymentId/refund",
+              "host": ["{{baseURL}}"],
+              "path": ["payments", ":paymentId", "refund"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer request\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/notifications/send-sms",
+              "host": ["{{baseURL}}"],
+              "path": ["notifications", "send-sms"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"{{consumerPhone}}\",\n  \"message\": \"Hello from Chopbaze!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Email",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/notifications/send-email",
+              "host": ["{{baseURL}}"],
+              "path": ["notifications", "send-email"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"user@example.com\",\n  \"subject\": \"Test Email\",\n  \"body\": \"This is a test email from Chopbaze.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Push Notification",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/notifications/send-push",
+              "host": ["{{baseURL}}"],
+              "path": ["notifications", "send-push"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{firebaseToken}}\",\n  \"title\": \"New Order\",\n  \"body\": \"You have a new order!\",\n  \"data\": {\n    \"orderId\": \"order_123\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Bulk SMS",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseURL}}/notifications/bulk-sms",
+              "host": ["{{baseURL}}"],
+              "path": ["notifications", "bulk-sms"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"to\": \"{{consumerPhone}}\",\n    \"message\": \"Message 1\"\n  },\n  {\n    \"to\": \"{{vendorPhone}}\",\n    \"message\": \"Message 2\"\n  },\n  {\n    \"to\": \"{{riderPhone}}\",\n    \"message\": \"Message 3\"\n  }\n]"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
