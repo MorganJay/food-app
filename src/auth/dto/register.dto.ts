@@ -11,12 +11,12 @@ import { UserRole } from '../../schemas/User.schema';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
-  @ApiProperty({
-    example: 'john_doe',
-    description: 'Unique username for the user',
-  })
+  // @ApiProperty({
+  //   example: 'john_doe',
+  //   description: 'Unique username for the user',
+  // })
   // @IsNotEmpty()
-  username?: string;
+  // username: string;
 
   @ApiProperty({
     example: 'John',
