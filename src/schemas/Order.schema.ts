@@ -26,7 +26,7 @@ export interface OrderItem {
 
 @Schema({ timestamps: true })
 export class Order extends BaseEntity {
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   userId: string;
 
   @Prop({ required: true })

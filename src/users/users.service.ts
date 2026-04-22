@@ -8,7 +8,7 @@ import { User, UserDocument } from '../schemas/User.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
 
   private hashPassword(password: string) {
     return createHash('sha256').update(password).digest('hex');
@@ -23,6 +23,7 @@ export class UsersService {
   }
 
   async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
+    console.log("From inside upsertByPhoneNumber", dto);
     const referrer = dto.referralCode
       ? await this.userModel.findOne({ referralCode: dto.referralCode }).exec()
       : null;

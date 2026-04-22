@@ -41,6 +41,7 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
+    console.log("in the register func in auth sevice", dto);
     const user = await this.usersService.upsertByPhoneNumber(
       dto.phoneNumber,
       dto,
