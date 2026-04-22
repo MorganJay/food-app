@@ -18,17 +18,6 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
-  // @ApiBody({
-  //   schema: {
-  //     example: {
-  //       firstName: 'John',
-  //       lastName: 'Doe',
-  //       phone: '+2348012345678',
-  //       email: 'john@example.com',
-  //       role: 'consumer',
-  //     },
-  //   },
-  // })
   @ApiResponse({
     status: 201,
     description: 'User registered successfully'

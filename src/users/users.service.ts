@@ -33,6 +33,7 @@ export class UsersService {
       {
         $setOnInsert: {
           phoneNumber,
+          username: dto.username,
           firstName: dto.firstName,
           lastName: dto.lastName,
           email: dto.email,
