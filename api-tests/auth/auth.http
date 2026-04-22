@@ -57,11 +57,11 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348012345681",
-  "username": "test_admin",
-  "firstName": "Admin",
-  "lastName": "Test",
-  "email": "testadmin@example.com",
+  "phoneNumber": "+2348173640964",
+  "username": "Victor Admin",
+  "firstName": "Victor",
+  "lastName": "Ajibodu",
+  "email": "chopbaze@gmail.com",
   "password": "password123",
   "role": "admin"
 }

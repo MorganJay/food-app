@@ -8,7 +8,7 @@ export class AppService {
   constructor(@InjectConnection() private readonly connection: Connection) {}
 
   getHello(): string {
-    return 'Hello World!';
+    return 'Hello from Chopbaze!';
   }
 
   /**
