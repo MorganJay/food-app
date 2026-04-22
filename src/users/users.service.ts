@@ -23,7 +23,6 @@ export class UsersService {
   }
 
   async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
-    console.log("From inside upsertByPhoneNumber", dto);
     const referrer = dto.referralCode
       ? await this.userModel.findOne({ referralCode: dto.referralCode }).exec()
       : null;

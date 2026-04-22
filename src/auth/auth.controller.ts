@@ -27,7 +27,6 @@ export class AuthController {
     description: 'Bad request, validation failed or user already exists'
   })
   register(@Body() dto: RegisterDto) {
-    console.log("from the authcontroller in the register func", dto);
     return this.auth.register(dto);
   }
 
@@ -58,6 +57,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Login successful' })
   async login(@Request() req) {
+    console.log("in the login controller req.user", req.user)
     return this.auth.login(req.user);
   }
 
