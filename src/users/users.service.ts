@@ -19,7 +19,7 @@ export class UsersService {
   }
 
   async findOne(username: string): Promise<User | null> {
-    return this.userModel.findOne({ username }).exec();
+    return this.userModel.findOne({ username }).lean().exec();
   }
 
   async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {

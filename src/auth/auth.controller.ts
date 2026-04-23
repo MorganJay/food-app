@@ -57,7 +57,6 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Login successful' })
   async login(@Request() req) {
-    console.log("in the login controller req.user", req.user)
     return this.auth.login(req.user);
   }
 

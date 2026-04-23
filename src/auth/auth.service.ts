@@ -23,9 +23,8 @@ export class AuthService {
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
     if (user && user.password && user.password === this.hashPassword(pass)) {
-      // const { password, ...result } = user as any;
-      // return result;
-      return user;
+      const { password, ...result } = user as any;
+      return result;
     }
     return null;
   }
@@ -42,7 +41,6 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    console.log("in the register func in auth sevice", dto);
     const user = await this.usersService.upsertByPhoneNumber(
       dto.phoneNumber,
       dto,
