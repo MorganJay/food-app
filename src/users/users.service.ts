@@ -22,6 +22,16 @@ export class UsersService {
     return this.userModel.findOne({ username }).lean().exec();
   }
 
+  async findDuplicate(dto: RegisterDto) {
+    return this.userModel.findOne({
+      $or: [
+        { phoneNumber: dto.phoneNumber },
+        { email: dto.email },
+        { username: dto.username },
+      ],
+    });
+  }
+
   async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
     const referrer = dto.referralCode
       ? await this.userModel.findOne({ referralCode: dto.referralCode }).exec()

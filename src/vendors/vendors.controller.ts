@@ -74,14 +74,13 @@ export class VendorsController {
   @ApiOperation({ summary: 'Create vendor profile' })
   @ApiResponse({ status: 201, description: 'Vendor created' })
   async create(@Body() vendorData: CreateVendorDto, @Req() req) {
-    console.log("from vendor create in controller the req", req.user);
-    return this.vendorsService.createVendor(req.user.userId, vendorData);
+    return this.vendorsService.createVendor(req.user.sub, vendorData);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
   async update(@Param('id') id: string, @Body() updateData: UpdateVendorDto, @Req() req) {

@@ -4,6 +4,14 @@ import { ApiProperty } from '@nestjs/swagger';
 
 class LocationDto {
   @ApiProperty({
+    description: 'GeoJSON type (must always be Point)',
+    example: 'Point',
+  })
+  @IsString()
+  @IsNotEmpty()
+  type: string;
+
+  @ApiProperty({
     description: 'Coordinates in [longitude, latitude]',
     example: [3.947, 7.3775],
   })
@@ -31,6 +39,7 @@ export class CreateVendorDto {
   @ApiProperty({
     description: 'Vendor location (GeoJSON Point)',
     example: {
+      type: 'Point',
       coordinates: [3.947, 7.3775],
     },
   })
@@ -67,6 +76,7 @@ export class UpdateVendorDto {
   @ApiProperty({
     required: false,
     example: {
+      type: 'Point',
       coordinates: [3.95, 7.38],
     },
   })

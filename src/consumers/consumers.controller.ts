@@ -20,7 +20,7 @@ import { UserRole } from '../schemas/User.schema';
 import { ConsumersService } from './consumers.service';
 
 @ApiTags('Consumers')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('consumers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConsumersController {

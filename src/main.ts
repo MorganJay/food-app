@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.setGlobalPrefix('api/v1');
   const config = new DocumentBuilder()
     .setTitle('Chopbase API')
     .setDescription('API documentation for the Chopbase App')

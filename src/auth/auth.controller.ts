@@ -1,5 +1,5 @@
 import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './auth-guards';
 import { RegisterDto } from './dto/register.dto';
@@ -45,6 +45,7 @@ export class AuthController {
   }
 
   @UseGuards(LocalAuthGuard)
+  @ApiBearerAuth('local')
   @Post('login')
   @ApiOperation({ summary: 'Login with username and password' })
   @ApiBody({
