@@ -36,7 +36,7 @@ export class NotificationsService {
 
   async sendEmail(notification: EmailNotification) {
     this.logger.log(`Sending email to ${notification.to}`);
-    // TODO: Integrate real email provider (SendGrid, Mailgun, etc.)
+    // TODO: Integrate real email provider (SendGrid, Mailgun, Resend etc.)
     console.log(
       `[Email to ${notification.to}] Subject: ${notification.subject}`,
     );

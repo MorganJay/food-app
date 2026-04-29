@@ -38,4 +38,3 @@ export class Cart extends BaseEntity {
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
-CartSchema.index({ userId: 1 });

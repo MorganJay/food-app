@@ -9,7 +9,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   const config = new DocumentBuilder()
     .setTitle('Chopbaze API')
-    .setDescription('API documentation for the Chopbase App')
+    .setDescription('API documentation for the Chopbaze App')
     .setVersion('1.0')
     .addTag('Chopbase')
     .addBearerAuth({
@@ -35,6 +35,6 @@ async function bootstrap() {
   });
 
   await app.listen(process.env.PORT ?? 3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  console.log(`Application is running on: ${await app.getUrl()}}`);
 }
 bootstrap();

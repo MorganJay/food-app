@@ -1,20 +1,16 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import {
-  NotificationsService,
-  SmsNotification,
-  EmailNotification,
-  PushNotification,
-} from './notifications.service';
-import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
-import { RolesGuard } from '../auth/roles.guard';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+
 import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
+import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
+import { NotificationsService, SmsNotification } from './notifications.service';
 
 class SendSmsDto {
   to: string;

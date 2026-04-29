@@ -40,5 +40,4 @@ export class Delivery extends BaseEntity {
 }
 
 export const DeliverySchema = SchemaFactory.createForClass(Delivery);
-DeliverySchema.index({ orderId: 1 });
 DeliverySchema.index({ driverId: 1 });
