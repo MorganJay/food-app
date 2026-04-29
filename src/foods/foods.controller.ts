@@ -16,12 +16,14 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { FoodsService } from './foods.service';
+import { CreateFoodDto, UpdateFoodDto } from './dto/foods.dto';
 
 @ApiTags('Foods')
 @Controller('foods')
@@ -57,6 +59,11 @@ export class FoodsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get food by ID' })
+  @ApiParam({
+    name: 'id',
+    example: '677vdvd12345feusksh...',
+    description: 'food ID',
+  })
   @ApiResponse({ status: 200, description: 'Food details' })
   async findById(@Param('id') id: string) {
     return this.foodsService.findById(id);
@@ -65,12 +72,12 @@ export class FoodsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('vendor/:vendorId')
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Create food item' })
   @ApiResponse({ status: 201, description: 'Food created' })
   async create(
     @Param('vendorId') vendorId: string,
-    @Body() foodData: any,
+    @Body() foodData: CreateFoodDto,
     @Req() req,
   ) {
     return this.foodsService.create(vendorId, foodData);
@@ -79,17 +86,17 @@ export class FoodsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update food item' })
   @ApiResponse({ status: 200, description: 'Food updated' })
-  async update(@Param('id') id: string, @Body() updateData: any, @Req() req) {
+  async update(@Param('id') id: string, @Body() updateData: UpdateFoodDto, @Req() req) {
     return this.foodsService.update(id, req.user.sub, updateData);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Delete food item (soft delete)' })
   @ApiResponse({ status: 200, description: 'Food deleted' })
   async delete(@Param('id') id: string, @Req() req) {

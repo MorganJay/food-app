@@ -12,7 +12,7 @@ import { UserRole } from '../schemas/User.schema';
 import { RidersService } from './riders.service';
 
 @ApiTags('Riders')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('riders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RidersController {

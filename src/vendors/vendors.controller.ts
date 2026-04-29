@@ -21,6 +21,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { VendorsService } from './vendors.service';
+import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
 
 @ApiTags('Vendors')
 @Controller('vendors')
@@ -69,20 +70,20 @@ export class VendorsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Create vendor profile' })
   @ApiResponse({ status: 201, description: 'Vendor created' })
-  async create(@Body() vendorData: any, @Req() req) {
+  async create(@Body() vendorData: CreateVendorDto, @Req() req) {
     return this.vendorsService.createVendor(req.user.sub, vendorData);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @Roles(UserRole.VENDOR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
-  async update(@Param('id') id: string, @Body() updateData: any, @Req() req) {
+  async update(@Param('id') id: string, @Body() updateData: UpdateVendorDto, @Req() req) {
     return this.vendorsService.updateProfile(id, req.user.sub, updateData);
   }
 }

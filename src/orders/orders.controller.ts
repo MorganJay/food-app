@@ -25,7 +25,7 @@ import { CreateOrderDto } from './dto/order.dto';
 import { OrderStatus } from '../schemas/Order.schema';
 
 @ApiTags('Orders')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {

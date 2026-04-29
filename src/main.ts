@@ -6,12 +6,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
   const config = new DocumentBuilder()
     .setTitle('Chopbaze API')
     .setDescription('API documentation for the Chopbaze App')
     .setVersion('1.0')
-    .addTag('Chopbaze')
+    .addTag('Chopbase')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: 'Enter access Token',
+      in: 'header',
+    }, 'jwt')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, documentFactory);
