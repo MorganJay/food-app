@@ -41,6 +41,12 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
+    const existingUser = await this.usersService.findDuplicate(dto);
+
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+
     const user = await this.usersService.upsertByPhoneNumber(
       dto.phoneNumber,
       dto,

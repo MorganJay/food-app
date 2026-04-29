@@ -9,7 +9,7 @@ export class Vendor extends BaseEntity {
   @Prop({ required: true, index: true })
   userId: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   businessName: string;
 
   @Prop({ required: true })

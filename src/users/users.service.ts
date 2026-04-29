@@ -8,7 +8,7 @@ import { User, UserDocument } from '../schemas/User.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
 
   private hashPassword(password: string) {
     return createHash('sha256').update(password).digest('hex');
@@ -19,7 +19,17 @@ export class UsersService {
   }
 
   async findOne(username: string): Promise<User | null> {
-    return this.userModel.findOne({ username }).exec();
+    return this.userModel.findOne({ username }).lean().exec();
+  }
+
+  async findDuplicate(dto: RegisterDto) {
+    return this.userModel.findOne({
+      $or: [
+        { phoneNumber: dto.phoneNumber },
+        { email: dto.email },
+        { username: dto.username },
+      ],
+    });
   }
 
   async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
@@ -32,6 +42,7 @@ export class UsersService {
       {
         $setOnInsert: {
           phoneNumber,
+          username: dto.username,
           firstName: dto.firstName,
           lastName: dto.lastName,
           email: dto.email,
