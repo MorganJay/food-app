@@ -11,15 +11,18 @@ async function bootstrap() {
     .setTitle('Chopbaze API')
     .setDescription('API documentation for the Chopbaze App')
     .setVersion('1.0')
-    .addTag('Chopbase')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      name: 'JWT',
-      description: 'Enter access Token',
-      in: 'header',
-    }, 'jwt')
+    .addTag('Chopbaze')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter access Token',
+        in: 'header',
+      },
+      'jwt',
+    )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, documentFactory);

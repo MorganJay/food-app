@@ -23,6 +23,7 @@ export class AuthService {
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
     if (user && user.password && user.password === this.hashPassword(pass)) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user as any;
       return result;
     }
@@ -47,10 +48,7 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    const user = await this.usersService.upsertByPhoneNumber(
-      dto.phoneNumber,
-      dto,
-    );
+    await this.usersService.upsertByPhoneNumber(dto.phoneNumber, dto);
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)
