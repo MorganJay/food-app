@@ -11,15 +11,45 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 
+@ApiTags('Products')
 @Controller('products')
 export class ProductsController {
-  constructor(private productsService: ProductsService) {}
+  constructor(private productsService: ProductsService) { }
 
   @Get('search')
+  @ApiOperation({ summary: 'Search for products by keyword' })
+  @ApiQuery({
+    name: 'q',
+    required: true,
+    description: 'Search keyword',
+    example: 'Burger',
+  })
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
+  @ApiResponse({ status: 200, description: 'Products fetched successfully' })
+  @ApiResponse({ status: 400, description: 'Search query is required' })
   async search(
     @Query('q') query: string,
     @Query('skip') skip: string = '0',
@@ -32,6 +62,28 @@ export class ProductsController {
   }
 
   @Get('restaurant/:restaurantId')
+  @ApiOperation({ summary: 'Get products by restaurant ID' })
+  @ApiParam({
+    name: 'restaurantId',
+    description: 'Restaurant unique ID',
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Restaurant products fetched successfully',
+  })
   async findByRestaurant(
     @Param('restaurantId') restaurantId: string,
     @Query('skip') skip: string = '0',
@@ -45,12 +97,29 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'Product unique ID',
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
+  @ApiResponse({ status: 200, description: 'Product fetched successfully' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async findById(@Param('id') id: string) {
     return this.productsService.findById(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('restaurant/:restaurantId')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Create a new product for a restaurant' })
+  @ApiParam({
+    name: 'restaurantId',
+    description: 'Restaurant unique ID',
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
+  @ApiResponse({ status: 201, description: 'Product created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
     @Param('restaurantId') restaurantId: string,
     @Body() createDto: CreateProductDto,
@@ -61,6 +130,16 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Update a product' })
+  @ApiParam({
+    name: 'id',
+    description: 'Product unique ID',
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
+  @ApiResponse({ status: 200, description: 'Product updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateProductDto,
@@ -71,6 +150,16 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Delete a product' })
+  @ApiParam({
+    name: 'id',
+    description: 'Product unique ID',
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
+  @ApiResponse({ status: 200, description: 'Product deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async delete(@Param('id') id: string, @Req() req) {
     return this.productsService.delete(id, req.user.sub);
   }
