@@ -8,7 +8,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.setGlobalPrefix('api/v1');
   const config = new DocumentBuilder()
-    .setTitle('Chopbase API')
+    .setTitle('Chopbaze API')
     .setDescription('API documentation for the Chopbase App')
     .setVersion('1.0')
     .addTag('Chopbase')
