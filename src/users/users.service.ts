@@ -19,7 +19,12 @@ export class UsersService {
   }
 
   async findOne(username: string): Promise<User | null> {
-    return this.userModel.findOne({ username }).lean().exec();
+    return this.userModel
+      .findOne({
+        $or: [{ username }, { phoneNumber: username }, { email: username }],
+      })
+      .lean()
+      .exec();
   }
 
   async findDuplicate(dto: RegisterDto) {
