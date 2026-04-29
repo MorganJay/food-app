@@ -35,6 +35,24 @@ export class Review extends BaseEntity {
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
+
+ReviewSchema.pre('save', async function (next) {
+  if (this.isNew && !this.serialNumber) {
+    try {
+      const counter = await this.collection.conn.db
+        .collection('counters')
+        .findOneAndUpdate(
+          { name: 'reviews' },
+          { $inc: { value: 1 } },
+          { upsert: true, returnDocument: 'after' },
+        );
+      this.serialNumber = counter.value?.value || 1;
+    } catch (error) {
+      console.error('Error auto-incrementing serialNumber:', error);
+    }
+  }
+  next();
+});
 ReviewSchema.index({ consumerId: 1 });
 ReviewSchema.index({ vendorId: 1 });
 ReviewSchema.index({ foodId: 1 });

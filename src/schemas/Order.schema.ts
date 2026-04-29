@@ -73,3 +73,21 @@ export class Order extends BaseEntity {
 export const OrderSchema = SchemaFactory.createForClass(Order);
 OrderSchema.index({ vendorId: 1 });
 OrderSchema.index({ status: 1 });
+
+OrderSchema.pre('save', async function (next) {
+  if (this.isNew && !this.serialNumber) {
+    try {
+      const counter = await this.collection.conn.db
+        .collection('counters')
+        .findOneAndUpdate(
+          { name: 'orders' },
+          { $inc: { value: 1 } },
+          { upsert: true, returnDocument: 'after' },
+        );
+      this.serialNumber = counter.value?.value || 1;
+    } catch (error) {
+      console.error('Error auto-incrementing serialNumber:', error);
+    }
+  }
+  next();
+});

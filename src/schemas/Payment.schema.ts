@@ -54,5 +54,23 @@ export class Payment extends BaseEntity {
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+
+PaymentSchema.pre('save', async function (next) {
+  if (this.isNew && !this.serialNumber) {
+    try {
+      const counter = await this.collection.conn.db
+        .collection('counters')
+        .findOneAndUpdate(
+          { name: 'payments' },
+          { $inc: { value: 1 } },
+          { upsert: true, returnDocument: 'after' },
+        );
+      this.serialNumber = counter.value?.value || 1;
+    } catch (error) {
+      console.error('Error auto-incrementing serialNumber:', error);
+    }
+  }
+  next();
+});
 PaymentSchema.index({ orderId: 1 });
 PaymentSchema.index({ consumerId: 1 });

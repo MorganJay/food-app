@@ -4,6 +4,9 @@
       "baseURL": "http://localhost:3000/api/v1",
       "token": "xxx",
       "adminToken": "xxx"
+    },
+    "test": {
+      "baseURL": "https://food-app-9lqz.onrender.com/api/v1"
     }
   }
 }

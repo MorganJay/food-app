@@ -1,5 +1,11 @@
 import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './auth-guards';
 import { RegisterDto } from './dto/register.dto';
@@ -14,17 +20,17 @@ import { JwtAuthGuard } from './strategies/jwt.strategy';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private auth: AuthService) { }
+  constructor(private auth: AuthService) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
-    description: 'User registered successfully'
+    description: 'User registered successfully',
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request, validation failed or user already exists'
+    description: 'Bad request, validation failed or user already exists',
   })
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);

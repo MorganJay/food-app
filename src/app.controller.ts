@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import mongoose from 'mongoose';
 
 import { AppService } from './app.service';
 import { ApiQuery } from '@nestjs/swagger';
@@ -8,7 +9,14 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
+  getHello() {
+    mongoose.connection.on('connected', () => {
+      console.log('✅ MongoDB connected');
+    });
+
+    mongoose.connection.on('error', (err) => {
+      console.log('❌ MongoDB error:', err);
+    });
     return this.appService.getHello();
   }
 

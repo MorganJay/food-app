@@ -1,6 +1,5 @@
 ### Auth API Tests
 ### Base URL: {{baseURL}}
-@baseURL = http://localhost:3000
 @token = 
 @adminToken =
 
@@ -57,12 +56,12 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "09129178554",
-  "username": "Admin",
-  "firstName": "Chopbaze",
-  "lastName": "Admin",
-  "email": "chopbaze@gmail.com",
-  "password": "password123",
+  "phoneNumber": "+2348165336114",
+  "username": "Admin-James",
+  "firstName": "James",
+  "lastName": "Morgan",
+  "email": "james@chopbaze.com",
+  "password": "password1234",
   "role": "admin"
 }
 
@@ -73,8 +72,8 @@ POST {{baseURL}}/auth/verify-otp
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348012345678",
-  "code": "123456"
+  "phoneNumber": "+2348165336114",
+  "code": "666160"
 }
 
 ###

@@ -7,8 +7,11 @@ export class AppService {
   private readonly logger = new Logger(AppService.name);
   constructor(@InjectConnection() private readonly connection: Connection) {}
 
-  getHello(): string {
-    return 'Hello from Chopbaze!';
+  getHello() {
+    return {
+      status: 'ok',
+      message: 'Hello from Chopbaze!',
+    };
   }
 
   /**

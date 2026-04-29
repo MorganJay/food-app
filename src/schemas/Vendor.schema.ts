@@ -42,3 +42,21 @@ export class Vendor extends BaseEntity {
 
 export const VendorSchema = SchemaFactory.createForClass(Vendor);
 VendorSchema.index({ location: '2dsphere' });
+
+VendorSchema.pre('save', async function (next) {
+  if (this.isNew && !this.serialNumber) {
+    try {
+      const counter = await this.collection.conn.db
+        .collection('counters')
+        .findOneAndUpdate(
+          { name: 'vendors' },
+          { $inc: { value: 1 } },
+          { upsert: true, returnDocument: 'after' },
+        );
+      this.serialNumber = counter.value?.value || 1;
+    } catch (error) {
+      console.error('Error auto-incrementing serialNumber:', error);
+    }
+  }
+  next();
+});
