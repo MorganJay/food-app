@@ -60,6 +60,7 @@ export class AuthService {
       },
       code,
     );
+    console.log(`OTP sent to user: ${code}`);
 
     return { message: 'OTP sent' };
   }

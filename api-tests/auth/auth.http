@@ -9,11 +9,11 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348012345678",
-  "username": "test_consumer",
-  "firstName": "Test",
-  "lastName": "User",
-  "email": "testconsumer@example.com",
+  "phoneNumber": "+2348140680757",
+  "username": "TosinA",
+  "firstName": "Tosin",
+  "lastName": "Adefope",
+  "email": "tosin@example.com",
   "password": "password123",
   "role": "consumer"
 }
@@ -57,10 +57,10 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348173640964",
-  "username": "Victor Admin",
-  "firstName": "Victor",
-  "lastName": "Ajibodu",
+  "phoneNumber": "09129178554",
+  "username": "Admin",
+  "firstName": "Chopbaze",
+  "lastName": "Admin",
   "email": "chopbaze@gmail.com",
   "password": "password123",
   "role": "admin"
