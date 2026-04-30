@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
+import { mapToGeoLocation } from 'src/common/geojson';
 
 @Injectable()
 export class RestaurantsService {
@@ -14,17 +15,6 @@ export class RestaurantsService {
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
   ) { }
-
-  mapToGeoJSON(latitude: number, longitude: number) {
-    if (latitude === undefined || longitude === undefined) {
-      return null;
-    }
-
-    return {
-      type: 'Point',
-      coordinates: [longitude, latitude],
-    };
-  }
 
   async create(createDto: CreateRestaurantDto, vendorId: string) {
     const { address, latitude, longitude } = createDto.location;
@@ -38,7 +28,7 @@ export class RestaurantsService {
       vendorId
     }
 
-    const geoLocation = this.mapToGeoJSON(latitude, longitude);
+    const geoLocation = mapToGeoLocation(latitude, longitude);
 
     if (geoLocation) {
       restaurantData.location = geoLocation;
