@@ -15,6 +15,15 @@ export class Vendor extends BaseEntity {
   @Prop({ required: true })
   description: string;
 
+  @Prop()
+  address: string;
+
+  @Prop()
+  latitude: number;
+
+  @Prop()
+  longitude: number;
+
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: [Number],

@@ -13,13 +13,39 @@ export class RestaurantsService {
   constructor(
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
-  ) {}
+  ) { }
+
+  mapToGeoJSON(latitude: number, longitude: number) {
+    if (latitude === undefined || longitude === undefined) {
+      return null;
+    }
+
+    return {
+      type: 'Point',
+      coordinates: [longitude, latitude],
+    };
+  }
 
   async create(createDto: CreateRestaurantDto, vendorId: string) {
-    const restaurant = new this.restaurantModel({
-      ...createDto,
-      vendorId,
-    });
+    const { address, latitude, longitude } = createDto.location;
+
+    const restaurantData: any = {
+      name: createDto.name,
+      description: createDto.description,
+      address,
+      latitude,
+      longitude,
+      vendorId
+    }
+
+    const geoLocation = this.mapToGeoJSON(latitude, longitude);
+
+    if (geoLocation) {
+      restaurantData.location = geoLocation;
+    }
+
+    const restaurant = new this.restaurantModel(restaurantData);
+
     return restaurant.save();
   }
 

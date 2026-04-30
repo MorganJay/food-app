@@ -1,22 +1,35 @@
-import { IsNotEmpty, IsString, IsOptional, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 class LocationDto {
   @ApiProperty({
-    description: 'GeoJSON type (must always be Point)',
-    example: 'Point',
+    description: 'Physical address of the restaurant',
+    example: 'ikeja, Lagos State',
+    required: false
   })
   @IsString()
-  @IsNotEmpty()
-  type: string;
+  address?: string;
 
   @ApiProperty({
-    description: 'Coordinates in [longitude, latitude]',
-    example: [3.947, 7.3775],
+    description: 'Latitude coordinate of the restaurant location',
+    example: '7.3775',
+    required: false,
   })
-  @IsNotEmpty()
-  coordinates: number[];
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiProperty({
+    description: 'Longitude coordinate of the restaurant location',
+    example: '3.947',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
 }
 
 export class CreateVendorDto {
@@ -37,15 +50,13 @@ export class CreateVendorDto {
   description: string;
 
   @ApiProperty({
-    description: 'Vendor location (GeoJSON Point)',
-    example: {
-      type: 'Point',
-      coordinates: [3.947, 7.3775],
-    },
+    description: 'Vendor location details',
+    type: LocationDto
   })
+  @IsOptional()
   @ValidateNested()
   @Type(() => LocationDto)
-  location: LocationDto;
+  location?: LocationDto;
 
   @ApiProperty({
     description: 'Opening time',
@@ -74,11 +85,8 @@ export class UpdateVendorDto {
   description?: string;
 
   @ApiProperty({
-    required: false,
-    example: {
-      type: 'Point',
-      coordinates: [3.95, 7.38],
-    },
+    description: 'Vendor location details',
+    type: LocationDto
   })
   @IsOptional()
   @ValidateNested()

@@ -5,19 +5,32 @@ import { Type } from 'class-transformer';
 
 class LocationDto {
   @ApiProperty({
-    description: 'GeoJSON type (must always be Point)',
-    example: 'Point',
+    description: 'Physical address of the restaurant',
+    example: 'ikeja, Lagos State'
   })
-  @IsString()
   @IsNotEmpty()
-  type: string;
+  @IsString()
+  address: string;
 
   @ApiProperty({
-    description: 'Coordinates in [longitude, latitude]',
-    example: [3.947, 7.3775],
+    description: 'Latitude coordinate of the restaurant location',
+    example: '7.3775',
+    required: false,
   })
-  @IsNotEmpty()
-  coordinates: number[];
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiProperty({
+    description: 'Longitude coordinate of the restaurant location',
+    example: '3.947',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
 }
 
 export class CreateRestaurantDto {
@@ -38,19 +51,8 @@ export class CreateRestaurantDto {
   description: string;
 
   @ApiProperty({
-    description: 'Physical address of the restaurant',
-    example: 'ikeja, Lagos State'
-  })
-  @IsNotEmpty()
-  @IsString()
-  address: string;
-
-  @ApiProperty({
-    description: 'Vendor location (GeoJSON Point)',
-    example: {
-      type: 'Point',
-      coordinates: [3.947, 7.3775],
-    },
+    description: 'Restaurant location details',
+    type: LocationDto,
   })
   @ValidateNested()
   @Type(() => LocationDto)
@@ -86,11 +88,8 @@ export class UpdateRestaurantDto {
   address?: string;
 
   @ApiProperty({
-    required: false,
-    example: {
-      type: 'Point',
-      coordinates: [3.95, 7.38],
-    },
+    description: 'Restaurant location details',
+    type: LocationDto
   })
   @IsOptional()
   @ValidateNested()
