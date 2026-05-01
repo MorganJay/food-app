@@ -49,7 +49,7 @@ RestaurantSchema.pre('save', async function (next) {
           { $inc: { value: 1 } },
           { upsert: true, returnDocument: 'after' },
         );
-      this.serialNumber = counter.value?.value || 1;
+      this.serialNumber = counter.value || 1;
     } catch (error) {
       console.error('Error auto-incrementing serialNumber:', error);
     }
