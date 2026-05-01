@@ -7,11 +7,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.setGlobalPrefix('api/v1');
+
   const config = new DocumentBuilder()
     .setTitle('Chopbaze API')
     .setDescription('API documentation for the Chopbaze App')
     .setVersion('1.0')
-    .addServer('/api/v1')
+    // .addServer('/api/v1')
     .addTag('Chopbaze')
     .addBearerAuth(
       {
@@ -26,7 +27,7 @@ async function bootstrap() {
     )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('swagger', app, documentFactory);
+  // SwaggerModule.setup('swagger', app, documentFactory);
 
   SwaggerModule.setup('swagger', app, documentFactory, {
     jsonDocumentUrl: 'swagger/json',

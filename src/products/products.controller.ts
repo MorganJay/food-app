@@ -10,6 +10,8 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +20,10 @@ import {
   ApiQuery,
   ApiParam,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/common/config/multer.config';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -112,7 +117,9 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Post('restaurant/:restaurantId')
   @ApiBearerAuth('jwt')
+  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
   @ApiOperation({ summary: 'Create a new product for a restaurant' })
+  @ApiConsumes('multipart/form-data')
   @ApiParam({
     name: 'restaurantId',
     description: 'Restaurant unique ID',
@@ -123,9 +130,10 @@ export class ProductsController {
   async create(
     @Param('restaurantId') restaurantId: string,
     @Body() createDto: CreateProductDto,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req,
   ) {
-    return this.productsService.create(createDto, restaurantId);
+    return this.productsService.create(createDto, restaurantId, file);
   }
 
   @UseGuards(JwtAuthGuard)

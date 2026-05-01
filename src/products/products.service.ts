@@ -12,13 +12,17 @@ import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-  ) {}
+  ) { }
 
-  async create(createDto: CreateProductDto, restaurantId: string) {
+  async create(createDto: CreateProductDto, restaurantId: string, file: Express.Multer.File) {
+    const imageUrl = `/uploads/products/${file.filename}`;
+
     const product = new this.productModel({
       ...createDto,
       restaurantId,
+      imageUrl,
     });
+
     return product.save();
   }
 

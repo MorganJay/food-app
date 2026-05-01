@@ -43,12 +43,11 @@ export class CreateProductDto {
   category?: string;
 
   @ApiPropertyOptional({
-    example: 'https://example.com/cheese-burger.jpg',
-    description: 'Image URL of the food product',
+    type: 'string',
+    format: 'binary',
+    description: 'Product image file',
   })
-  @IsOptional()
-  @IsString()
-  image?: string;
+  image?: any;
 }
 
 export class UpdateProductDto {
