@@ -22,12 +22,33 @@ export class AuthService {
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
-    console.log('user found');
+
+    // User must not exist
+    if (!user) {
+      return null;
+    }
+
+    // All users (including consumers) must verify phone before login
+    if (!user.isPhoneVerified) {
+      throw new BadRequestException(
+        'Phone number not verified. Please verify your OTP first.',
+      );
+    }
+
+    // Consumers login with phone only - no password validation needed
+    if (user.role === 'consumer') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...result } = user as any;
+      return result;
+    }
+
+    // Vendors, riders, and admins must provide valid password
     if (user && user.password && user.password === this.hashPassword(pass)) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user as any;
       return result;
     }
+
     return null;
   }
 

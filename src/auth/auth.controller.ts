@@ -1,15 +1,16 @@
 import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './auth-guards';
-import { RegisterDto } from './dto/register.dto';
-import { ResendOtpDto, VerifyOtpDto } from './dto/otp.dto';
+
 import {
   RequestPasswordResetDto,
   ResetPasswordDto,
   ChangePasswordDto,
 } from './dto/password.dto';
+import { AuthService } from './auth.service';
+import { LocalAuthGuard } from './auth-guards';
+import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './strategies/jwt.strategy';
+import { ResendOtpDto, VerifyOtpDto } from './dto/otp.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -46,7 +47,7 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  @ApiOperation({ summary: 'Login with username and password' })
+  @ApiOperation({ summary: 'Login with username/email and password' })
   @ApiBody({
     schema: {
       example: {
@@ -55,7 +56,11 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Login successful. For consumers: use phone number as username and any password.',
+  })
   async login(@Request() req) {
     return this.auth.login(req.user);
   }

@@ -11,7 +11,13 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import {  ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurant.dto';
