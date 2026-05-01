@@ -1,5 +1,5 @@
-export function mapToGeoLocation(latitude?: number, longitude?: number) {
-    if (latitude === undefined || longitude === undefined) {
+export function mapToGeoLocation(longitude?: number, latitude?: number) {
+    if (longitude === undefined || latitude === undefined) {
         return null;
     }
 

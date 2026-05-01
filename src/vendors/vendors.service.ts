@@ -81,9 +81,7 @@ export class VendorsService {
     }
 
     if (latitude !== undefined && longitude !== undefined) {
-      vendorData.latitude = latitude;
-      vendorData.longitude = longitude;
-      vendorData.location = mapToGeoLocation(latitude, longitude);
+      vendorData.location = mapToGeoLocation(longitude, latitude);
     }
 
     const vendor = new this.vendorModel(vendorData);

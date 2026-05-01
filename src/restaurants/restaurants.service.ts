@@ -23,12 +23,10 @@ export class RestaurantsService {
       name: createDto.name,
       description: createDto.description,
       address,
-      latitude,
-      longitude,
       vendorId
     }
 
-    const geoLocation = mapToGeoLocation(latitude, longitude);
+    const geoLocation = mapToGeoLocation(longitude, latitude);
 
     if (geoLocation) {
       restaurantData.location = geoLocation;

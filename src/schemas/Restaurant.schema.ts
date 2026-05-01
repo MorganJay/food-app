@@ -15,12 +15,6 @@ export class Restaurant extends BaseEntity {
   @Prop({ required: true })
   vendorId: string;
 
-  @Prop()
-  latitude: number;
-
-  @Prop()
-  longitude: number;
-
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: [Number],
