@@ -8,7 +8,7 @@ import { User, UserDocument } from '../schemas/User.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
 
   private hashPassword(password: string) {
     return createHash('sha256').update(password).digest('hex');
@@ -42,23 +42,37 @@ export class UsersService {
       ? await this.userModel.findOne({ referralCode: dto.referralCode }).exec()
       : null;
 
-    return this.userModel.findOneAndUpdate(
-      { phoneNumber },
-      {
-        $setOnInsert: {
-          phoneNumber,
-          username: dto.username,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          role: dto.role,
-          referralCode: this.generateReferralCode(),
-          referredBy: referrer?._id,
-          password: dto.password ? this.hashPassword(dto.password) : undefined,
-        },
-      },
-      { new: true, upsert: true },
-    );
+    const user = new this.userModel({
+      phoneNumber,
+      username: dto.username,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      role: dto.role,
+      referralCode: this.generateReferralCode(),
+      referredBy: referrer?._id,
+      password: dto.password ? this.hashPassword(dto.password) : undefined,
+    });
+
+    return await user.save();
+
+    // return this.userModel.findOneAndUpdate(
+    //   { phoneNumber },
+    //   {
+    //     $setOnInsert: {
+    //       phoneNumber,
+    //       username: dto.username,
+    //       firstName: dto.firstName,
+    //       lastName: dto.lastName,
+    //       email: dto.email,
+    //       role: dto.role,
+    //       referralCode: this.generateReferralCode(),
+    //       referredBy: referrer?._id,
+    //       password: dto.password ? this.hashPassword(dto.password) : undefined,
+    //     },
+    //   },
+    //   { new: true, upsert: true },
+    // );
   }
 
   async findByPhoneNumber(phoneNumber: string) {

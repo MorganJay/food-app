@@ -6,12 +6,14 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
+import { CreateVendorDto } from './dto/create-vendor.dto';
+import { mapToGeoLocation } from 'src/common/geojson';
 
 @Injectable()
 export class VendorsService {
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) {}
+  ) { }
 
   async listAll(
     skip: number = 0,
@@ -51,20 +53,38 @@ export class VendorsService {
       .exec();
   }
 
-  async createVendor(userId: string, vendorData: any) {
+  async createVendor(userId: string, createVendor: CreateVendorDto) {
+    const location = createVendor.location;
+
     const existing = await this.vendorModel.findOne({
-      businessName: vendorData.businessName,
+      businessName: createVendor.businessName,
     });
 
     if (existing) {
       throw new BadRequestException('Vendor name already exists');
     }
 
-    const vendor = new this.vendorModel({
+    const vendorData: any = {
       userId,
-      ...vendorData,
+      businessName: createVendor.businessName,
+      description: createVendor.description,
+      openHours: createVendor.openHours,
+      closeHours: createVendor.closeHours,
       isVerified: false,
-    });
+    };
+
+    const latitude = location?.latitude;
+    const longitude = location?.longitude;
+
+    if (location?.address) {
+      vendorData.address = location.address;
+    }
+
+    if (latitude !== undefined && longitude !== undefined) {
+      vendorData.location = mapToGeoLocation(longitude, latitude);
+    }
+
+    const vendor = new this.vendorModel(vendorData);
     return vendor.save();
   }
 
