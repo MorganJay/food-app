@@ -11,7 +11,6 @@ async function bootstrap() {
     .setTitle('Chopbaze API')
     .setDescription('API documentation for the Chopbaze App')
     .setVersion('1.0')
-    .addServer('/api/v1')
     .addTag('Chopbaze')
     .addBearerAuth(
       {
