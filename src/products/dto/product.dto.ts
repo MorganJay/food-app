@@ -43,12 +43,11 @@ export class CreateProductDto {
   category?: string;
 
   @ApiPropertyOptional({
-    example: 'https://example.com/cheese-burger.jpg',
-    description: 'Image URL of the food product',
+    type: 'string',
+    format: 'binary',
+    description: 'Product image file',
   })
-  @IsOptional()
-  @IsString()
-  image?: string;
+  image?: any;
 }
 
 export class UpdateProductDto {
@@ -100,4 +99,41 @@ export class UpdateProductDto {
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
+}
+
+
+export class ProductResponseDto {
+  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  id: string;
+
+  @ApiProperty({ example: 'Cheese Burger' })
+  name: string;
+
+  @ApiProperty({
+    example: 'A juicy beef burger topped with cheddar cheese and fresh lettuce',
+  })
+  description: string;
+
+  @ApiProperty({ example: 3500 })
+  price: number;
+
+  @ApiPropertyOptional({ example: 'Fast Food' })
+  category?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://your-cdn.com/uploads/burger.jpg',
+  })
+  image?: string;
+
+  @ApiPropertyOptional({ example: true })
+  isAvailable?: boolean;
+
+  @ApiProperty({ example: '67vendorId123' })
+  restaurantId: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }

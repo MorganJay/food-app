@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
-import { CreateVendorDto } from './dto/create-vendor.dto';
+import { CreateVendorDto, UpdateVendorDto, VendorResponseDto } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from 'src/common/geojson';
 
 @Injectable()
@@ -20,12 +20,14 @@ export class VendorsService {
     limit: number = 20,
     sortBy: string = 'avgRating',
   ) {
-    return this.vendorModel
+    const vendors = await this.vendorModel
       .find({ isVerified: true })
       .sort({ [sortBy]: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return vendors.map(vendor => this.mapVendorResponse(vendor));
   }
 
   async findById(id: string) {
@@ -33,11 +35,11 @@ export class VendorsService {
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
     }
-    return vendor;
+    return this.mapVendorResponse(vendor);
   }
 
   async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-    return this.vendorModel
+    const vendors = await this.vendorModel
       .find({
         isVerified: true,
         location: {
@@ -51,6 +53,8 @@ export class VendorsService {
         },
       })
       .exec();
+
+    return vendors.map(vendor => this.mapVendorResponse(vendor));
   }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {
@@ -84,11 +88,11 @@ export class VendorsService {
       vendorData.location = mapToGeoLocation(longitude, latitude);
     }
 
-    const vendor = new this.vendorModel(vendorData);
-    return vendor.save();
+    const vendor = await this.vendorModel.create(vendorData);
+    return this.mapVendorResponse(vendor);
   }
 
-  async updateProfile(id: string, userId: string, updateData: any) {
+  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
     const vendor = await this.vendorModel.findById(id).exec();
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
@@ -98,8 +102,60 @@ export class VendorsService {
         'You can only update your own vendor profile',
       );
     }
-    return this.vendorModel
-      .findByIdAndUpdate(id, updateData, { new: true })
+
+    const updatePayload: any = {};
+
+    if (updateData.businessName !== undefined) {
+      updatePayload.businessName = updateData.businessName;
+    }
+
+    if (updateData.description !== undefined) {
+      updatePayload.description = updateData.description;
+    }
+
+    if (updateData.openHours) {
+      updatePayload.openHours = updateData.openHours;
+    }
+
+    if (updateData.closeHours) {
+      updatePayload.closeHours = updateData.closeHours;
+    }
+
+    // handle location mapping
+    if (updateData.location) {
+      const { address, latitude, longitude } = updateData.location;
+
+      if (address) {
+        updatePayload.address = address;
+      }
+
+      if (latitude !== undefined && longitude !== undefined) {
+        updatePayload.location = mapToGeoLocation(longitude, latitude);
+      }
+    }
+
+    const updatedVendor = await this.vendorModel
+      .findByIdAndUpdate(id, updatePayload, { new: true })
       .exec();
+
+    return this.mapVendorResponse(updatedVendor);
+  }
+
+  private mapVendorResponse(vendor: any): VendorResponseDto {
+    return {
+      id: vendor._id.toString(),
+      businessName: vendor.businessName,
+      description: vendor.description,
+      openHours: vendor.openHours,
+      closeHours: vendor.closeHours,
+      isVerified: vendor.isVerified,
+      location: {
+        address: vendor.address,
+        latitude: vendor.location?.coordinates?.[1],
+        longitude: vendor.location?.coordinates?.[0],
+      },
+      createdAt: vendor.createdAt,
+      updatedAt: vendor.updatedAt,
+    };
   }
 }

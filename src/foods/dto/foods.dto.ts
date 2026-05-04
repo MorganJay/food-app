@@ -97,3 +97,43 @@ export class UpdateFoodDto {
   @IsString()
   status?: string;
 }
+
+export class FoodResponseDto {
+  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  id: string;
+
+  @ApiProperty({ example: 'Jollof Rice' })
+  name: string;
+
+  @ApiProperty({ example: 'plate' })
+  unit: string;
+
+  @ApiProperty({ example: 2500 })
+  price: number;
+
+  @ApiPropertyOptional({ example: 'Main Course' })
+  category?: string;
+
+  @ApiPropertyOptional({ example: 20 })
+  prepTime?: number;
+
+  @ApiPropertyOptional({
+    example: 'https://your-cdn.com/uploads/jollof.jpg',
+  })
+  image?: string;
+
+  @ApiPropertyOptional({
+    example: 'available',
+    description: 'Food availability status',
+  })
+  status?: string;
+
+  @ApiProperty({ example: '67restaurantId123' })
+  restaurantId: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
