@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString, IsNumber, IsOptional, ValidateNested } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 
@@ -87,6 +87,9 @@ export class UpdateRestaurantDto {
   @IsString()
   address?: string;
 
+  @ApiProperty({ example: true })
+  isActive?: boolean;
+
   @ApiProperty({
     description: 'Restaurant location details',
     type: LocationDto
@@ -95,4 +98,36 @@ export class UpdateRestaurantDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location?: LocationDto;
+}
+
+export class RestaurantResponseDto {
+  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  id: string;
+
+  @ApiProperty({ example: 'Chicken Republic' })
+  name: string;
+
+  @ApiProperty({ example: 'Fast food restaurant serving meals' })
+  description: string;
+
+  @ApiProperty({ example: 'vendor123' })
+  vendorId: string;
+
+  @ApiProperty({ example: true })
+  isActive: boolean;
+
+  @ApiPropertyOptional()
+  rating?: number;
+
+  @ApiPropertyOptional()
+  reviewCount?: number;
+
+  @ApiProperty({ type: LocationDto })
+  location: LocationDto;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }

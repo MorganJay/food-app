@@ -20,12 +20,14 @@ export class VendorsService {
     limit: number = 20,
     sortBy: string = 'avgRating',
   ) {
-    return this.vendorModel
+    const vendors = await this.vendorModel
       .find({ isVerified: true })
       .sort({ [sortBy]: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return vendors.map(vendor => this.mapVendorResponse(vendor));
   }
 
   async findById(id: string) {
@@ -33,11 +35,11 @@ export class VendorsService {
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
     }
-    return vendor;
+    return this.mapVendorResponse(vendor);
   }
 
   async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-    return this.vendorModel
+    const vendors = await this.vendorModel
       .find({
         isVerified: true,
         location: {
@@ -51,6 +53,8 @@ export class VendorsService {
         },
       })
       .exec();
+
+    return vendors.map(vendor => this.mapVendorResponse(vendor));
   }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {
@@ -101,7 +105,23 @@ export class VendorsService {
       );
     }
 
-    const updatePayload: any = { ...updateData };
+    const updatePayload: any = {};
+
+    if (updateData.businessName !== undefined) {
+      updatePayload.businessName = updateData.businessName;
+    }
+
+    if (updateData.description !== undefined) {
+      updatePayload.description = updateData.description;
+    }
+
+    if (updateData.openHours) {
+      updatePayload.openHours = updateData.openHours;
+    }
+
+    if (updateData.closeHours) {
+      updatePayload.closeHours = updateData.closeHours;
+    }
 
     // handle location mapping
     if (updateData.location) {
@@ -114,9 +134,6 @@ export class VendorsService {
       if (latitude !== undefined && longitude !== undefined) {
         updatePayload.location = mapToGeoLocation(longitude, latitude);
       }
-
-      // remove nested location DTO to avoid saving wrong location data
-      delete updatePayload.location;
     }
 
     const updatedVendor = await this.vendorModel
