@@ -139,6 +139,8 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   @ApiBearerAuth('jwt')
+  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update a product' })
   @ApiParam({
     name: 'id',
@@ -152,8 +154,9 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() updateDto: UpdateProductDto,
     @Req() req,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.productsService.update(id, req.user.sub, updateDto);
+    return this.productsService.update(id, req.user.sub, updateDto, file);
   }
 
   @UseGuards(JwtAuthGuard)

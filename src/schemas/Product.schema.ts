@@ -19,7 +19,7 @@ export class Product extends BaseEntity {
   category: string;
 
   @Prop()
-  imageUrl: string;
+  image: string;
 
   @Prop({ required: true })
   restaurantId: string;

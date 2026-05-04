@@ -12,19 +12,21 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { ConsumersService } from './consumers.service';
+import { ToggleFavoriteDto } from './dto/consumers.dto';
 
 @ApiTags('Consumers')
 @ApiBearerAuth('jwt')
 @Controller('consumers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConsumersController {
-  constructor(private consumersService: ConsumersService) {}
+  constructor(private consumersService: ConsumersService) { }
 
   @Get('profile')
   @Roles(UserRole.CONSUMER)
@@ -46,8 +48,8 @@ export class ConsumersController {
   @Roles(UserRole.CONSUMER)
   @ApiOperation({ summary: 'Toggle favorite vendor' })
   @ApiResponse({ status: 200, description: 'Favorite toggled' })
-  async toggleFavorite(@Req() req, @Body('vendorId') vendorId: string) {
-    return this.consumersService.toggleFavorite(req.user.sub, vendorId);
+  async toggleFavorite(@Req() req, @Body() dto: ToggleFavoriteDto) {
+    return this.consumersService.toggleFavorite(req.user.sub, dto.vendorId);
   }
 
   @Get('orders')

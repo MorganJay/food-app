@@ -32,11 +32,8 @@ export class RestaurantsService {
       restaurantData.location = geoLocation;
     }
 
-    const restaurant = new this.restaurantModel(restaurantData);
-
-    const savedRestaurant = await restaurant.save();
-
-    return this.mapRestaurantResponse(savedRestaurant);
+    const restaurant = await this.restaurantModel.create(restaurantData);
+    return this.mapRestaurantResponse(restaurant);
   }
 
   async findAll(skip: number = 0, limit: number = 10) {

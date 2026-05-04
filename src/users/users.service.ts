@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
+import { UserResponseDto } from './dto/users.dto';
 
 @Injectable()
 export class UsersService {
@@ -54,29 +55,13 @@ export class UsersService {
       password: dto.password ? this.hashPassword(dto.password) : undefined,
     });
 
-    return await user.save();
-
-    // return this.userModel.findOneAndUpdate(
-    //   { phoneNumber },
-    //   {
-    //     $setOnInsert: {
-    //       phoneNumber,
-    //       username: dto.username,
-    //       firstName: dto.firstName,
-    //       lastName: dto.lastName,
-    //       email: dto.email,
-    //       role: dto.role,
-    //       referralCode: this.generateReferralCode(),
-    //       referredBy: referrer?._id,
-    //       password: dto.password ? this.hashPassword(dto.password) : undefined,
-    //     },
-    //   },
-    //   { new: true, upsert: true },
-    // );
+    const savedUser = await user.save();
+    return this.mapUserResponse(savedUser);
   }
 
   async findByPhoneNumber(phoneNumber: string) {
-    return this.userModel.findOne({ phoneNumber }).exec();
+    const user = await this.userModel.findOne({ phoneNumber }).exec();
+    return this.mapUserResponse(user);
   }
 
   async findById(id: string) {
@@ -87,19 +72,22 @@ export class UsersService {
     const user = await this.findByPhoneNumber(phoneNumber);
     if (!user) throw new Error('User not found');
     if (user.isPhoneVerified) throw new Error('Phone already verified');
-    return this.userModel.findOneAndUpdate(
+    const savedUser = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { $set: { isPhoneVerified: true } },
       { new: true },
     );
+
+    return this.mapUserResponse(savedUser);
   }
 
   async setPassword(phoneNumber: string, newPassword: string) {
-    return this.userModel.findOneAndUpdate(
+    const user = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { password: this.hashPassword(newPassword) },
       { new: true },
     );
+    return this.mapUserResponse(user);
   }
 
   async changePassword(
@@ -114,10 +102,25 @@ export class UsersService {
     if (user.password !== this.hashPassword(currentPassword)) {
       throw new BadRequestException('Current password is incorrect');
     }
-    return this.userModel.findByIdAndUpdate(
+    const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
       { password: this.hashPassword(newPassword) },
       { new: true },
     );
+
+    return this.mapUserResponse(updatedUser);
+  }
+
+  private mapUserResponse(user: any): UserResponseDto {
+    return {
+      id: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      isPhoneVerified: user.isPhoneVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }

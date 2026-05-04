@@ -14,7 +14,7 @@ export class AuthService {
     private jwtService: JwtService,
     private otpService: OtpService,
     private otpDelivery: OtpDeliveryService,
-  ) {}
+  ) { }
 
   private hashPassword(password: string) {
     return createHash('sha256').update(password).digest('hex');
@@ -116,7 +116,7 @@ export class AuthService {
     await this.otpService.verify(phoneNumber, code);
 
     const user = await this.usersService.verifyPhoneNumber(phoneNumber);
-    const payload = { sub: user._id.toString(), role: user.role };
+    const payload = { sub: user.id, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
     return { accessToken, user };

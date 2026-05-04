@@ -88,10 +88,8 @@ export class VendorsService {
       vendorData.location = mapToGeoLocation(longitude, latitude);
     }
 
-    const vendor = new this.vendorModel(vendorData);
-    const savedVendor = await vendor.save();
-
-    return this.mapVendorResponse(savedVendor);
+    const vendor = await this.vendorModel.create(vendorData);
+    return this.mapVendorResponse(vendor);
   }
 
   async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
