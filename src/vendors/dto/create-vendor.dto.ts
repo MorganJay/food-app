@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, IsOptional, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class LocationDto {
   @ApiProperty({
@@ -84,13 +84,7 @@ export class UpdateVendorDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({
-    description: 'Vendor location details',
-    type: LocationDto
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => LocationDto)
+  @ApiPropertyOptional({ type: LocationDto })
   location?: LocationDto;
 
   @ApiProperty({ required: false })
@@ -100,4 +94,33 @@ export class UpdateVendorDto {
   @ApiProperty({ required: false })
   @IsOptional()
   closeHours?: string;
+}
+
+export class VendorResponseDto {
+  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  id: string;
+
+  @ApiProperty({ example: 'Mama Put Kitchen' })
+  businessName: string;
+
+  @ApiProperty({ example: 'Local food vendor serving delicious Nigerian dishes' })
+  description: string;
+
+  @ApiProperty({ example: '08:00' })
+  openHours: string;
+
+  @ApiProperty({ example: '22:00' })
+  closeHours: string;
+
+  @ApiProperty({ example: false })
+  isVerified: boolean;
+
+  @ApiProperty({ type: LocationDto })
+  location: LocationDto;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }
