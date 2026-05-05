@@ -123,4 +123,7 @@ export class VendorResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
 }

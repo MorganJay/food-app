@@ -130,4 +130,7 @@ export class RestaurantResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
 }

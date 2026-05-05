@@ -13,6 +13,9 @@ export class Product extends BaseEntity {
   description: string;
 
   @Prop({ required: true })
+  unit: string;
+
+  @Prop({ required: true })
   price: number;
 
   @Prop()
@@ -20,6 +23,15 @@ export class Product extends BaseEntity {
 
   @Prop()
   image: string;
+
+  @Prop({ default: 0 })
+  prepTime: number;
+
+  @Prop({ default: 0 })
+  avgRating: number;
+
+  @Prop({ default: 0 })
+  reviewsCount: number;
 
   @Prop({ required: true })
   restaurantId: string;
@@ -47,5 +59,5 @@ ProductSchema.pre('save', async function (next) {
   }
   next();
 });
-ProductSchema.index({ restaurantId: 1 });
+ProductSchema.index({ name: 1, restaurantId: 1 }, { unique: true });
 ProductSchema.index({ name: 'text', description: 'text' });

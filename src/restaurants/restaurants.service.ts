@@ -153,6 +153,7 @@ export class RestaurantsService {
       reviewCount: restaurant.reviewCount,
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
+      serialNumber: restaurant.serialNumber,
     };
   }
 }

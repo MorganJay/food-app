@@ -24,4 +24,7 @@ export class UserResponseDto {
 
     @ApiProperty()
     updatedAt: Date;
+
+    @ApiProperty({ example: 1 })
+    serialNumber: number;
 }

@@ -13,7 +13,7 @@ export class Review extends BaseEntity {
   vendorId: string;
 
   @Prop()
-  foodId: string;
+  productId: string;
 
   @Prop({ required: true, min: 1, max: 5 })
   rating: number;

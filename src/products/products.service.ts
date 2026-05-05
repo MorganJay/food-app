@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -14,7 +15,21 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) { }
 
-  async create(createDto: CreateProductDto, restaurantId: string, file?: Express.Multer.File) {
+  async create(createDto: CreateProductDto, file?: Express.Multer.File) {
+    const name = createDto.name.trim();
+
+    const existingProduct = await this.productModel.findOne({
+      restaurantId: createDto.restaurantId,
+      name: {
+        $regex: `^${name}$`,
+        $options: 'i',
+      },
+    });
+
+    if (existingProduct) {
+      throw new BadRequestException('Product already exists for this restaurant');
+    }
+
     let image: string | undefined;
 
     if (file) {
@@ -23,7 +38,7 @@ export class ProductsService {
 
     const productData: any = {
       ...createDto,
-      restaurantId,
+      name,
     };
 
     // add image if exits
@@ -34,6 +49,16 @@ export class ProductsService {
     const product = await this.productModel.create(productData);
 
     return this.mapProductResponse(product);
+  }
+
+  async findAll(skip: number = 0, limit: number = 10) {
+    const products = await this.productModel
+      .find({ isAvailable: true })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    return products.map((product) => this.mapProductResponse(product));
   }
 
   async findByRestaurant(
@@ -85,8 +110,12 @@ export class ProductsService {
 
     const updatePayload: any = { ...updateDto };
 
+    if (updatePayload.name) {
+      updatePayload.name = updatePayload.name.trim();
+    }
+
     if (file) {
-      updateDto.image = `/uploads/products/${file.filename}`;
+      updatePayload.image = `/uploads/products/${file.filename}`;
     }
 
     const updatedProduct = await this.productModel
@@ -117,12 +146,15 @@ export class ProductsService {
       name: product.name,
       description: product.description,
       price: product.price,
+      unit: product.unit,
+      prepTime: product.prepTime,
       category: product.category,
       image: product.image,
       isAvailable: product.isAvailable,
       restaurantId: product.restaurantId,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
+      serialNumber: product.serialNumber,
     };
   }
 }

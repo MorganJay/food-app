@@ -121,6 +121,7 @@ export class UsersService {
       isPhoneVerified: user.isPhoneVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      serialNumber: user.serialNumber,
     };
   }
 }

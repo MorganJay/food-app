@@ -7,16 +7,16 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Review, ReviewDocument } from '../schemas/Review.schema';
-import { Food, FoodDocument } from '../schemas/Food.schema';
+import { Product, ProductDocument } from '../schemas/Product.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 
 @Injectable()
 export class ReviewsService {
   constructor(
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
-    @InjectModel(Food.name) private foodModel: Model<FoodDocument>,
+    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) {}
+  ) { }
 
   async create(consumerId: string, reviewData: any) {
     const review = new this.reviewModel({
@@ -27,16 +27,16 @@ export class ReviewsService {
     const created = await review.save();
     await this.adjustAverages(
       created.vendorId,
-      created.foodId,
+      created.productId,
       created.rating,
       1,
     );
     return created;
   }
 
-  async findByFood(foodId: string, skip: number = 0, limit: number = 20) {
+  async findByFood(productId: string, skip: number = 0, limit: number = 20) {
     return this.reviewModel
-      .find({ foodId, isDeleted: false })
+      .find({ productId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -87,7 +87,7 @@ export class ReviewsService {
     if (updateData.rating != null && updated) {
       await this.adjustAverages(
         updated.vendorId,
-        updated.foodId,
+        updated.productId,
         (updateData.rating as number) - originalRating,
         0,
       );
@@ -117,7 +117,7 @@ export class ReviewsService {
     });
     await this.adjustAverages(
       review.vendorId,
-      review.foodId,
+      review.productId,
       -review.rating,
       -1,
     );
@@ -140,21 +140,21 @@ export class ReviewsService {
 
   private async adjustAverages(
     vendorId: string,
-    foodId: string,
+    productId: string,
     ratingDelta: number,
     countDelta: number,
   ) {
-    const food = await this.foodModel.findById(foodId).exec();
+    const product = await this.productModel.findById(productId).exec();
     const vendor = await this.vendorModel.findById(vendorId).exec();
-    if (food) {
-      const currentCount = food.reviewsCount || 0;
-      const currentAvg = food.avgRating || 0;
+    if (product) {
+      const currentCount = product.reviewsCount || 0;
+      const currentAvg = product.avgRating || 0;
       const nextCount = currentCount + countDelta;
       const nextAvg =
         nextCount > 0
           ? (currentAvg * currentCount + ratingDelta) / nextCount
           : 0;
-      await this.foodModel.findByIdAndUpdate(foodId, {
+      await this.productModel.findByIdAndUpdate(productId, {
         reviewsCount: Math.max(0, nextCount),
         avgRating: nextAvg,
       });

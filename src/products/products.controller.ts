@@ -33,6 +33,18 @@ import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 export class ProductsController {
   constructor(private productsService: ProductsService) { }
 
+  @Get()
+  @ApiOperation({ summary: 'Get all products (paginated)' })
+  @ApiQuery({ name: 'skip', required: false, example: 0 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({ status: 200, description: 'List of products' })
+  async findAll(
+    @Query('skip') skip: string = '0',
+    @Query('limit') limit: string = '10',
+  ) {
+    return this.productsService.findAll(parseInt(skip), parseInt(limit));
+  }
+
   @Get('search')
   @ApiOperation({ summary: 'Search for products by keyword' })
   @ApiQuery({
@@ -115,25 +127,19 @@ export class ProductsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('restaurant/:restaurantId')
+  @Post('restaurant')
   @ApiBearerAuth('jwt')
   @UseInterceptors(FileInterceptor('image', multerConfig('products')))
   @ApiOperation({ summary: 'Create a new product for a restaurant' })
   @ApiConsumes('multipart/form-data')
-  @ApiParam({
-    name: 'restaurantId',
-    description: 'Restaurant unique ID',
-    example: '67ab12cd34ef56gh78ij90kl',
-  })
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
-    @Param('restaurantId') restaurantId: string,
     @Body() createDto: CreateProductDto,
     @UploadedFile() file: Express.Multer.File,
     @Req() req,
   ) {
-    return this.productsService.create(createDto, restaurantId, file);
+    return this.productsService.create(createDto, file);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -29,24 +29,24 @@ import { CreateReviewDto, UpdateReviewDto } from './dto/reviews.dto';
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private reviewsService: ReviewsService) {}
+  constructor(private reviewsService: ReviewsService) { }
 
-  @Get('food/:foodId')
-  @ApiOperation({ summary: 'Get reviews for a food item' })
+  @Get('product/:productId')
+  @ApiOperation({ summary: 'Get reviews for a product item' })
   @ApiParam({
-    name: 'foodId',
-    example: 'food_12345',
+    name: 'productId',
+    example: 'product_12345',
   })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
-  @ApiResponse({ status: 200, description: 'Food reviews' })
+  @ApiResponse({ status: 200, description: 'Product reviews' })
   async findByFood(
-    @Param('foodId') foodId: string,
+    @Param('productId') productId: string,
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
     return this.reviewsService.findByFood(
-      foodId,
+      productId,
       parseInt(skip),
       parseInt(limit),
     );

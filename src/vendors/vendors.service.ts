@@ -156,6 +156,7 @@ export class VendorsService {
       },
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
+      serialNumber: vendor.serialNumber,
     };
   }
 }
