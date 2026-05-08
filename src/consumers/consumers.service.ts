@@ -1,13 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Consumer, ConsumerDocument } from '../schemas/Consumer.schema';
+import { ConsumerResponseDto } from './dto/consumers.dto';
+import { Vendor } from 'src/schemas/Vendor.schema';
 
 @Injectable()
 export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
-  ) {}
+    @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
+  ) { }
 
   async getProfile(userId: string) {
     let consumer = await this.consumerModel.findOne({ userId }).exec();
@@ -19,24 +22,35 @@ export class ConsumersService {
       });
       await consumer.save();
     }
-    return consumer;
+    return this.mapConsumerResponse(consumer);
   }
 
   async updateProfile(userId: string, updateData: any) {
-    return this.consumerModel
+    const consumer = await this.consumerModel
       .findOneAndUpdate({ userId }, updateData, { new: true, upsert: true })
       .exec();
+
+    return this.mapConsumerResponse(consumer);
   }
 
   async toggleFavorite(userId: string, vendorId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
-      const newConsumer = new this.consumerModel({
+      const newConsumer = await this.consumerModel.create({
         userId,
         favorites: [vendorId],
         orderHistory: [],
       });
-      return newConsumer.save();
+      return this.mapConsumerResponse(newConsumer);
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      throw new BadRequestException('Invalid vendorId');
+    }
+
+    const vendorExists = await this.vendorModel.findById(vendorId).exec();
+    if (!vendorExists) {
+      throw new NotFoundException('Vendor not found');
     }
 
     const isFavorited = consumer.favorites.includes(vendorId);
@@ -45,7 +59,9 @@ export class ConsumersService {
     } else {
       consumer.favorites.push(vendorId);
     }
-    return consumer.save();
+    await consumer.save();
+
+    return this.mapConsumerResponse(consumer);
   }
 
   async getOrders(userId: string) {
@@ -54,5 +70,16 @@ export class ConsumersService {
       throw new NotFoundException('Consumer not found');
     }
     return consumer.orderHistory;
+  }
+
+  private mapConsumerResponse(consumer: any): ConsumerResponseDto {
+    return {
+      id: consumer._id.toString(),
+      userId: consumer.userId,
+      favorites: consumer.favorites || [],
+      orderHistory: consumer.orderHistory || [],
+      createdAt: consumer.createdAt,
+      updatedAt: consumer.updatedAt,
+    };
   }
 }

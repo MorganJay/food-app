@@ -10,6 +10,8 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +20,10 @@ import {
   ApiQuery,
   ApiParam,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/common/config/multer.config';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -27,6 +32,18 @@ import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 @Controller('products')
 export class ProductsController {
   constructor(private productsService: ProductsService) { }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all products (paginated)' })
+  @ApiQuery({ name: 'skip', required: false, example: 0 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({ status: 200, description: 'List of products' })
+  async findAll(
+    @Query('skip') skip: string = '0',
+    @Query('limit') limit: string = '10',
+  ) {
+    return this.productsService.findAll(parseInt(skip), parseInt(limit));
+  }
 
   @Get('search')
   @ApiOperation({ summary: 'Search for products by keyword' })
@@ -110,27 +127,26 @@ export class ProductsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('restaurant/:restaurantId')
+  @Post('restaurant')
   @ApiBearerAuth('jwt')
+  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
   @ApiOperation({ summary: 'Create a new product for a restaurant' })
-  @ApiParam({
-    name: 'restaurantId',
-    description: 'Restaurant unique ID',
-    example: '67ab12cd34ef56gh78ij90kl',
-  })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
-    @Param('restaurantId') restaurantId: string,
     @Body() createDto: CreateProductDto,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req,
   ) {
-    return this.productsService.create(createDto, restaurantId);
+    return this.productsService.create(createDto, file);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   @ApiBearerAuth('jwt')
+  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update a product' })
   @ApiParam({
     name: 'id',
@@ -144,8 +160,9 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() updateDto: UpdateProductDto,
     @Req() req,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.productsService.update(id, req.user.sub, updateDto);
+    return this.productsService.update(id, req.user.sub, updateDto, file);
   }
 
   @UseGuards(JwtAuthGuard)

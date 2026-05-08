@@ -15,7 +15,6 @@ import { OrdersModule } from './orders/orders.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { ConsumersModule } from './consumers/consumers.module';
 import { VendorsModule } from './vendors/vendors.module';
-import { FoodsModule } from './foods/foods.module';
 import { RidersModule } from './riders/riders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReviewsModule } from './reviews/reviews.module';
@@ -37,7 +36,6 @@ import { NotificationsModule } from './notifications/notifications.module';
     DeliveriesModule,
     ConsumersModule,
     VendorsModule,
-    FoodsModule,
     RidersModule,
     NotificationsModule,
     PaymentsModule,
@@ -47,4 +45,4 @@ import { NotificationsModule } from './notifications/notifications.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
