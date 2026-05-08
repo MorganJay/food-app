@@ -11,31 +11,48 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { NotificationsService, SmsNotification } from './notifications.service';
+import { IsEmail, IsObject, IsOptional, IsString } from 'class-validator';
 
 class SendSmsDto {
+  @IsString()
   to: string;
+
+  @IsString()
   message: string;
 }
 
 class SendEmailDto {
+  @IsEmail()
   to: string;
+
+  @IsString()
   subject: string;
+
+  @IsString()
   body: string;
 }
 
 class SendPushDto {
+  @IsString()
   token: string;
+
+  @IsString()
   title: string;
+
+  @IsString()
   body: string;
+
+  @IsOptional()
+  @IsObject()
   data?: Record<string, any>;
 }
 
 @ApiTags('Notifications')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   @Post('send-sms')
   @Roles(UserRole.ADMIN)

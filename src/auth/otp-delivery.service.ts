@@ -32,17 +32,32 @@ export class OtpDeliveryService {
 
     if (this.channels.includes('SMS') && recipient.phoneNumber) {
       this.logger.log(`Sending OTP via SMS to ${recipient.phoneNumber}`);
-      senders.push(this.smsProvider.sendOtp(recipient.phoneNumber, code));
+      senders.push(this.smsProvider.sendOtp(recipient.phoneNumber, code)
+        .catch((err) => {
+          this.logger.error(`SMS failed: ${err.message}`);
+          return { success: false, channel: 'sms', error: err.message };
+        }),
+      );
     }
 
     if (this.channels.includes('EMAIL') && recipient.email) {
       this.logger.log(`Sending OTP via email to ${recipient.email}`);
-      senders.push(this.emailProvider.sendOtp(recipient.email, code));
+      senders.push(this.emailProvider.sendOtp(recipient.email, code)
+        .catch((err) => {
+          this.logger.error(`Email failed: ${err.message}`);
+          return { success: false, channel: 'email', error: err.message };
+        }),
+      );
     }
 
     if (this.channels.includes('PUSH') && recipient.pushToken) {
       this.logger.log(`Sending OTP via push to ${recipient.pushToken}`);
-      senders.push(this.pushProvider.sendOtp(recipient.pushToken, code));
+      senders.push(this.pushProvider.sendOtp(recipient.pushToken, code)
+        .catch((err) => {
+          this.logger.error(`Push failed: ${err.message}`);
+          return { success: false, channel: 'push', error: err.message };
+        }),
+      );
     }
 
     if (senders.length === 0) {
@@ -52,6 +67,11 @@ export class OtpDeliveryService {
       return;
     }
 
-    await Promise.all(senders);
+    // await Promise.all(senders);
+    const results = await Promise.all(senders);
+
+    this.logger.log('OTP delivery results:', results);
+
+    return results;
   }
 }
