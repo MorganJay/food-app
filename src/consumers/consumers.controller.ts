@@ -26,7 +26,7 @@ import { ToggleFavoriteDto } from './dto/consumers.dto';
 @Controller('consumers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConsumersController {
-  constructor(private consumersService: ConsumersService) { }
+  constructor(private consumersService: ConsumersService) {}
 
   @Get('profile')
   @Roles(UserRole.CONSUMER)

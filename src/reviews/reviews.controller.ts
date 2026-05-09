@@ -29,7 +29,7 @@ import { CreateReviewDto, UpdateReviewDto } from './dto/reviews.dto';
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private reviewsService: ReviewsService) { }
+  constructor(private reviewsService: ReviewsService) {}
 
   @Get('product/:productId')
   @ApiOperation({ summary: 'Get reviews for a product item' })
@@ -111,7 +111,11 @@ export class ReviewsController {
     name: 'id',
     example: 'review_12345',
   })
-  async update(@Param('id') id: string, @Body() updateData: UpdateReviewDto, @Req() req) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateData: UpdateReviewDto,
+    @Req() req,
+  ) {
     return this.reviewsService.update(id, req.user.sub, updateData);
   }
 

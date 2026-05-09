@@ -1,11 +1,16 @@
-import { createHash } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { OtpService } from '../otp/otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
 import { OtpDeliveryService } from './otp-delivery.service';
+import { UserRole } from '../schemas/User.schema';
+import { isBcryptHash, verifyPassword } from '../common/password.util';
 
 @Injectable()
 export class AuthService {
@@ -14,42 +19,38 @@ export class AuthService {
     private jwtService: JwtService,
     private otpService: OtpService,
     private otpDelivery: OtpDeliveryService,
-  ) { }
-
-  private hashPassword(password: string) {
-    return createHash('sha256').update(password).digest('hex');
-  }
+  ) {}
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
 
-    // User must not exist
     if (!user) {
       return null;
     }
 
-    // All users (including consumers) must verify phone before login
     if (!user.isPhoneVerified) {
       throw new BadRequestException(
         'Phone number not verified. Please verify your OTP first.',
       );
     }
 
-    // Consumers login with phone only - no password validation needed
-    if (user.role === 'consumer') {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = user as any;
-      return result;
+    if (user.role === UserRole.CONSUMER) {
+      throw new UnauthorizedException(
+        'Consumers must sign in with POST /auth/verify-otp, not password login.',
+      );
     }
 
-    // Vendors, riders, and admins must provide valid password
-    if (user && user.password && user.password === this.hashPassword(pass)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = user as any;
-      return result;
+    if (!(await verifyPassword(pass, user.password))) {
+      return null;
     }
 
-    return null;
+    if (user.password && !isBcryptHash(user.password)) {
+      await this.usersService.rehashPasswordToBcrypt(user._id.toString(), pass);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...result } = user as any;
+    return result;
   }
 
   async login(user: any) {
@@ -71,7 +72,7 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    await this.usersService.upsertByPhoneNumber(dto.phoneNumber, dto);
+    await this.usersService.createByPhoneNumber(dto.phoneNumber, dto);
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)
@@ -87,7 +88,6 @@ export class AuthService {
       },
       code,
     );
-    console.log(`OTP sent to user: ${code}`);
 
     return { message: 'OTP sent' };
   }
@@ -117,7 +117,12 @@ export class AuthService {
     await this.otpService.verify(phoneNumber, code);
 
     const user = await this.usersService.verifyPhoneNumber(phoneNumber);
-    const payload = { sub: user.id, role: user.role };
+    const payload = {
+      sub: user.id,
+      role: user.role,
+      username: user.username,
+      phoneNumber: user.phoneNumber,
+    };
     const accessToken = await this.jwtService.signAsync(payload);
 
     return { accessToken, user };

@@ -83,7 +83,11 @@ export class VendorsController {
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
-  async update(@Param('id') id: string, @Body() updateData: UpdateVendorDto, @Req() req) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateData: UpdateVendorDto,
+    @Req() req,
+  ) {
     return this.vendorsService.updateProfile(id, req.user.sub, updateData);
   }
 }

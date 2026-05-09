@@ -136,7 +136,6 @@ export class UpdateProductDto {
   isAvailable?: boolean;
 }
 
-
 export class ProductResponseDto {
   @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
   id: string;

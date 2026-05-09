@@ -16,7 +16,7 @@ export class ReviewsService {
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) { }
+  ) {}
 
   async create(consumerId: string, reviewData: any) {
     const review = new this.reviewModel({

@@ -1,19 +1,20 @@
 import { Model } from 'mongoose';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
 import { UserResponseDto } from './dto/users.dto';
+import { hashPassword, verifyPassword } from '../common/password.util';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) { }
-
-  private hashPassword(password: string) {
-    return createHash('sha256').update(password).digest('hex');
-  }
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   private generateReferralCode() {
     return `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
@@ -38,7 +39,7 @@ export class UsersService {
     });
   }
 
-  async upsertByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
+  async createByPhoneNumber(phoneNumber: string, dto: RegisterDto) {
     const referrer = dto.referralCode
       ? await this.userModel.findOne({ referralCode: dto.referralCode }).exec()
       : null;
@@ -52,15 +53,18 @@ export class UsersService {
       role: dto.role,
       referralCode: this.generateReferralCode(),
       referredBy: referrer?._id,
-      password: dto.password ? this.hashPassword(dto.password) : undefined,
+      password: dto.password ? await hashPassword(dto.password) : undefined,
     });
 
     const savedUser = await user.save();
     return this.mapUserResponse(savedUser);
   }
 
-  async findByPhoneNumber(phoneNumber: string) {
+  async findByPhoneNumber(
+    phoneNumber: string,
+  ): Promise<UserResponseDto | null> {
     const user = await this.userModel.findOne({ phoneNumber }).exec();
+    if (!user) return null;
     return this.mapUserResponse(user);
   }
 
@@ -69,24 +73,28 @@ export class UsersService {
   }
 
   async verifyPhoneNumber(phoneNumber: string) {
-    const user = await this.findByPhoneNumber(phoneNumber);
-    if (!user) throw new Error('User not found');
-    if (user.isPhoneVerified) throw new Error('Phone already verified');
+    const existing = await this.userModel.findOne({ phoneNumber }).exec();
+    if (!existing) throw new NotFoundException('User not found');
+    if (existing.isPhoneVerified) {
+      throw new BadRequestException('Phone already verified');
+    }
     const savedUser = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { $set: { isPhoneVerified: true } },
       { new: true },
     );
-
+    if (!savedUser) throw new NotFoundException('User not found');
     return this.mapUserResponse(savedUser);
   }
 
   async setPassword(phoneNumber: string, newPassword: string) {
+    const hashed = await hashPassword(newPassword);
     const user = await this.userModel.findOneAndUpdate(
       { phoneNumber },
-      { password: this.hashPassword(newPassword) },
+      { password: hashed },
       { new: true },
     );
+    if (!user) throw new NotFoundException('User not found');
     return this.mapUserResponse(user);
   }
 
@@ -99,19 +107,25 @@ export class UsersService {
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    if (user.password !== this.hashPassword(currentPassword)) {
+    if (!(await verifyPassword(currentPassword, user.password))) {
       throw new BadRequestException('Current password is incorrect');
     }
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
-      { password: this.hashPassword(newPassword) },
+      { password: await hashPassword(newPassword) },
       { new: true },
     );
-
+    if (!updatedUser) throw new BadRequestException('User not found');
     return this.mapUserResponse(updatedUser);
   }
 
-  private mapUserResponse(user: any): UserResponseDto {
+  async rehashPasswordToBcrypt(userId: string, plainPassword: string) {
+    await this.userModel.findByIdAndUpdate(userId, {
+      password: await hashPassword(plainPassword),
+    });
+  }
+
+  private mapUserResponse(user: UserDocument): UserResponseDto {
     return {
       id: user._id.toString(),
       username: user.username,

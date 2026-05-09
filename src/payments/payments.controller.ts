@@ -9,12 +9,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -56,8 +51,9 @@ export class PaymentsController {
   async verify(
     @Param('id') id: string,
     @Body() body: { transactionRef: string },
+    @Req() req,
   ) {
-    return this.paymentsService.verify(id, body.transactionRef);
+    return this.paymentsService.verify(id, body.transactionRef, req.user.sub);
   }
 
   @Get('history')
@@ -82,8 +78,8 @@ export class PaymentsController {
 
   @Post(':id/refund-request')
   @Roles(UserRole.CONSUMER)
-  async requestRefund(@Param('id') id: string) {
-    return this.paymentsService.requestRefund(id);
+  async requestRefund(@Param('id') id: string, @Req() req) {
+    return this.paymentsService.requestRefund(id, req.user.sub);
   }
 
   @Patch(':id/refund')
