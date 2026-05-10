@@ -89,7 +89,7 @@ export class AuthService {
       code,
     );
 
-    return { message: 'OTP sent' };
+    return { message: 'OTP sent', otp: code };
   }
 
   async resendOtp(phoneNumber: string) {
@@ -110,7 +110,7 @@ export class AuthService {
       },
       code,
     );
-    return { message: 'OTP resent' };
+    return { message: 'OTP resent', otp: code };
   }
 
   async verifyOtp(phoneNumber: string, code: string) {
@@ -143,7 +143,7 @@ export class AuthService {
       { phoneNumber: user.phoneNumber, email: user.email },
       code,
     );
-    return { message: 'Password reset code sent' };
+    return { message: 'Password reset code sent', otp: code };
   }
 
   async resetPassword(phoneNumber: string, code: string, newPassword: string) {
