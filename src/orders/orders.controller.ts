@@ -34,7 +34,6 @@ export class OrdersController {
     private ordersGateway: OrdersGateway,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CONSUMER)
   @Post()
   @ApiOperation({ summary: 'Create order from cart' })
@@ -43,7 +42,6 @@ export class OrdersController {
     return this.ordersService.create(req.user.sub, createDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'Get user orders' })
   @ApiResponse({ status: 200, description: 'Orders list' })
@@ -54,39 +52,11 @@ export class OrdersController {
   ) {
     return this.ordersService.findByUser(
       req.user.sub,
-      parseInt(skip),
-      parseInt(limit),
+      parseInt(skip, 10),
+      parseInt(limit, 10),
     );
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  async findById(@Param('id') id: string) {
-    return this.ordersService.findById(id);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CONSUMER, UserRole.VENDOR, UserRole.ADMIN)
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: OrderStatus,
-  ) {
-    const updated = await this.ordersService.updateStatus(id, status);
-    this.ordersGateway.emitOrderStatus(updated);
-    return updated;
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.VENDOR)
-  @Patch(':id/rider')
-  async assignRider(@Param('id') id: string, @Body('riderId') riderId: string) {
-    const updated = await this.ordersService.assignRider(id, riderId);
-    this.ordersGateway.emitRiderAssignment(updated);
-    return updated;
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @Get('vendor')
   async findByVendor(
@@ -96,32 +66,67 @@ export class OrdersController {
   ) {
     return this.ordersService.findByVendorUser(
       req.user.sub,
-      parseInt(skip),
-      parseInt(limit),
+      parseInt(skip, 10),
+      parseInt(limit, 10),
     );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @Get('vendor/analytics')
   async vendorAnalytics(@Req() req) {
     return this.ordersService.vendorAnalyticsByUser(req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get('all')
   async findAll(
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
-    return this.ordersService.findAll(parseInt(skip), parseInt(limit));
+    return this.ordersService.findAll(parseInt(skip, 10), parseInt(limit, 10));
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get('analytics')
   async analytics() {
     return this.ordersService.analytics();
+  }
+
+  @Get(':id')
+  async findById(@Param('id') id: string, @Req() req) {
+    return this.ordersService.findById(id, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+  }
+
+  @Roles(UserRole.CONSUMER, UserRole.VENDOR, UserRole.ADMIN, UserRole.RIDER)
+  @Patch(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: OrderStatus,
+    @Req() req,
+  ) {
+    const updated = await this.ordersService.updateStatus(id, status, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitOrderStatus(updated);
+    return updated;
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  @Patch(':id/rider')
+  async assignRider(
+    @Param('id') id: string,
+    @Body('riderId') riderId: string,
+    @Req() req,
+  ) {
+    const updated = await this.ordersService.assignRider(id, riderId, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitRiderAssignment(updated);
+    return updated;
   }
 }

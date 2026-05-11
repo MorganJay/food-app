@@ -23,7 +23,7 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from 'src/common/config/multer.config';
+import { multerConfig } from '../common/config/multer.config';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -31,7 +31,7 @@ import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
-  constructor(private productsService: ProductsService) { }
+  constructor(private productsService: ProductsService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all products (paginated)' })
@@ -139,7 +139,7 @@ export class ProductsController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req,
   ) {
-    return this.productsService.create(createDto, file);
+    return this.productsService.create(createDto, req.user.sub, file);
   }
 
   @UseGuards(JwtAuthGuard)

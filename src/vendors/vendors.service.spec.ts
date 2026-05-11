@@ -24,18 +24,18 @@ describe('VendorsService', () => {
   beforeEach(async () => {
     mockVendorModel = {
       find: jest.fn().mockReturnValue({
-        skip: jest.fn().mockReturnValue({
-          limit: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue([mockVendor]),
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([mockVendor]),
+            }),
           }),
         }),
       }),
       findById: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
       }),
-      findOne: jest.fn().mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      }),
+      findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(mockVendor),
       findByIdAndUpdate: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
@@ -70,21 +70,31 @@ describe('VendorsService', () => {
   describe('findById', () => {
     it('should return a vendor by id', async () => {
       const result = await service.findById('vendor123');
-      expect(result).toEqual(mockVendor);
+      expect(result).toMatchObject({
+        id: 'vendor123',
+        businessName: 'Test Restaurant',
+        description: 'Test description',
+        isVerified: false,
+      });
     });
   });
 
   describe('createVendor', () => {
     it('should create a new vendor', async () => {
-      const dto = { businessName: 'New Restaurant' };
-      const result = await service.createVendor('user123', dto);
-      expect(mockVendorModel.findOneAndUpdate).toHaveBeenCalled();
+      const dto = {
+        businessName: 'New Restaurant',
+        description: 'A new place',
+        openHours: '09:00',
+        closeHours: '22:00',
+      };
+      await service.createVendor('user123', dto);
+      expect(mockVendorModel.create).toHaveBeenCalled();
     });
   });
 
   describe('updateProfile', () => {
     it('should update vendor profile', async () => {
-      const result = await service.updateProfile('vendor123', 'user123', {
+      await service.updateProfile('vendor123', 'user123', {
         businessName: 'Updated',
       });
       expect(mockVendorModel.findByIdAndUpdate).toHaveBeenCalled();

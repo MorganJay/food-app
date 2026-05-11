@@ -15,19 +15,20 @@ export class AdminService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
-  ) { }
+  ) {}
 
   async getAllUsers(skip: number = 0, limit: number = 20) {
-    return this.userModel.find({}).select('-password -__v').skip(skip).limit(limit).exec();
+    return this.userModel
+      .find({})
+      .select('-password -__v')
+      .skip(skip)
+      .limit(limit)
+      .exec();
   }
 
   async updateUserStatus(userId: string, isActive: boolean) {
     const user = await this.userModel
-      .findByIdAndUpdate(
-        userId,
-        { isActive },
-        { new: true },
-      )
+      .findByIdAndUpdate(userId, { isActive }, { new: true })
       .select('-password -__v')
       .exec();
 

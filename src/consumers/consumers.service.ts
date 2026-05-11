@@ -1,16 +1,20 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Consumer, ConsumerDocument } from '../schemas/Consumer.schema';
 import { ConsumerResponseDto } from './dto/consumers.dto';
-import { Vendor } from 'src/schemas/Vendor.schema';
+import { Vendor } from '../schemas/Vendor.schema';
 
 @Injectable()
 export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
-  ) { }
+  ) {}
 
   async getProfile(userId: string) {
     let consumer = await this.consumerModel.findOne({ userId }).exec();

@@ -1,12 +1,17 @@
-import { IsNotEmpty, IsString, IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-
 
 class LocationDto {
   @ApiProperty({
     description: 'Physical address of the restaurant',
-    example: 'ikeja, Lagos State'
+    example: 'ikeja, Lagos State',
   })
   @IsNotEmpty()
   @IsString()
@@ -63,7 +68,7 @@ export class UpdateRestaurantDto {
   @ApiProperty({
     description: 'Updated Name of the restaurant',
     example: 'KFC Bodija',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -72,7 +77,7 @@ export class UpdateRestaurantDto {
   @ApiProperty({
     description: 'Updated description of the restaurant',
     example: 'Popular fast-food chain offering chicken and fries',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -92,7 +97,7 @@ export class UpdateRestaurantDto {
 
   @ApiProperty({
     description: 'Restaurant location details',
-    type: LocationDto
+    type: LocationDto,
   })
   @IsOptional()
   @ValidateNested()

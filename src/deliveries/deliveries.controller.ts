@@ -7,7 +7,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {  ApiBearerAuth, ApiOperation, ApiTags, ApiParam, ApiBody, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiParam,
+  ApiBody,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { DeliveriesService } from './deliveries.service';
 import { DeliveryStatus } from '../schemas/Delivery.schema';
@@ -55,7 +62,7 @@ export class DeliveriesController {
       type: 'object',
       properties: {
         latitude: { type: 'number', example: 7.3775 },
-        longitude: { type: 'number', example: 3.9470 },
+        longitude: { type: 'number', example: 3.947 },
       },
       required: ['latitude', 'longitude'],
     },

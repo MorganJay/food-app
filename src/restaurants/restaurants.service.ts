@@ -6,15 +6,19 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
-import { CreateRestaurantDto, RestaurantResponseDto, UpdateRestaurantDto } from './dto/restaurant.dto';
-import { mapToGeoLocation } from 'src/common/geojson';
+import {
+  CreateRestaurantDto,
+  RestaurantResponseDto,
+  UpdateRestaurantDto,
+} from './dto/restaurant.dto';
+import { mapToGeoLocation } from '../common/geojson';
 
 @Injectable()
 export class RestaurantsService {
   constructor(
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
-  ) { }
+  ) {}
 
   async create(createDto: CreateRestaurantDto, vendorId: string) {
     const { address, latitude, longitude } = createDto.location;
@@ -23,8 +27,8 @@ export class RestaurantsService {
       name: createDto.name,
       description: createDto.description,
       address,
-      vendorId
-    }
+      vendorId,
+    };
 
     const geoLocation = mapToGeoLocation(longitude, latitude);
 
@@ -43,7 +47,9 @@ export class RestaurantsService {
       .limit(limit)
       .exec();
 
-    return restaurants.map((restaurant) => this.mapRestaurantResponse(restaurant));
+    return restaurants.map((restaurant) =>
+      this.mapRestaurantResponse(restaurant),
+    );
   }
 
   async findById(id: string) {
@@ -65,7 +71,9 @@ export class RestaurantsService {
       .limit(limit)
       .exec();
 
-    return restaurants.map((restaurant) => this.mapRestaurantResponse(restaurant));
+    return restaurants.map((restaurant) =>
+      this.mapRestaurantResponse(restaurant),
+    );
   }
 
   async findByVendor(vendorId: string, skip: number = 0, limit: number = 10) {
@@ -75,7 +83,9 @@ export class RestaurantsService {
       .limit(limit)
       .exec();
 
-    return restaurants.map((restaurant) => this.mapRestaurantResponse(restaurant));
+    return restaurants.map((restaurant) =>
+      this.mapRestaurantResponse(restaurant),
+    );
   }
 
   async update(id: string, vendorId: string, updateDto: UpdateRestaurantDto) {
@@ -124,7 +134,10 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(id: string, vendorId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    id: string,
+    vendorId: string,
+  ): Promise<{ status: string; message: string }> {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -134,7 +147,7 @@ export class RestaurantsService {
     }
     await this.restaurantModel.findByIdAndDelete(id).exec();
 
-    return { status: "ok", message: "Restaurant deleted successfully" };
+    return { status: 'ok', message: 'Restaurant deleted successfully' };
   }
 
   private mapRestaurantResponse(restaurant: any): RestaurantResponseDto {
