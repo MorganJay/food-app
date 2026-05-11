@@ -115,6 +115,8 @@ export class UsersService {
     return {
       id: user._id.toString(),
       username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,
