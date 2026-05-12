@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { CreateVendorDto, UpdateVendorDto, VendorResponseDto } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from 'src/common/geojson';
@@ -31,6 +31,10 @@ export class VendorsService {
   }
 
   async findById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid vendor ID: ${id}`);
+    }
+
     const vendor = await this.vendorModel.findById(id).exec();
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
