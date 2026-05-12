@@ -18,4 +18,4 @@ import { Vendor, VendorSchema } from '../schemas/Vendor.schema';
   controllers: [ReviewsController],
   exports: [ReviewsService],
 })
-export class ReviewsModule { }
+export class ReviewsModule {}

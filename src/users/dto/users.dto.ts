@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UserResponseDto {
-    @ApiProperty()
-    id: string;
+  @ApiProperty()
+  id: string;
 
-    @ApiProperty()
-    username: string;
+  @ApiProperty()
+  username: string;
 
     @ApiProperty()
     firstName: string;
@@ -16,21 +16,21 @@ export class UserResponseDto {
     @ApiProperty()
     email: string;
 
-    @ApiProperty()
-    phoneNumber: string;
+  @ApiProperty()
+  phoneNumber: string;
 
-    @ApiProperty()
-    isPhoneVerified: boolean;
+  @ApiProperty()
+  isPhoneVerified: boolean;
 
-    @ApiProperty()
-    role: string;
+  @ApiProperty()
+  role: string;
 
-    @ApiProperty()
-    createdAt: Date;
+  @ApiProperty()
+  createdAt: Date;
 
-    @ApiProperty()
-    updatedAt: Date;
+  @ApiProperty()
+  updatedAt: Date;
 
-    @ApiProperty({ example: 1 })
-    serialNumber: number;
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
 }

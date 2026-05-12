@@ -1,4 +1,4 @@
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { BaseEntity } from './BaseEntity';
 
@@ -13,6 +13,8 @@ export enum UserRole {
 
 @Schema({ timestamps: true })
 export class User extends BaseEntity {
+  _id: Types.ObjectId;
+
   @Prop({ required: true, unique: true })
   username: string;
 

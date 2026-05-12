@@ -6,14 +6,18 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
-import { CreateVendorDto, UpdateVendorDto, VendorResponseDto } from './dto/create-vendor.dto';
-import { mapToGeoLocation } from 'src/common/geojson';
+import {
+  CreateVendorDto,
+  UpdateVendorDto,
+  VendorResponseDto,
+} from './dto/create-vendor.dto';
+import { mapToGeoLocation } from '../common/geojson';
 
 @Injectable()
 export class VendorsService {
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) { }
+  ) {}
 
   async listAll(
     skip: number = 0,
@@ -27,7 +31,7 @@ export class VendorsService {
       .limit(limit)
       .exec();
 
-    return vendors.map(vendor => this.mapVendorResponse(vendor));
+    return vendors.map((vendor) => this.mapVendorResponse(vendor));
   }
 
   async findById(id: string) {
@@ -58,7 +62,7 @@ export class VendorsService {
       })
       .exec();
 
-    return vendors.map(vendor => this.mapVendorResponse(vendor));
+    return vendors.map((vendor) => this.mapVendorResponse(vendor));
   }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {

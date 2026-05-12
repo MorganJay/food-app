@@ -2,13 +2,18 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
+import { Rider, RiderDocument } from '../schemas/Rider.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
+import { UserRole } from '../schemas/User.schema';
 import { CreateOrderDto } from './dto/order.dto';
+
+export type OrderRequester = { sub: string; role: UserRole };
 
 @Injectable()
 export class OrdersService {
@@ -16,6 +21,7 @@ export class OrdersService {
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
+    @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
   ) {}
 
   async create(userId: string, createDto: CreateOrderDto) {
@@ -64,14 +70,68 @@ export class OrdersService {
     return order.save();
   }
 
-  async findById(id: string) {
+  private async getVendorIdForUser(userId: string) {
+    const vendor = await this.vendorModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+    return vendor._id.toString();
+  }
+
+  private async getRiderIdForUser(userId: string) {
+    const rider = await this.riderModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
+    if (!rider) {
+      throw new NotFoundException('Rider profile not found');
+    }
+    return rider._id.toString();
+  }
+
+  private async canAccessOrder(
+    order: OrderDocument,
+    requester: OrderRequester,
+  ): Promise<boolean> {
+    if (requester.role === UserRole.ADMIN) {
+      return true;
+    }
+    if (requester.role === UserRole.CONSUMER) {
+      return order.userId === requester.sub;
+    }
+    if (requester.role === UserRole.VENDOR) {
+      const vendorId = await this.getVendorIdForUser(requester.sub);
+      return order.vendorId === vendorId;
+    }
+    if (requester.role === UserRole.RIDER) {
+      if (!order.riderId) {
+        return false;
+      }
+      const riderId = await this.getRiderIdForUser(requester.sub);
+      return order.riderId === riderId;
+    }
+    return false;
+  }
+
+  async assertOrderAccessible(
+    orderId: string,
+    requester: OrderRequester,
+  ): Promise<OrderDocument> {
     const order = await this.orderModel
-      .findOne({ _id: id, isDeleted: false })
+      .findOne({ _id: orderId, isDeleted: false })
       .exec();
     if (!order) {
-      throw new NotFoundException(`Order with ID ${id} not found`);
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+    if (!(await this.canAccessOrder(order, requester))) {
+      throw new ForbiddenException('You cannot access this order');
     }
     return order;
+  }
+
+  async findById(id: string, requester: OrderRequester) {
+    return this.assertOrderAccessible(id, requester);
   }
 
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
@@ -90,16 +150,6 @@ export class OrdersService {
       .skip(skip)
       .limit(limit)
       .exec();
-  }
-
-  private async getVendorIdForUser(userId: string) {
-    const vendor = await this.vendorModel
-      .findOne({ userId, isDeleted: false })
-      .exec();
-    if (!vendor) {
-      throw new NotFoundException('Vendor profile not found');
-    }
-    return vendor._id.toString();
   }
 
   async findByVendorUser(userId: string, skip: number = 0, limit: number = 20) {
@@ -146,7 +196,7 @@ export class OrdersService {
     return this.vendorAnalytics(vendorId);
   }
 
-  async updateStatus(id: string, status: OrderStatus) {
+  private async applyStatusUpdate(id: string, status: OrderStatus) {
     const order = await this.orderModel
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
@@ -160,17 +210,116 @@ export class OrdersService {
     return order;
   }
 
-  async assignRider(orderId: string, riderId: string) {
+  async updateStatus(
+    id: string,
+    status: OrderStatus,
+    requester: OrderRequester,
+  ) {
+    const order = await this.assertOrderAccessible(id, requester);
+
+    if (requester.role === UserRole.ADMIN) {
+      return this.applyStatusUpdate(id, status);
+    }
+
+    if (requester.role === UserRole.CONSUMER) {
+      if (status !== OrderStatus.CANCELLED_BY_CONSUMER) {
+        throw new ForbiddenException(
+          'Consumers may only cancel orders (cancelled_by_consumer).',
+        );
+      }
+      const cancellable = [
+        OrderStatus.PENDING,
+        OrderStatus.ACCEPTED,
+        OrderStatus.PREPARING,
+      ];
+      if (!cancellable.includes(order.status)) {
+        throw new BadRequestException(
+          'Order cannot be cancelled at this stage',
+        );
+      }
+      return this.applyStatusUpdate(id, status);
+    }
+
+    if (requester.role === UserRole.VENDOR) {
+      const vendorAllowed = new Set<OrderStatus>([
+        OrderStatus.ACCEPTED,
+        OrderStatus.DECLINED,
+        OrderStatus.PREPARING,
+        OrderStatus.READY_FOR_PICKUP,
+        OrderStatus.CANCELLED_BY_VENDOR,
+      ]);
+      if (!vendorAllowed.has(status)) {
+        throw new ForbiddenException('Invalid status update for vendor');
+      }
+      return this.applyStatusUpdate(id, status);
+    }
+
+    if (requester.role === UserRole.RIDER) {
+      if (status !== OrderStatus.DELIVERED) {
+        throw new ForbiddenException(
+          'Riders may only mark orders as delivered.',
+        );
+      }
+      if (order.status !== OrderStatus.OUT_FOR_DELIVERY) {
+        throw new BadRequestException(
+          'Order must be out for delivery before it can be delivered.',
+        );
+      }
+      const riderId = await this.getRiderIdForUser(requester.sub);
+      if (order.riderId !== riderId) {
+        throw new ForbiddenException('This order is not assigned to you');
+      }
+      return this.applyStatusUpdate(id, status);
+    }
+
+    throw new ForbiddenException();
+  }
+
+  async assignRider(
+    orderId: string,
+    riderId: string,
+    requester: OrderRequester,
+  ) {
+    if (
+      requester.role !== UserRole.ADMIN &&
+      requester.role !== UserRole.VENDOR
+    ) {
+      throw new ForbiddenException('Only vendors or admins can assign riders');
+    }
+
     const order = await this.orderModel
+      .findOne({ _id: orderId, isDeleted: false })
+      .exec();
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    if (requester.role === UserRole.VENDOR) {
+      const vendorId = await this.getVendorIdForUser(requester.sub);
+      if (order.vendorId !== vendorId) {
+        throw new ForbiddenException(
+          'You can only assign riders to your orders',
+        );
+      }
+    }
+
+    const rider = await this.riderModel
+      .findOne({ _id: riderId, isDeleted: false })
+      .exec();
+    if (!rider) {
+      throw new BadRequestException('Rider not found');
+    }
+
+    const updated = await this.orderModel
       .findOneAndUpdate(
         { _id: orderId, isDeleted: false },
         { riderId, status: OrderStatus.OUT_FOR_DELIVERY },
         { new: true },
       )
       .exec();
-    if (!order) {
+    if (!updated) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
-    return order;
+    return updated;
   }
 }

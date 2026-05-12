@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,11 +13,13 @@ import {
   PaymentMethod,
   PaymentGateway,
 } from '../schemas/Payment.schema';
+import { Order, OrderDocument } from '../schemas/Order.schema';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
+    @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
   ) {}
 
   async initialize(
@@ -30,6 +33,19 @@ export class PaymentsService {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be greater than zero');
     }
+    const order = await this.orderModel
+      .findOne({ _id: orderId, isDeleted: false })
+      .exec();
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    if (order.userId !== consumerId) {
+      throw new ForbiddenException('You can only pay for your own orders');
+    }
+    if (order.total !== amount) {
+      throw new BadRequestException('Amount must match the order total');
+    }
+
     const payment = new this.paymentModel({
       orderId,
       consumerId,
@@ -42,7 +58,14 @@ export class PaymentsService {
     return payment.save();
   }
 
-  async verify(id: string, transactionRef: string) {
+  async verify(id: string, transactionRef: string, consumerId: string) {
+    const payment = await this.paymentModel.findById(id).exec();
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+    if (payment.consumerId !== consumerId) {
+      throw new ForbiddenException('You cannot verify this payment');
+    }
     return this.paymentModel
       .findByIdAndUpdate(
         id,
@@ -69,10 +92,15 @@ export class PaymentsService {
     };
   }
 
-  async requestRefund(id: string) {
+  async requestRefund(id: string, consumerId: string) {
     const payment = await this.paymentModel.findById(id).exec();
     if (!payment) {
       throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+    if (payment.consumerId !== consumerId) {
+      throw new ForbiddenException(
+        'You cannot request a refund for this payment',
+      );
     }
     if (payment.status !== PaymentStatus.COMPLETED) {
       throw new BadRequestException(

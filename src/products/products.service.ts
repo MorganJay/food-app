@@ -7,15 +7,44 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Product, ProductDocument } from '../schemas/Product.schema';
-import { CreateProductDto, ProductResponseDto, UpdateProductDto } from './dto/product.dto';
+import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
+import {
+  CreateProductDto,
+  ProductResponseDto,
+  UpdateProductDto,
+} from './dto/product.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-  ) { }
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
+  ) {}
 
-  async create(createDto: CreateProductDto, file?: Express.Multer.File) {
+  private async assertRestaurantOwnedByVendor(
+    restaurantId: string,
+    vendorUserId: string,
+  ) {
+    const restaurant = await this.restaurantModel.findById(restaurantId).exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+    if (restaurant.vendorId !== vendorUserId) {
+      throw new ForbiddenException('You do not own this restaurant');
+    }
+  }
+
+  async create(
+    createDto: CreateProductDto,
+    vendorUserId: string,
+    file?: Express.Multer.File,
+  ) {
+    await this.assertRestaurantOwnedByVendor(
+      createDto.restaurantId,
+      vendorUserId,
+    );
+
     const name = createDto.name.trim();
 
     const existingProduct = await this.productModel.findOne({
@@ -27,7 +56,9 @@ export class ProductsService {
     });
 
     if (existingProduct) {
-      throw new BadRequestException('Product already exists for this restaurant');
+      throw new BadRequestException(
+        'Product already exists for this restaurant',
+      );
     }
 
     let image: string | undefined;
@@ -36,12 +67,11 @@ export class ProductsService {
       image = `/uploads/products/${file.filename}`;
     }
 
-    const productData: any = {
+    const productData: Record<string, unknown> = {
       ...createDto,
       name,
     };
 
-    // add image if exits
     if (image) {
       productData.image = image;
     }
@@ -72,7 +102,7 @@ export class ProductsService {
       .limit(limit)
       .exec();
 
-    return products.map(product => this.mapProductResponse(product));
+    return products.map((product) => this.mapProductResponse(product));
   }
 
   async findById(id: string) {
@@ -94,24 +124,28 @@ export class ProductsService {
       .limit(limit)
       .exec();
 
-    return products.map(product => this.mapProductResponse(product));
+    return products.map((product) => this.mapProductResponse(product));
   }
 
-  async update(id: string, restaurantId: string, updateDto: UpdateProductDto, file?: Express.Multer.File) {
+  async update(
+    id: string,
+    vendorUserId: string,
+    updateDto: UpdateProductDto,
+    file?: Express.Multer.File,
+  ) {
     const product = await this.productModel.findById(id).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    if (product.restaurantId.toString() !== restaurantId) {
-      throw new ForbiddenException(
-        'You can only update products in your restaurant',
-      );
-    }
+    await this.assertRestaurantOwnedByVendor(
+      product.restaurantId.toString(),
+      vendorUserId,
+    );
 
-    const updatePayload: any = { ...updateDto };
+    const updatePayload: Record<string, unknown> = { ...updateDto };
 
     if (updatePayload.name) {
-      updatePayload.name = updatePayload.name.trim();
+      updatePayload.name = (updatePayload.name as string).trim();
     }
 
     if (file) {
@@ -121,26 +155,30 @@ export class ProductsService {
     const updatedProduct = await this.productModel
       .findByIdAndUpdate(id, updatePayload, { new: true })
       .exec();
-
+    if (!updatedProduct) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
     return this.mapProductResponse(updatedProduct);
   }
 
-  async delete(id: string, restaurantId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    id: string,
+    vendorUserId: string,
+  ): Promise<{ status: string; message: string }> {
     const product = await this.productModel.findById(id).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    if (product.restaurantId !== restaurantId) {
-      throw new ForbiddenException(
-        'You can only delete products in your restaurant',
-      );
-    }
+    await this.assertRestaurantOwnedByVendor(
+      product.restaurantId.toString(),
+      vendorUserId,
+    );
     await this.productModel.findByIdAndDelete(id).exec();
 
-    return { status: "ok", message: "Product deleted successfully" };
+    return { status: 'ok', message: 'Product deleted successfully' };
   }
 
-  private mapProductResponse(product: any): ProductResponseDto {
+  private mapProductResponse(product: ProductDocument): ProductResponseDto {
     return {
       id: product._id.toString(),
       name: product.name,
