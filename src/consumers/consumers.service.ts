@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Consumer, ConsumerDocument } from '../schemas/Consumer.schema';
-import { ConsumerResponseDto, UpdateConsumerDto } from './dto/consumers.dto';
+import { ConsumerResponseDto } from './dto/consumers.dto';
 import { Vendor } from '../schemas/Vendor.schema';
 
 @Injectable()
@@ -14,22 +14,29 @@ export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
-  ) {}
+  ) { }
+
+  async create(userId: string) {
+    const existingConsumer = await this.consumerModel.findOne({ userId });
+
+    if (existingConsumer) return;
+
+    await this.consumerModel.create({
+      userId,
+      favorites: [],
+      orderHistory: [],
+    });
+  }
 
   async getProfile(userId: string) {
     let consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
-      consumer = new this.consumerModel({
-        userId,
-        favorites: [],
-        orderHistory: [],
-      });
-      await consumer.save();
+      throw new NotFoundException('Consumer not found');
     }
     return this.mapConsumerResponse(consumer);
   }
 
-  async updateProfile(userId: string, updateData: UpdateConsumerDto) {
+  async updateProfile(userId: string, updateData: any) {
     const consumer = await this.consumerModel
       .findOneAndUpdate({ userId }, updateData, { new: true, upsert: true })
       .exec();
@@ -40,12 +47,7 @@ export class ConsumersService {
   async toggleFavorite(userId: string, vendorId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
-      const newConsumer = await this.consumerModel.create({
-        userId,
-        favorites: [vendorId],
-        orderHistory: [],
-      });
-      return this.mapConsumerResponse(newConsumer);
+      throw new NotFoundException('Consumer not found');
     }
 
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
@@ -82,6 +84,7 @@ export class ConsumersService {
       userId: consumer.userId,
       favorites: consumer.favorites || [],
       orderHistory: consumer.orderHistory || [],
+      serialNumber: consumer.serialNumber,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
     };

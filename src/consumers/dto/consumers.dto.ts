@@ -25,6 +25,9 @@ export class ConsumerResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
 }
 
 export class ToggleFavoriteDto {

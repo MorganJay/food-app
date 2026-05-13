@@ -21,7 +21,7 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
-  ) {}
+  ) { }
 
   private async assertRestaurantOwnedByVendor(
     restaurantId: string,
@@ -61,8 +61,6 @@ export class ProductsService {
         'Product already exists for this restaurant',
       );
     }
-
-    let image: string | undefined;
 
     const productData: Record<string, unknown> = {
       ...createDto,

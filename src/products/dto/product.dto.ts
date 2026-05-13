@@ -7,7 +7,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -65,6 +65,15 @@ export class CreateProductDto {
   category?: string;
 
   @ApiPropertyOptional({
+    example: true,
+    description: 'Availability status of the food product',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  isAvailable?: boolean;
+
+  @ApiPropertyOptional({
     type: 'string',
     format: 'binary',
     description: 'Product image file',
@@ -101,7 +110,6 @@ export class UpdateProductDto {
   @ApiPropertyOptional({ example: 'plate' })
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   unit?: string;
 
   @ApiPropertyOptional({ example: 20 })
@@ -131,6 +139,7 @@ export class UpdateProductDto {
     description: 'Availability status of the food product',
   })
   @IsOptional()
+  @Transform(({ value }) => value === 'true')
   @IsBoolean()
   isAvailable?: boolean;
 }

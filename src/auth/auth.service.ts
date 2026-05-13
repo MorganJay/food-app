@@ -8,6 +8,7 @@ import {
 import { OtpService } from '../otp/otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
+import { ConsumersService } from '../consumers/consumers.service';
 import { OtpDeliveryService } from './otp-delivery.service';
 import { UserRole } from '../schemas/User.schema';
 import { isBcryptHash, verifyPassword } from '../common/password.util';
@@ -16,10 +17,11 @@ import { isBcryptHash, verifyPassword } from '../common/password.util';
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private consumersService: ConsumersService,
     private jwtService: JwtService,
     private otpService: OtpService,
     private otpDelivery: OtpDeliveryService,
-  ) {}
+  ) { }
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
@@ -72,7 +74,15 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    await this.usersService.createByPhoneNumber(dto.phoneNumber, dto);
+    const user = await this.usersService.createByPhoneNumber(
+      dto.phoneNumber,
+      dto,
+    );
+
+    // create consumer profile automatically
+    if (user.role === 'consumer') {
+      await this.consumersService.create(user.id);
+    }
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)

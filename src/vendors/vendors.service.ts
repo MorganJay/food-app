@@ -75,8 +75,6 @@ export class VendorsService {
       throw new BadRequestException('Vendor name already exists');
     }
 
-    let imageUrl: string | undefined;
-
     const geo = createVendor.location
       ? mapToGeoLocation(createVendor.location.longitude, createVendor.location.latitude)
       : null;
