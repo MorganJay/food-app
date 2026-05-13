@@ -21,8 +21,16 @@ export class Product extends BaseEntity {
   @Prop()
   category: string;
 
-  @Prop()
-  image: string;
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  image: {
+    secure_url: string;
+    public_id: string;
+  };
 
   @Prop({ default: 0 })
   prepTime: number;

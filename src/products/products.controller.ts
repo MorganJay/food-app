@@ -23,7 +23,6 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from '../common/config/multer.config';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -129,7 +128,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Post('restaurant')
   @ApiBearerAuth('jwt')
-  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
+  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Create a new product for a restaurant' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Product created successfully' })
@@ -145,7 +144,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   @ApiBearerAuth('jwt')
-  @UseInterceptors(FileInterceptor('image', multerConfig('products')))
+  @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update a product' })
   @ApiParam({

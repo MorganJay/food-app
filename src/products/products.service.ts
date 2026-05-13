@@ -13,6 +13,7 @@ import {
   ProductResponseDto,
   UpdateProductDto,
 } from './dto/product.dto';
+import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 
 @Injectable()
 export class ProductsService {
@@ -63,17 +64,28 @@ export class ProductsService {
 
     let image: string | undefined;
 
-    if (file) {
-      image = `/uploads/products/${file.filename}`;
-    }
-
     const productData: Record<string, unknown> = {
       ...createDto,
       name,
     };
 
-    if (image) {
-      productData.image = image;
+    if (file) {
+      const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'products' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          },
+        );
+
+        stream.end(file.buffer);
+      });
+
+      productData.image = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
     }
 
     const product = await this.productModel.create(productData);
@@ -144,12 +156,33 @@ export class ProductsService {
 
     const updatePayload: Record<string, unknown> = { ...updateDto };
 
-    if (updatePayload.name) {
-      updatePayload.name = (updatePayload.name as string).trim();
+    if (updateDto.name) {
+      updatePayload.name = (updateDto.name as string).trim();
     }
 
     if (file) {
-      updatePayload.image = `/uploads/products/${file.filename}`;
+      // delete old image first
+      if (product.image?.public_id) {
+        await cloudinary.uploader.destroy(product.image.public_id);
+      }
+
+      // upload new image
+      const uploaded = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'products' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          },
+        );
+
+        stream.end(file.buffer);
+      });
+
+      updatePayload.image = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
     }
 
     const updatedProduct = await this.productModel
@@ -187,7 +220,7 @@ export class ProductsService {
       unit: product.unit,
       prepTime: product.prepTime,
       category: product.category,
-      image: product.image,
+      image: product.image?.secure_url,
       isAvailable: product.isAvailable,
       restaurantId: product.restaurantId,
       createdAt: product.createdAt,

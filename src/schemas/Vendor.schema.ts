@@ -18,8 +18,16 @@ export class Vendor extends BaseEntity {
   @Prop()
   address: string;
 
-  @Prop()
-  image: string;
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  image: {
+    secure_url: string;
+    public_id: string;
+  };
 
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },

@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Consumer, ConsumerDocument } from '../schemas/Consumer.schema';
-import { ConsumerResponseDto } from './dto/consumers.dto';
+import { ConsumerResponseDto, UpdateConsumerDto } from './dto/consumers.dto';
 import { Vendor } from '../schemas/Vendor.schema';
 
 @Injectable()
@@ -29,7 +29,7 @@ export class ConsumersService {
     return this.mapConsumerResponse(consumer);
   }
 
-  async updateProfile(userId: string, updateData: any) {
+  async updateProfile(userId: string, updateData: UpdateConsumerDto) {
     const consumer = await this.consumerModel
       .findOneAndUpdate({ userId }, updateData, { new: true, upsert: true })
       .exec();

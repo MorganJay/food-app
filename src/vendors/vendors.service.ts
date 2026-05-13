@@ -12,12 +12,13 @@ import {
   VendorResponseDto,
 } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from '../common/geojson';
+import { v2 as cloudinary } from "cloudinary";
 
 @Injectable()
 export class VendorsService {
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) {}
+  ) { }
 
   async listAll(
     skip: number = 0,
@@ -65,15 +66,7 @@ export class VendorsService {
     return vendors.map((vendor) => this.mapVendorResponse(vendor));
   }
 
-  async createVendor(userId: string, createVendor: CreateVendorDto, file?: Express.Multer.File) {
-    // const location = createVendor.location;
-
-    let image: string | undefined;
-
-    if (file) {
-      image = `/uploads/vendors/${file.filename}`;
-    }
-
+  async createVendor(userId: string, createVendor: CreateVendorDto) {
     const existing = await this.vendorModel.findOne({
       businessName: createVendor.businessName,
     });
@@ -82,32 +75,40 @@ export class VendorsService {
       throw new BadRequestException('Vendor name already exists');
     }
 
+    let imageUrl: string | undefined;
+
+    const geo = createVendor.location
+      ? mapToGeoLocation(createVendor.location.longitude, createVendor.location.latitude)
+      : null;
+
     const vendorData: any = {
       userId,
       businessName: createVendor.businessName,
       description: createVendor.description,
       openHours: createVendor.openHours,
       closeHours: createVendor.closeHours,
-      address: createVendor.address,
+      address: createVendor.location?.address,
+      location: geo,
       isVerified: false,
     };
 
-    const latitude = createVendor?.latitude;
-    const longitude = createVendor?.longitude;
+    if (createVendor.image) {
+      const uploaded = await cloudinary.uploader.upload(
+        createVendor.image,
+        { folder: 'vendors' },
+      );
 
-    if (latitude !== undefined && longitude !== undefined) {
-      vendorData.location = mapToGeoLocation(longitude, latitude);
-    }
-
-    if (image) {
-      vendorData.image = image;
+      vendorData.image = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
     }
 
     const vendor = await this.vendorModel.create(vendorData);
     return this.mapVendorResponse(vendor);
   }
 
-  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto, file?: Express.Multer.File) {
+  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
     const vendor = await this.vendorModel.findById(id).exec();
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
@@ -117,6 +118,10 @@ export class VendorsService {
         'You can only update your own vendor profile',
       );
     }
+
+    const geo = updateData.location
+      ? mapToGeoLocation(updateData.location.longitude, updateData.location.latitude)
+      : undefined;
 
     const updatePayload: any = {};
 
@@ -135,23 +140,30 @@ export class VendorsService {
     if (updateData.closeHours) {
       updatePayload.closeHours = updateData.closeHours;
     }
-    
-    if (updateData?.address) {
-      updatePayload.address = updateData.address;
+
+    if (updateData.location?.address) {
+      updatePayload.address = updateData.location?.address;
     }
 
-    if (
-      updateData?.latitude !== undefined &&
-      updateData?.longitude !== undefined
-    ) {
-      updatePayload.location = mapToGeoLocation(
-        updateData.longitude,
-        updateData.latitude,
+    if (geo) {
+      updatePayload.location = geo;
+    }
+
+    if (updateData.image) {
+      // delete old image first
+      if (vendor.image?.public_id) {
+        await cloudinary.uploader.destroy(vendor.image.public_id);
+      }
+
+      const uploaded = await cloudinary.uploader.upload(
+        updateData.image,
+        { folder: 'vendors' },
       );
-    }
 
-    if (file) {
-      updatePayload.image = `/uploads/vendors/${file.filename}`;
+      updatePayload.image = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
     }
 
     const updatedVendor = await this.vendorModel
@@ -174,7 +186,7 @@ export class VendorsService {
         latitude: vendor.location?.coordinates?.[1],
         longitude: vendor.location?.coordinates?.[0],
       },
-      image: vendor.image,
+      image: vendor.image?.secure_url,
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
       serialNumber: vendor.serialNumber,

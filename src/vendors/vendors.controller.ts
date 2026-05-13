@@ -8,8 +8,6 @@ import {
   Query,
   UseGuards,
   Req,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +15,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
-  ApiConsumes,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
@@ -25,13 +22,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from '../common/config/multer.config';
 
 @ApiTags('Vendors')
 @Controller('vendors')
 export class VendorsController {
-  constructor(private vendorsService: VendorsService) {}
+  constructor(private vendorsService: VendorsService) { }
 
   @Get()
   @ApiOperation({ summary: 'List all vendors (paginated)' })
@@ -76,28 +71,23 @@ export class VendorsController {
   @Post()
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @UseInterceptors(FileInterceptor('image', multerConfig('vendors')))
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create vendor profile' })
   @ApiResponse({ status: 201, description: 'Vendor created' })
-  async create(@Body() vendorData: CreateVendorDto, @Req() req, @UploadedFile() file: Express.Multer.File,) {
-    return this.vendorsService.createVendor(req.user.sub, vendorData, file);
+  async create(@Body() vendorData: CreateVendorDto, @Req() req) {
+    return this.vendorsService.createVendor(req.user.sub, vendorData);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @UseInterceptors(FileInterceptor('image', multerConfig('vendors')))
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
   async update(
     @Param('id') id: string,
     @Body() updateData: UpdateVendorDto,
-    @Req() req,
-    @UploadedFile() file: Express.Multer.File,
+    @Req() req
   ) {
-    return this.vendorsService.updateProfile(id, req.user.sub, updateData, file);
+    return this.vendorsService.updateProfile(id, req.user.sub, updateData);
   }
 }
