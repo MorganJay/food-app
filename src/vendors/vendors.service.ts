@@ -65,8 +65,14 @@ export class VendorsService {
     return vendors.map((vendor) => this.mapVendorResponse(vendor));
   }
 
-  async createVendor(userId: string, createVendor: CreateVendorDto) {
-    const location = createVendor.location;
+  async createVendor(userId: string, createVendor: CreateVendorDto, file?: Express.Multer.File) {
+    // const location = createVendor.location;
+
+    let image: string | undefined;
+
+    if (file) {
+      image = `/uploads/vendors/${file.filename}`;
+    }
 
     const existing = await this.vendorModel.findOne({
       businessName: createVendor.businessName,
@@ -82,25 +88,26 @@ export class VendorsService {
       description: createVendor.description,
       openHours: createVendor.openHours,
       closeHours: createVendor.closeHours,
+      address: createVendor.address,
       isVerified: false,
     };
 
-    const latitude = location?.latitude;
-    const longitude = location?.longitude;
-
-    if (location?.address) {
-      vendorData.address = location.address;
-    }
+    const latitude = createVendor?.latitude;
+    const longitude = createVendor?.longitude;
 
     if (latitude !== undefined && longitude !== undefined) {
       vendorData.location = mapToGeoLocation(longitude, latitude);
+    }
+
+    if (image) {
+      vendorData.image = image;
     }
 
     const vendor = await this.vendorModel.create(vendorData);
     return this.mapVendorResponse(vendor);
   }
 
-  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
+  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto, file?: Express.Multer.File) {
     const vendor = await this.vendorModel.findById(id).exec();
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
@@ -128,18 +135,23 @@ export class VendorsService {
     if (updateData.closeHours) {
       updatePayload.closeHours = updateData.closeHours;
     }
+    
+    if (updateData?.address) {
+      updatePayload.address = updateData.address;
+    }
 
-    // handle location mapping
-    if (updateData.location) {
-      const { address, latitude, longitude } = updateData.location;
+    if (
+      updateData?.latitude !== undefined &&
+      updateData?.longitude !== undefined
+    ) {
+      updatePayload.location = mapToGeoLocation(
+        updateData.longitude,
+        updateData.latitude,
+      );
+    }
 
-      if (address) {
-        updatePayload.address = address;
-      }
-
-      if (latitude !== undefined && longitude !== undefined) {
-        updatePayload.location = mapToGeoLocation(longitude, latitude);
-      }
+    if (file) {
+      updatePayload.image = `/uploads/vendors/${file.filename}`;
     }
 
     const updatedVendor = await this.vendorModel
@@ -162,6 +174,7 @@ export class VendorsService {
         latitude: vendor.location?.coordinates?.[1],
         longitude: vendor.location?.coordinates?.[0],
       },
+      image: vendor.image,
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
       serialNumber: vendor.serialNumber,

@@ -18,6 +18,9 @@ export class Vendor extends BaseEntity {
   @Prop()
   address: string;
 
+  @Prop()
+  image: string;
+
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: [Number],

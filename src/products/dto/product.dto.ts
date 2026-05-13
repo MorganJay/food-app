@@ -120,12 +120,11 @@ export class UpdateProductDto {
   category?: string;
 
   @ApiPropertyOptional({
-    example: 'https://example.com/double-cheese-burger.jpg',
-    description: 'Updated image URL',
+    type: 'string',
+    format: 'binary',
+    description: 'Product image file',
   })
-  @IsOptional()
-  @IsString()
-  image?: string;
+  image?: any;
 
   @ApiPropertyOptional({
     example: true,

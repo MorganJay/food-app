@@ -5,38 +5,8 @@ import {
   ValidateNested,
   IsNumber,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-class LocationDto {
-  @ApiProperty({
-    description: 'Physical address of the restaurant',
-    example: 'ikeja, Lagos State',
-    required: false,
-  })
-  @IsString()
-  address?: string;
-
-  @ApiProperty({
-    description: 'Latitude coordinate of the restaurant location',
-    example: '7.3775',
-    required: false,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  latitude?: number;
-
-  @ApiProperty({
-    description: 'Longitude coordinate of the restaurant location',
-    example: '3.947',
-    required: false,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  longitude?: number;
-}
 
 export class CreateVendorDto {
   @ApiProperty({
@@ -55,14 +25,31 @@ export class CreateVendorDto {
   @IsString()
   description: string;
 
-  @ApiProperty({
-    description: 'Vendor location details',
-    type: LocationDto,
+  @ApiPropertyOptional({
+    description: 'Physical address of the restaurant',
+    example: 'Ikeja, Lagos State',
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => LocationDto)
-  location?: LocationDto;
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Latitude coordinate of the restaurant',
+    example: 7.3775,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude coordinate of the restaurant',
+    example: 3.947,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
 
   @ApiProperty({
     description: 'Opening time',
@@ -79,34 +66,104 @@ export class CreateVendorDto {
   @IsNotEmpty()
   @IsString()
   closeHours: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Vendor image file',
+  })
+  image?: any;
 }
 
 export class UpdateVendorDto {
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({
+    example: 'Mama Put Kitchen',
+  })
   @IsOptional()
+  @IsString()
   businessName?: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({
+    example: 'Best local food vendor in Lagos',
+  })
   @IsOptional()
+  @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ type: LocationDto })
-  location?: LocationDto;
-
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({
+    description: 'Physical address of the restaurant',
+    example: 'Ikeja, Lagos State',
+  })
   @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Latitude coordinate of the restaurant',
+    example: 7.3775,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    description: 'Longitude coordinate of the restaurant',
+    example: 3.947,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
+
+  @ApiPropertyOptional({
+    example: '08:00',
+  })
+  @IsOptional()
+  @IsString()
   openHours?: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({
+    example: '22:00',
+  })
   @IsOptional()
+  @IsString()
   closeHours?: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Vendor image file',
+  })
+  image?: any;
+}
+
+export class VendorResponseLocationDto {
+  @ApiProperty({
+    example: 'Ikeja, Lagos State',
+  })
+  address: string;
+
+  @ApiProperty({
+    example: 7.3775,
+  })
+  latitude: number;
+
+  @ApiProperty({
+    example: 3.947,
+  })
+  longitude: number;
 }
 
 export class VendorResponseDto {
-  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  @ApiProperty({
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
   id: string;
 
-  @ApiProperty({ example: 'Mama Put Kitchen' })
+  @ApiProperty({
+    example: 'Mama Put Kitchen',
+  })
   businessName: string;
 
   @ApiProperty({
@@ -114,17 +171,30 @@ export class VendorResponseDto {
   })
   description: string;
 
-  @ApiProperty({ example: '08:00' })
+  @ApiPropertyOptional({
+    example: 'https://your-cdn.com/uploads/vendor.jpg',
+  })
+  image?: string;
+
+  @ApiProperty({
+    example: '08:00',
+  })
   openHours: string;
 
-  @ApiProperty({ example: '22:00' })
+  @ApiProperty({
+    example: '22:00',
+  })
   closeHours: string;
 
-  @ApiProperty({ example: false })
+  @ApiProperty({
+    example: false,
+  })
   isVerified: boolean;
 
-  @ApiProperty({ type: LocationDto })
-  location: LocationDto;
+  @ApiProperty({
+    type: VendorResponseLocationDto,
+  })
+  location: VendorResponseLocationDto;
 
   @ApiProperty()
   createdAt: Date;
@@ -132,6 +202,8 @@ export class VendorResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ example: 1 })
+  @ApiProperty({
+    example: 1,
+  })
   serialNumber: number;
 }
