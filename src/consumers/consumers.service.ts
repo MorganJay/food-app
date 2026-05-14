@@ -16,22 +16,14 @@ export class ConsumersService {
     @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
   ) { }
 
-  async create(userId: string) {
-    const existingConsumer = await this.consumerModel.findOne({ userId });
-
-    if (existingConsumer) return;
-
-    await this.consumerModel.create({
-      userId,
-      favorites: [],
-      orderHistory: [],
-    });
-  }
-
   async getProfile(userId: string) {
     let consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
-      throw new NotFoundException('Consumer not found');
+      consumer = await this.consumerModel.create({
+        userId,
+        favorites: [],
+        orderHistory: [],
+      });
     }
     return this.mapConsumerResponse(consumer);
   }
@@ -47,7 +39,12 @@ export class ConsumersService {
   async toggleFavorite(userId: string, vendorId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
-      throw new NotFoundException('Consumer not found');
+      const newConsumer = await this.consumerModel.create({
+        userId,
+        favorites: [vendorId],
+        orderHistory: [],
+      });
+      return this.mapConsumerResponse(newConsumer);
     }
 
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {

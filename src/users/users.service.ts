@@ -75,9 +75,9 @@ export class UsersService {
   async verifyPhoneNumber(phoneNumber: string) {
     const existing = await this.userModel.findOne({ phoneNumber }).exec();
     if (!existing) throw new NotFoundException('User not found');
-    if (existing.isPhoneVerified) {
-      throw new BadRequestException('Phone already verified');
-    }
+    // if (existing.isPhoneVerified) {
+    //   throw new BadRequestException('Phone already verified');
+    // }
     const savedUser = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { $set: { isPhoneVerified: true } },

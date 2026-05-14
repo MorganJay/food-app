@@ -9,3 +9,9 @@ export const cloudinaryConfig = () => {
 
   return cloudinary;
 };
+
+// export const cloudinaryConfig = () => {
+//   cloudinary.config(process.env.CLOUDINARY_URL);
+
+//   return cloudinary;
+// };
