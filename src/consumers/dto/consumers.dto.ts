@@ -43,7 +43,6 @@ export class UpdateConsumerDto {
   @ApiPropertyOptional({
     example: [
       '64f1c2a9b1234567890abcd1',
-      '64f1c2a9b1234567890abcd2',
     ],
     description: 'Updated list of favorite vendor IDs',
   })

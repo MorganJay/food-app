@@ -6,6 +6,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { OrderStatus } from '../../schemas/Order.schema';
 
 export class OrderItemDto {
   @ApiProperty({
@@ -97,4 +98,66 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+
+class OrderItemResponseDto {
+  @ApiProperty()
+  productId: string;
+
+  @ApiProperty()
+  quantity: number;
+
+  @ApiProperty()
+  price: number;
+
+  @ApiProperty()
+  name: string;
+}
+
+export class OrderResponseDto {
+  @ApiProperty()
+  _id: string;
+
+  @ApiProperty()
+  serialNumber: number;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  vendorId: string;
+
+  @ApiProperty()
+  orderReference: string;
+
+  @ApiProperty({ type: [OrderItemResponseDto] })
+  items: OrderItemResponseDto[];
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  deliveryAddress: string;
+
+  @ApiProperty({ enum: OrderStatus })
+  status: OrderStatus;
+
+  @ApiProperty({
+    example: 'Please deliver at the gate / no pepper',
+    required: false,
+  })
+  notes?: string;
+
+  @ApiProperty()
+  riderId: string;
+
+  @ApiProperty()
+  paymentStatus: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }

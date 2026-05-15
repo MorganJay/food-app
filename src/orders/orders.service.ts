@@ -11,7 +11,7 @@ import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { Rider, RiderDocument } from '../schemas/Rider.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
 import { UserRole } from '../schemas/User.schema';
-import { CreateOrderDto } from './dto/order.dto';
+import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -22,7 +22,7 @@ export class OrdersService {
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
-  ) {}
+  ) { }
 
   async create(userId: string, createDto: CreateOrderDto) {
     let orderData: Partial<Order> = {
@@ -67,7 +67,8 @@ export class OrdersService {
     }
 
     const order = new this.orderModel(orderData);
-    return order.save();
+    const savedOrder = await order.save();
+    return this.mapOrderResponse(savedOrder)
   }
 
   private async getVendorIdForUser(userId: string) {
@@ -131,25 +132,30 @@ export class OrdersService {
   }
 
   async findById(id: string, requester: OrderRequester) {
-    return this.assertOrderAccessible(id, requester);
+    const order = await this.assertOrderAccessible(id, requester);
+    return this.mapOrderResponse(order);
   }
 
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
-    return this.orderModel
+    const orders = await this.orderModel
       .find({ userId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
   async findByVendor(vendorId: string, skip: number = 0, limit: number = 20) {
-    return this.orderModel
+    const orders = await this.orderModel
       .find({ vendorId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
   async findByVendorUser(userId: string, skip: number = 0, limit: number = 20) {
@@ -158,12 +164,14 @@ export class OrdersService {
   }
 
   async findAll(skip: number = 0, limit: number = 20) {
-    return this.orderModel
+    const orders = await this.orderModel
       .find({ isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
   async analytics() {
@@ -207,7 +215,7 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
-    return order;
+    return this.mapOrderResponse(order);
   }
 
   async updateStatus(
@@ -320,6 +328,34 @@ export class OrdersService {
     if (!updated) {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
-    return updated;
+    return this.mapOrderResponse(updated);
+  }
+
+  private mapOrderResponse(order: OrderDocument): OrderResponseDto {
+    return {
+      _id: order._id.toString(),
+      serialNumber: order.serialNumber,
+      userId: order.userId,
+      vendorId: order.vendorId,
+      orderReference: order.orderReference,
+
+      items: order.items.map((item) => ({
+        productId: item.productId.toString(),
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+      })),
+
+      total: order.total,
+      deliveryAddress: order.deliveryAddress,
+      status: order.status,
+
+      notes: order.notes,
+      riderId: order.riderId,
+      paymentStatus: order.paymentStatus,
+
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
   }
 }
