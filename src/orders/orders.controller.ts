@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
@@ -32,7 +33,7 @@ export class OrdersController {
   constructor(
     private ordersService: OrdersService,
     private ordersGateway: OrdersGateway,
-  ) {}
+  ) { }
 
   @Roles(UserRole.CONSUMER)
   @Post()
@@ -43,6 +44,18 @@ export class OrdersController {
   }
 
   @Get()
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
   @ApiOperation({ summary: 'Get user orders' })
   @ApiResponse({ status: 200, description: 'Orders list' })
   async findByUser(
@@ -59,6 +72,18 @@ export class OrdersController {
 
   @Roles(UserRole.VENDOR)
   @Get('vendor')
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
   async findByVendor(
     @Req() req,
     @Query('skip') skip: string = '0',
@@ -79,6 +104,18 @@ export class OrdersController {
 
   @Roles(UserRole.ADMIN)
   @Get('all')
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
   async findAll(
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
