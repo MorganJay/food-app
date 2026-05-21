@@ -113,6 +113,27 @@ export class AuthService {
     return { message: 'OTP resent', otp: code };
   }
 
+  async sendVerificationCode(phoneNumber: string) {
+    const user = await this.usersService.findByPhoneNumber(phoneNumber);
+    if (!user) throw new BadRequestException('User not found');
+
+    const recently = await this.otpService.lastSentWithin(phoneNumber, 60);
+    if (recently)
+      throw new BadRequestException(
+        'Please wait before requesting another code',
+      );
+
+    const code = await this.otpService.create(phoneNumber);
+    await this.otpDelivery.sendOtp(
+      {
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+      },
+      code,
+    );
+    return { message: 'Verification code sent', otp: code };
+  }
+
   async verifyOtp(phoneNumber: string, code: string) {
     await this.otpService.verify(phoneNumber, code);
 

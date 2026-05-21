@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './auth-guards';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './strategies/jwt.strategy';
-import { ResendOtpDto, VerifyOtpDto } from './dto/otp.dto';
+import { ResendOtpDto, SendVerificationCodeDto, VerifyOtpDto } from './dto/otp.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -48,6 +48,17 @@ export class AuthController {
   })
   resend(@Body() dto: ResendOtpDto) {
     return this.auth.resendOtp(dto.phoneNumber);
+  }
+
+  @Post('send-verification-code')
+  @ApiOperation({ summary: 'Send a verification code to a user by phone number' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Verification code sent; response includes the code for development/testing',
+  })
+  sendVerificationCode(@Body() dto: SendVerificationCodeDto) {
+    return this.auth.sendVerificationCode(dto.phoneNumber);
   }
 
   @UseGuards(LocalAuthGuard)
