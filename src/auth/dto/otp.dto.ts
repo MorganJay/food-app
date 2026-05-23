@@ -28,3 +28,12 @@ export class ResendOtpDto {
   @IsPhoneNumber()
   phoneNumber: string;
 }
+
+export class SendVerificationCodeDto {
+  @ApiProperty({
+    example: '+2348012345678',
+    description: 'User phone number to send a verification code to',
+  })
+  @IsPhoneNumber()
+  phoneNumber: string;
+}
