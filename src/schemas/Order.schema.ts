@@ -54,8 +54,8 @@ export class Order extends BaseEntity {
   @Prop({ required: true })
   total: number;
 
-  @Prop({ required: true })
-  deliveryAddress: string;
+  @Prop({ required: true, type: Object })
+  deliveryAddress: any;
 
   @Prop({ enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;

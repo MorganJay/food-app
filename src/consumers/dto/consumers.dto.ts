@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsMongoId, IsArray, IsOptional } from 'class-validator';
 
-
 export class ConsumerResponseDto {
   @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
   id: string;
@@ -19,6 +18,11 @@ export class ConsumerResponseDto {
     description: 'List of order IDs or order objects depending on schema',
   })
   orderHistory: any[];
+
+  @ApiPropertyOptional({
+    description: 'Saved delivery addresses for the consumer',
+  })
+  addresses?: any[];
 
   @ApiProperty()
   createdAt: Date;
@@ -41,9 +45,7 @@ export class ToggleFavoriteDto {
 
 export class UpdateConsumerDto {
   @ApiPropertyOptional({
-    example: [
-      '64f1c2a9b1234567890abcd1',
-    ],
+    example: ['64f1c2a9b1234567890abcd1'],
     description: 'Updated list of favorite vendor IDs',
   })
   @IsOptional()

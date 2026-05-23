@@ -9,6 +9,10 @@ import { Order, OrderSchema } from '../schemas/Order.schema';
 import { Cart, CartSchema } from '../schemas/Cart.schema';
 import { Vendor, VendorSchema } from '../schemas/Vendor.schema';
 import { Rider, RiderSchema } from '../schemas/Rider.schema';
+import {
+  DeliveryAddress,
+  DeliveryAddressSchema,
+} from '../schemas/DeliveryAddress.schema';
 
 @Module({
   imports: [
@@ -17,6 +21,7 @@ import { Rider, RiderSchema } from '../schemas/Rider.schema';
       { name: Cart.name, schema: CartSchema },
       { name: Vendor.name, schema: VendorSchema },
       { name: Rider.name, schema: RiderSchema },
+      { name: DeliveryAddress.name, schema: DeliveryAddressSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

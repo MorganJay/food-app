@@ -85,11 +85,11 @@ export class CreateOrderDto {
 
   @ApiProperty({
     example: '123 Ring Road, Ibadan',
-    description: 'Delivery address',
+    description:
+      'Delivery address (string or object). If object is provided it may be saved to consumer addresses.',
   })
   @IsNotEmpty()
-  @IsString()
-  deliveryAddress: string;
+  deliveryAddress: any;
 
   @ApiPropertyOptional({
     example: 'Please deliver quickly',
@@ -99,7 +99,6 @@ export class CreateOrderDto {
   @IsString()
   notes?: string;
 }
-
 
 class OrderItemResponseDto {
   @ApiProperty()

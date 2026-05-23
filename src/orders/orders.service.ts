@@ -10,6 +10,10 @@ import { Cart, CartDocument } from '../schemas/Cart.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { Rider, RiderDocument } from '../schemas/Rider.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
+import {
+  DeliveryAddress,
+  DeliveryAddressDocument,
+} from '../schemas/DeliveryAddress.schema';
 import { UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 
@@ -22,7 +26,9 @@ export class OrdersService {
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
-  ) { }
+    @InjectModel(DeliveryAddress.name)
+    private addressModel: Model<DeliveryAddressDocument>,
+  ) {}
 
   async create(userId: string, createDto: CreateOrderDto) {
     let orderData: Partial<Order> = {
@@ -68,7 +74,34 @@ export class OrdersService {
 
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
-    return this.mapOrderResponse(savedOrder)
+
+    // If deliveryAddress supplied as an object and consumer has no saved addresses, persist it as first address
+    try {
+      const addr = createDto.deliveryAddress;
+      if (addr && typeof addr === 'object') {
+        const count = await this.addressModel
+          .countDocuments({ consumerId: userId, isDeleted: false })
+          .exec();
+        if (!count) {
+          await this.addressModel.create({
+            consumerId: userId,
+            label: addr.label || 'Home',
+            addressLine: addr.addressLine || addr.address || '',
+            city: addr.city,
+            state: addr.state,
+            postalCode: addr.postalCode,
+            country: addr.country,
+            location: addr.location,
+            instructions: addr.instructions,
+            isDefault: true,
+          });
+        }
+      }
+    } catch (e) {
+      // don't block order on address persistence
+      console.error('Error saving first delivery address:', e);
+    }
+    return this.mapOrderResponse(savedOrder);
   }
 
   private async getVendorIdForUser(userId: string) {

@@ -6,6 +6,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { Consumer, ConsumerDocument } from '../schemas/Consumer.schema';
+import {
+  DeliveryAddress,
+  DeliveryAddressDocument,
+} from '../schemas/DeliveryAddress.schema';
 import { ConsumerResponseDto } from './dto/consumers.dto';
 import { Vendor } from '../schemas/Vendor.schema';
 
@@ -14,7 +18,9 @@ export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
-  ) { }
+    @InjectModel(DeliveryAddress.name)
+    private addressModel: Model<DeliveryAddressDocument>,
+  ) {}
 
   async getProfile(userId: string) {
     let consumer = await this.consumerModel.findOne({ userId }).exec();
@@ -25,7 +31,11 @@ export class ConsumersService {
         orderHistory: [],
       });
     }
-    return this.mapConsumerResponse(consumer);
+    const addresses = await this.addressModel
+      .find({ consumerId: userId, isDeleted: false })
+      .sort({ isDefault: -1, updatedAt: -1 })
+      .exec();
+    return this.mapConsumerResponse(consumer, addresses);
   }
 
   async updateProfile(userId: string, updateData: any) {
@@ -75,7 +85,10 @@ export class ConsumersService {
     return consumer.orderHistory;
   }
 
-  private mapConsumerResponse(consumer: any): ConsumerResponseDto {
+  private mapConsumerResponse(
+    consumer: any,
+    addresses: any[] = [],
+  ): ConsumerResponseDto & { addresses?: any[] } {
     return {
       id: consumer._id.toString(),
       userId: consumer.userId,
@@ -84,6 +97,7 @@ export class ConsumersService {
       serialNumber: consumer.serialNumber,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
+      addresses,
     };
   }
 }
