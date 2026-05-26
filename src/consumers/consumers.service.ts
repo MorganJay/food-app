@@ -97,7 +97,22 @@ export class ConsumersService {
       serialNumber: consumer.serialNumber,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
-      addresses,
+      addresses: addresses.map((address) => ({
+        id: address._id.toString(),
+        label: address.label,
+        addressLine: address.addressLine,
+        // consumerId: address.consumerId,
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+        location: address.location,
+        instructions: address.instructions,
+        isDefault: address.isDefault,
+        serialNumber: address.serialNumber,
+        createdAt: address.createdAt,
+        updatedAt: address.updatedAt,
+      })),
     };
   }
 }
