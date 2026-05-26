@@ -11,6 +11,7 @@ import {
 } from '../schemas/DeliveryAddress.schema';
 import {
   CreateDeliveryAddressDto,
+  DeliveryAddressResponseDto,
   UpdateDeliveryAddressDto,
 } from './dto/delivery-address.dto';
 
@@ -21,7 +22,7 @@ export class DeliveryAddressesService {
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
 
-  async create(consumerId: string, dto: CreateDeliveryAddressDto) {
+  async create(consumerId: string, dto: CreateDeliveryAddressDto): Promise<DeliveryAddressResponseDto> {
     if (!dto.addressLine) {
       throw new BadRequestException('addressLine is required');
     }
@@ -31,25 +32,33 @@ export class DeliveryAddressesService {
         .exec();
     }
     const created = new this.addressModel({ ...dto, consumerId });
-    return created.save();
+    const saved = await created.save();
+
+    return this.mapDeliveryAddressResponse(saved);
   }
 
-  async findByConsumer(consumerId: string) {
-    return this.addressModel
+  async findByConsumer(consumerId: string): Promise<DeliveryAddressResponseDto[]> {
+    const addresses = await this.addressModel
       .find({ consumerId, isDeleted: false })
       .sort({ isDefault: -1, updatedAt: -1 })
       .exec();
+
+    return addresses.map(address =>
+      this.mapDeliveryAddressResponse(
+        address,
+      ),
+    );
   }
 
-  async findById(id: string, consumerId: string) {
+  async findById(id: string, consumerId: string): Promise<DeliveryAddressResponseDto> {
     const addr = await this.addressModel
       .findOne({ _id: id, consumerId, isDeleted: false })
       .exec();
     if (!addr) throw new NotFoundException('Address not found');
-    return addr;
+    return this.mapDeliveryAddressResponse(addr);
   }
 
-  async update(id: string, consumerId: string, dto: UpdateDeliveryAddressDto) {
+  async update(id: string, consumerId: string, dto: UpdateDeliveryAddressDto): Promise<DeliveryAddressResponseDto> {
     if (dto.isDefault) {
       await this.addressModel
         .updateMany({ consumerId }, { isDefault: false })
@@ -61,10 +70,10 @@ export class DeliveryAddressesService {
       })
       .exec();
     if (!updated) throw new NotFoundException('Address not found');
-    return updated;
+    return this.mapDeliveryAddressResponse(updated);
   }
 
-  async remove(id: string, consumerId: string) {
+  async remove(id: string, consumerId: string): Promise<DeliveryAddressResponseDto> {
     const removed = await this.addressModel
       .findOneAndUpdate(
         { _id: id, consumerId, isDeleted: false },
@@ -73,12 +82,38 @@ export class DeliveryAddressesService {
       )
       .exec();
     if (!removed) throw new NotFoundException('Address not found');
-    return removed;
+    return this.mapDeliveryAddressResponse(removed);
   }
 
-  async countForConsumer(consumerId: string) {
+  async countForConsumer(consumerId: string): Promise<number> {
     return this.addressModel
       .countDocuments({ consumerId, isDeleted: false })
       .exec();
+  }
+
+  private mapDeliveryAddressResponse(address: DeliveryAddressDocument): DeliveryAddressResponseDto {
+    return {
+      id: address._id.toString(),
+      consumerId: address.consumerId,
+      label: address.label,
+      addressLine: address.addressLine,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+
+      location: address.location
+        ? {
+            lat: address.location.lat,
+            lng: address.location.lng,
+          }
+        : undefined,
+
+      instructions: address.instructions,
+      isDefault: address.isDefault,
+      serialNumber: address.serialNumber,
+      createdAt: address.createdAt,
+      updatedAt: address.updatedAt,
+    };
   }
 }

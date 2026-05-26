@@ -39,3 +39,21 @@ export class DeliveryAddress extends BaseEntity {
 
 export const DeliveryAddressSchema =
   SchemaFactory.createForClass(DeliveryAddress);
+
+DeliveryAddressSchema.pre('save', async function (next) {
+  if (this.isNew && !this.serialNumber) {
+    try {
+      const counter = await this.collection.conn.db
+        .collection('counters')
+        .findOneAndUpdate(
+          { name: 'delivery-address' },
+          { $inc: { value: 1 } },
+          { upsert: true, returnDocument: 'after' },
+        );
+      this.serialNumber = counter.value || 1;
+    } catch (error) {
+      console.error('Error auto-incrementing serialNumber:', error);
+    }
+  }
+  next();
+});

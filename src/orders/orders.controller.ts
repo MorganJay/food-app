@@ -24,6 +24,7 @@ import { OrdersService } from './orders.service';
 import { OrdersGateway } from './orders.gateway';
 import { CreateOrderDto } from './dto/order.dto';
 import { OrderStatus } from '../schemas/Order.schema';
+import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth('jwt')
@@ -41,6 +42,20 @@ export class OrdersController {
   @ApiResponse({ status: 201, description: 'Order created' })
   async create(@Body() createDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(req.user.sub, createDto);
+  }
+
+  @Roles(UserRole.CONSUMER)
+  @Get('checkout-summary')
+  @ApiOperation({ summary: 'Get checkout summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Checkout summary retrieved successfully',
+    type: CheckoutSummaryResponseDto,
+  })
+  async getCheckoutSummary(@Req() req) {
+    return this.ordersService.getCheckoutSummary(
+      req.user.sub,
+    );
   }
 
   @Get()

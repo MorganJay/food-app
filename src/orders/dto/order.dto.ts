@@ -100,7 +100,7 @@ export class CreateOrderDto {
   notes?: string;
 }
 
-class OrderItemResponseDto {
+export class OrderItemResponseDto {
   @ApiProperty()
   productId: string;
 

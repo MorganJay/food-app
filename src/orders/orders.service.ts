@@ -16,6 +16,7 @@ import {
 } from '../schemas/DeliveryAddress.schema';
 import { UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
+import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -102,6 +103,56 @@ export class OrdersService {
       console.error('Error saving first delivery address:', e);
     }
     return this.mapOrderResponse(savedOrder);
+  }
+
+  async getCheckoutSummary(userId: string): Promise<CheckoutSummaryResponseDto> {
+    const cart = await this.cartModel.findOne({ userId, isDeleted: false, }).exec();
+
+    if (!cart || cart.items.length === 0) {
+      throw new NotFoundException('Cart is empty');
+    }
+
+    const serviceFee = Math.round(cart.total * 0.1);
+    const deliveryFee = 4000;
+    const grandTotal = cart.total + serviceFee + deliveryFee;
+
+    const address = await this.addressModel
+      .findOne({
+        consumerId: userId,
+        isDeleted: false,
+        isDefault: true,
+      })
+      .lean()
+      .exec();
+
+    if (!address) {
+      throw new NotFoundException(
+        'No delivery address found',
+      );
+    }
+
+    return {
+      deliveryAddress: address ? {
+          id: address._id.toString(),
+          label: address.label,
+          addressLine: address.addressLine,
+          city: address.city,
+          state: address.state,
+          postalCode: address.postalCode,
+          country: address.country,
+          instructions: address.instructions,
+        } : null,
+      cartTotal: cart.total,
+      serviceFee,
+      deliveryFee,
+      grandTotal,
+      items: cart.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+      })),
+    };
   }
 
   private async getVendorIdForUser(userId: string) {
