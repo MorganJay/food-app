@@ -46,10 +46,10 @@ export class ConsumersController {
 
   @Post('toggleFavorites')
   @Roles(UserRole.CONSUMER)
-  @ApiOperation({ summary: 'Toggle favorite vendor' })
-  @ApiResponse({ status: 200, description: 'Favorite toggled' })
+  @ApiOperation({ summary: 'Toggle favorite restaurant' })
+  @ApiResponse({ status: 200, description: 'Restaurant toggled' })
   async toggleFavorite(@Req() req, @Body() dto: ToggleFavoriteDto) {
-    return this.consumersService.toggleFavorite(req.user.sub, dto.vendorId);
+    return this.consumersService.toggleFavorite(req.user.sub, dto.restaurantId);
   }
 
   @Get('orders')

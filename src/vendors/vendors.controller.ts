@@ -42,23 +42,23 @@ export class VendorsController {
     return this.vendorsService.listAll(parseInt(skip), parseInt(limit), sortBy);
   }
 
-  @Get('nearby')
-  @ApiOperation({ summary: 'Find nearby vendors by location' })
-  @ApiQuery({ name: 'latitude', required: true, type: Number })
-  @ApiQuery({ name: 'longitude', required: true, type: Number })
-  @ApiQuery({ name: 'radius', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Nearby vendors' })
-  async findNearby(
-    @Query('latitude') latitude: string,
-    @Query('longitude') longitude: string,
-    @Query('radius') radius: string = '5',
-  ) {
-    return this.vendorsService.findNearby(
-      parseFloat(latitude),
-      parseFloat(longitude),
-      parseInt(radius),
-    );
-  }
+  // @Get('nearby')
+  // @ApiOperation({ summary: 'Find nearby vendors by location' })
+  // @ApiQuery({ name: 'latitude', required: true, type: Number })
+  // @ApiQuery({ name: 'longitude', required: true, type: Number })
+  // @ApiQuery({ name: 'radius', required: false, type: Number })
+  // @ApiResponse({ status: 200, description: 'Nearby vendors' })
+  // async findNearby(
+  //   @Query('latitude') latitude: string,
+  //   @Query('longitude') longitude: string,
+  //   @Query('radius') radius: string = '5',
+  // ) {
+  //   return this.vendorsService.findNearby(
+  //     parseFloat(latitude),
+  //     parseFloat(longitude),
+  //     parseInt(radius),
+  //   );
+  // }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get vendor by ID' })

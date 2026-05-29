@@ -47,24 +47,24 @@ export class VendorsService {
     return this.mapVendorResponse(vendor);
   }
 
-  async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-    const vendors = await this.vendorModel
-      .find({
-        isVerified: true,
-        location: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            $maxDistance: radiusKm * 1000,
-          },
-        },
-      })
-      .exec();
+  // async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
+  //   const vendors = await this.vendorModel
+  //     .find({
+  //       isVerified: true,
+  //       location: {
+  //         $near: {
+  //           $geometry: {
+  //             type: 'Point',
+  //             coordinates: [longitude, latitude],
+  //           },
+  //           $maxDistance: radiusKm * 1000,
+  //         },
+  //       },
+  //     })
+  //     .exec();
 
-    return vendors.map((vendor) => this.mapVendorResponse(vendor));
-  }
+  //   return vendors.map((vendor) => this.mapVendorResponse(vendor));
+  // }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {
     const existing = await this.vendorModel.findOne({

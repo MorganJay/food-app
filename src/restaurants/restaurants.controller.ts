@@ -38,6 +38,24 @@ export class RestaurantsController {
     return this.restaurantsService.findAll(parseInt(skip), parseInt(limit));
   }
 
+  @Get('nearby')
+  @ApiOperation({ summary: 'Find nearby restaurants by location' })
+  @ApiQuery({ name: 'latitude', required: true, type: Number })
+  @ApiQuery({ name: 'longitude', required: true, type: Number })
+  @ApiQuery({ name: 'radius', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Nearby restaurants' })
+  async findNearby(
+    @Query('latitude') latitude: string,
+    @Query('longitude') longitude: string,
+    @Query('radius') radius: string = '5',
+  ) {
+    return this.restaurantsService.findNearby(
+      parseFloat(latitude),
+      parseFloat(longitude),
+      parseInt(radius),
+    );
+  }
+
   @Get('search')
   @ApiOperation({ summary: 'Search restaurants' })
   @ApiQuery({ name: 'q', required: true, example: 'pizza' })
