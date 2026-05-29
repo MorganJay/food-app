@@ -116,32 +116,7 @@ export class OrdersService {
     const deliveryFee = 4000;
     const grandTotal = cart.total + serviceFee + deliveryFee;
 
-    const address = await this.addressModel
-      .findOne({
-        consumerId: userId,
-        isDeleted: false,
-        isDefault: true,
-      })
-      .lean()
-      .exec();
-
-    if (!address) {
-      throw new NotFoundException(
-        'No delivery address found',
-      );
-    }
-
     return {
-      deliveryAddress: address ? {
-          id: address._id.toString(),
-          label: address.label,
-          addressLine: address.addressLine,
-          city: address.city,
-          state: address.state,
-          postalCode: address.postalCode,
-          country: address.country,
-          instructions: address.instructions,
-        } : null,
       cartTotal: cart.total,
       serviceFee,
       deliveryFee,
