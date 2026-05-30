@@ -69,6 +69,8 @@ Authorization: Bearer {{token}}
 
 ###
 
+@addressId =
+
 # Update Consumer Delivery Address
 PUT {{baseURL}}/consumers/addresses/{{addressId}}
 Content-Type: application/json

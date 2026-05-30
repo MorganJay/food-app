@@ -55,7 +55,9 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
   });
 
@@ -75,7 +77,7 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       state: 'Oyo',
       postalCode: '200001',
       country: 'NG',
-      location: { lat: 7.3775, lng: 3.9470 },
+      location: { lat: 7.3775, lng: 3.947 },
       instructions: 'Leave at gate',
       isDefault: true,
     };
@@ -86,7 +88,10 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       .send(payload)
       .expect(201);
 
-    expect(addressService.create).toHaveBeenCalledWith('consumer-test', payload);
+    expect(addressService.create).toHaveBeenCalledWith(
+      'consumer-test',
+      payload,
+    );
     expect(response.body).toMatchObject({ id: 'addr1', ...payload });
   });
 
@@ -111,7 +116,11 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       .send(payload)
       .expect(200);
 
-    expect(addressService.update).toHaveBeenCalledWith('addr1', 'consumer-test', payload);
+    expect(addressService.update).toHaveBeenCalledWith(
+      'addr1',
+      'consumer-test',
+      payload,
+    );
     expect(response.body).toEqual({ id: 'addr1', ...payload });
   });
 
@@ -122,7 +131,10 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       .delete('/consumers/addresses/addr1')
       .expect(200);
 
-    expect(addressService.remove).toHaveBeenCalledWith('addr1', 'consumer-test');
+    expect(addressService.remove).toHaveBeenCalledWith(
+      'addr1',
+      'consumer-test',
+    );
     expect(response.body).toEqual({ id: 'addr1', isDeleted: true });
   });
 
@@ -145,7 +157,14 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
       .send(orderPayload)
       .expect(201);
 
-    expect(ordersService.create).toHaveBeenCalledWith('consumer-test', orderPayload);
-    expect(response.body).toMatchObject({ id: 'order1', userId: 'consumer-test', total: 1200 });
+    expect(ordersService.create).toHaveBeenCalledWith(
+      'consumer-test',
+      orderPayload,
+    );
+    expect(response.body).toMatchObject({
+      id: 'order1',
+      userId: 'consumer-test',
+      total: 1200,
+    });
   });
 });
