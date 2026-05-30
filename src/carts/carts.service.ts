@@ -30,20 +30,20 @@ export class CartsService {
     if (!cart) {
       cart = new this.cartModel({
         userId,
-        vendorId: addDto.vendorId,
+        restaurantId: addDto.restaurantId,
         items: [],
         total: 0,
       });
     }
 
-    if (cart.vendorId && cart.vendorId !== addDto.vendorId) {
+    if (cart.restaurantId && cart.restaurantId !== addDto.restaurantId) {
       throw new BadRequestException(
-        'Cannot add items from different vendors to the same cart',
+        'Cannot add items from different restaurants to the same cart',
       );
     }
 
-    if (!cart.vendorId) {
-      cart.vendorId = addDto.vendorId;
+    if (!cart.restaurantId) {
+      cart.restaurantId = addDto.restaurantId;
     }
 
     const existingItem = cart.items.find(
@@ -119,7 +119,7 @@ export class CartsService {
   async clearCart(userId: string) {
     const cart = await this.cartModel.findOneAndUpdate(
       { userId },
-      { items: [], total: 0 },
+      { items: [], total: 0, restaurantId: null,},
       { new: true },
     );
 
@@ -135,7 +135,7 @@ export class CartsService {
       id: cart._id.toString(),
       serialNumber: cart.serialNumber,
       userId: cart.userId,
-      vendorId: cart.vendorId,
+      restaurantId: cart.restaurantId,
 
       items: cart.items.map((item) => ({
         productId: item.productId.toString(),

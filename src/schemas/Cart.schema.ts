@@ -31,7 +31,7 @@ export class Cart extends BaseEntity {
   items: CartItem[];
 
   @Prop()
-  vendorId?: string;
+  restaurantId?: string;
 
   @Prop({ default: 0 })
   total: number;

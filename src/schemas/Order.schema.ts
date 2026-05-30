@@ -30,7 +30,7 @@ export class Order extends BaseEntity {
   userId: string;
 
   @Prop({ required: true })
-  vendorId: string;
+  restaurantId: string;
 
   @Prop({
     type: [
@@ -50,6 +50,15 @@ export class Order extends BaseEntity {
       `ORD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
   })
   orderReference: string;
+
+  @Prop({ default: 0 })
+  serviceFee: number;
+
+  @Prop({ default: 0 })
+  deliveryFee: number;
+
+  @Prop({ required: true })
+  subtotal: number;
 
   @Prop({ required: true })
   total: number;
