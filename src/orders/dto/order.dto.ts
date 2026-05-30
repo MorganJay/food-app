@@ -7,6 +7,8 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '../../schemas/Order.schema';
+import { CreateDeliveryAddressDto } from 'src/consumers/dto/delivery-address.dto';
+import { Type } from 'class-transformer';
 
 export class OrderItemDto {
   @ApiProperty({
@@ -51,21 +53,10 @@ export class CreateOrderDto {
   @IsString()
   cartId?: string;
 
-  @ApiPropertyOptional({
-    example: 'ORD-2026-0001',
-    description: 'Unique order reference',
-  })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  orderReference?: string;
-
-  @ApiPropertyOptional({
-    example: 'vendor_67890',
-    description: 'Vendor ID',
-  })
-  @IsOptional()
-  @IsString()
-  vendorId?: string;
+  restaurantId?: string;
 
   @ApiPropertyOptional({
     type: [OrderItemDto],
@@ -75,21 +66,15 @@ export class CreateOrderDto {
   @IsArray()
   items?: OrderItemDto[];
 
-  @ApiPropertyOptional({
-    example: 3000,
-    description: 'Total order amount',
-  })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
   total?: number;
 
-  @ApiProperty({
-    example: '123 Ring Road, Ibadan',
-    description:
-      'Delivery address (string or object). If object is provided it may be saved to consumer addresses.',
-  })
+  @ApiProperty()
   @IsNotEmpty()
-  deliveryAddress: any;
+  @Type(() => CreateDeliveryAddressDto)
+  deliveryAddress: CreateDeliveryAddressDto;;
 
   @ApiPropertyOptional({
     example: 'Please deliver quickly',
@@ -100,7 +85,7 @@ export class CreateOrderDto {
   notes?: string;
 }
 
-class OrderItemResponseDto {
+export class OrderItemResponseDto {
   @ApiProperty()
   productId: string;
 
@@ -125,13 +110,22 @@ export class OrderResponseDto {
   userId: string;
 
   @ApiProperty()
-  vendorId: string;
+  restaurantId: string;
 
   @ApiProperty()
   orderReference: string;
 
   @ApiProperty({ type: [OrderItemResponseDto] })
   items: OrderItemResponseDto[];
+
+  @ApiProperty()
+  subtotal: number;
+
+  @ApiProperty()
+  serviceFee: number;
+
+  @ApiProperty()
+  deliveryFee: number;
 
   @ApiProperty()
   total: number;

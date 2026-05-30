@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
-import { UserResponseDto } from './dto/users.dto';
+import { UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
 
 @Injectable()
@@ -123,6 +123,51 @@ export class UsersService {
     await this.userModel.findByIdAndUpdate(userId, {
       password: await hashPassword(plainPassword),
     });
+  }
+
+  async updateProfile(userId: string, dto: UpdateUserProfileDto) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existingEmail = await this.userModel.findOne({ email: dto.email });
+
+      if (existingEmail) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+
+    if (dto.phoneNumber && dto.phoneNumber !== user.phoneNumber) {
+      const existingPhone = await this.userModel.findOne({
+        phoneNumber: dto.phoneNumber,
+      });
+
+      if (existingPhone) {
+        throw new BadRequestException('Phone number already exists');
+      }
+    }
+
+    if (dto.username && dto.username !== user.username) {
+      const existingUsername = await this.userModel.findOne({
+        username: dto.username,
+      });
+
+      if (existingUsername) {
+        throw new BadRequestException('Username already exists');
+      }
+    }
+
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, dto,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    return this.mapUserResponse(updatedUser);
   }
 
   private mapUserResponse(user: UserDocument): UserResponseDto {

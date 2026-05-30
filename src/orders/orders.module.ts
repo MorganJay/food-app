@@ -13,6 +13,7 @@ import {
   DeliveryAddress,
   DeliveryAddressSchema,
 } from '../schemas/DeliveryAddress.schema';
+import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import {
       { name: Order.name, schema: OrderSchema },
       { name: Cart.name, schema: CartSchema },
       { name: Vendor.name, schema: VendorSchema },
+      { name: Restaurant.name, schema: RestaurantSchema },
       { name: Rider.name, schema: RiderSchema },
       { name: DeliveryAddress.name, schema: DeliveryAddressSchema },
     ]),

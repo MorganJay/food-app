@@ -84,7 +84,7 @@ export class UpdateDeliveryAddressDto {
 
 export class DeliveryAddressResponseDto {
   @ApiProperty({ example: '64f1c2a9b1234567890abcd1' })
-  _id: string;
+  id: string;
 
   @ApiProperty({ example: 'consumer123' })
   consumerId: string;
@@ -116,9 +116,13 @@ export class DeliveryAddressResponseDto {
   @ApiPropertyOptional({ example: true })
   isDefault?: boolean;
 
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
+
   @ApiPropertyOptional()
   createdAt?: Date;
 
   @ApiPropertyOptional()
   updatedAt?: Date;
 }
+

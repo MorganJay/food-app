@@ -11,13 +11,14 @@ import {
   DeliveryAddressDocument,
 } from '../schemas/DeliveryAddress.schema';
 import { ConsumerResponseDto } from './dto/consumers.dto';
-import { Vendor } from '../schemas/Vendor.schema';
+import { Restaurant, RestaurantDocument } from 'src/schemas/Restaurant.schema';
 
 @Injectable()
 export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
-    @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
+    // @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
+    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(DeliveryAddress.name)
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
@@ -46,36 +47,68 @@ export class ConsumersService {
     return this.mapConsumerResponse(consumer);
   }
 
-  async toggleFavorite(userId: string, vendorId: string) {
+
+  async toggleFavorite(userId: string, restaurantId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
       const newConsumer = await this.consumerModel.create({
         userId,
-        favorites: [vendorId],
+        favorites: [restaurantId],
         orderHistory: [],
       });
       return this.mapConsumerResponse(newConsumer);
     }
 
-    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
-      throw new BadRequestException('Invalid vendorId');
+    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+      throw new BadRequestException('Invalid restaurantId');
     }
 
-    const vendorExists = await this.vendorModel.findById(vendorId).exec();
-    if (!vendorExists) {
-      throw new NotFoundException('Vendor not found');
+    const restaurantExists = await this.restaurantModel.findById(restaurantId).exec();
+    if (!restaurantExists) {
+      throw new NotFoundException('Restaurant not found');
     }
 
-    const isFavorited = consumer.favorites.includes(vendorId);
+    const isFavorited = consumer.favorites.includes(restaurantId);
     if (isFavorited) {
-      consumer.favorites = consumer.favorites.filter((id) => id !== vendorId);
+      consumer.favorites = consumer.favorites.filter((id) => id !== restaurantId);
     } else {
-      consumer.favorites.push(vendorId);
+      consumer.favorites.push(restaurantId);
     }
     await consumer.save();
 
     return this.mapConsumerResponse(consumer);
   }
+
+  // async toggleFavorite(userId: string, vendorId: string) {
+  //   const consumer = await this.consumerModel.findOne({ userId }).exec();
+  //   if (!consumer) {
+  //     const newConsumer = await this.consumerModel.create({
+  //       userId,
+  //       favorites: [vendorId],
+  //       orderHistory: [],
+  //     });
+  //     return this.mapConsumerResponse(newConsumer);
+  //   }
+
+  //   if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+  //     throw new BadRequestException('Invalid vendorId');
+  //   }
+
+  //   const vendorExists = await this.vendorModel.findById(vendorId).exec();
+  //   if (!vendorExists) {
+  //     throw new NotFoundException('Vendor not found');
+  //   }
+
+  //   const isFavorited = consumer.favorites.includes(vendorId);
+  //   if (isFavorited) {
+  //     consumer.favorites = consumer.favorites.filter((id) => id !== vendorId);
+  //   } else {
+  //     consumer.favorites.push(vendorId);
+  //   }
+  //   await consumer.save();
+
+  //   return this.mapConsumerResponse(consumer);
+  // }
 
   async getOrders(userId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
@@ -97,7 +130,22 @@ export class ConsumersService {
       serialNumber: consumer.serialNumber,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
-      addresses,
+      addresses: addresses.map((address) => ({
+        id: address._id.toString(),
+        label: address.label,
+        addressLine: address.addressLine,
+        // consumerId: address.consumerId,
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+        location: address.location,
+        instructions: address.instructions,
+        isDefault: address.isDefault,
+        serialNumber: address.serialNumber,
+        createdAt: address.createdAt,
+        updatedAt: address.updatedAt,
+      })),
     };
   }
 }

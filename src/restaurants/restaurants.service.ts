@@ -60,6 +60,25 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(restaurant);
   }
 
+  async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
+    const restaurants = await this.restaurantModel
+      .find({
+        isActive: true,
+        location: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude],
+            },
+            $maxDistance: radiusKm * 1000,
+          },
+        },
+      })
+      .exec();
+
+    return restaurants.map((restaurant) => this.mapRestaurantResponse(restaurant));
+  }
+
   async search(query: string, skip: number = 0, limit: number = 10) {
     const restaurants = await this.restaurantModel
       .find(

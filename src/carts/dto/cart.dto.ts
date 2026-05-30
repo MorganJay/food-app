@@ -11,12 +11,12 @@ export class AddToCartDto {
   productId: string;
 
   @ApiProperty({
-    example: 'vendor_67890',
-    description: 'ID of the vendor selling the product',
+    example: 'restaurant_67890',
+    description: 'ID of the restaurant selling the product',
   })
   @IsNotEmpty()
   @IsString()
-  vendorId: string;
+  restaurantId: string;
 
   @ApiProperty({
     example: 2,
@@ -103,10 +103,10 @@ export class CartResponseDto {
 
   @ApiProperty({
     example: '66b1f7c3a12d4e5f67890999',
-    description: 'Vendor ID',
+    description: 'Restaurant ID',
     required: false,
   })
-  vendorId?: string;
+  restaurantId?: string;
 
   @ApiProperty({
     type: [CartItemResponseDto],

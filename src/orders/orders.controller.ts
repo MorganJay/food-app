@@ -24,6 +24,7 @@ import { OrdersService } from './orders.service';
 import { OrdersGateway } from './orders.gateway';
 import { CreateOrderDto } from './dto/order.dto';
 import { OrderStatus } from '../schemas/Order.schema';
+import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth('jwt')
@@ -41,6 +42,20 @@ export class OrdersController {
   @ApiResponse({ status: 201, description: 'Order created' })
   async create(@Body() createDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(req.user.sub, createDto);
+  }
+
+  @Roles(UserRole.CONSUMER)
+  @Get('checkout-summary')
+  @ApiOperation({ summary: 'Get checkout summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Checkout summary retrieved successfully',
+    type: CheckoutSummaryResponseDto,
+  })
+  async getCheckoutSummary(@Req() req) {
+    return this.ordersService.getCheckoutSummary(
+      req.user.sub,
+    );
   }
 
   @Get()
@@ -70,7 +85,32 @@ export class OrdersController {
     );
   }
 
-  @Roles(UserRole.VENDOR)
+  // @Roles(UserRole.VENDOR)
+  // @Get('vendor')
+  // @ApiQuery({
+  //   name: 'skip',
+  //   required: false,
+  //   description: 'Number of records to skip',
+  //   example: 0,
+  // })
+  // @ApiQuery({
+  //   name: 'limit',
+  //   required: false,
+  //   description: 'Maximum number of records to return',
+  //   example: 20,
+  // })
+  // async findByVendor(
+  //   @Req() req,
+  //   @Query('skip') skip: string = '0',
+  //   @Query('limit') limit: string = '20',
+  // ) {
+  //   return this.ordersService.findByVendorUser(
+  //     req.user.sub,
+  //     parseInt(skip, 10),
+  //     parseInt(limit, 10),
+  //   );
+  // }
+    @Roles(UserRole.VENDOR)
   @Get('vendor')
   @ApiQuery({
     name: 'skip',
@@ -84,22 +124,27 @@ export class OrdersController {
     description: 'Maximum number of records to return',
     example: 20,
   })
-  async findByVendor(
+  async findByRestaurant(
     @Req() req,
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
-    return this.ordersService.findByVendorUser(
+    return this.ordersService.findByRestaurantUser(
       req.user.sub,
       parseInt(skip, 10),
       parseInt(limit, 10),
     );
   }
 
-  @Roles(UserRole.VENDOR)
-  @Get('vendor/analytics')
-  async vendorAnalytics(@Req() req) {
-    return this.ordersService.vendorAnalyticsByUser(req.user.sub);
+  // @Roles(UserRole.VENDOR)
+  // @Get('vendor/analytics')
+  // async vendorAnalytics(@Req() req) {
+  //   return this.ordersService.vendorAnalyticsByUser(req.user.sub);
+  // }
+    @Roles(UserRole.VENDOR)
+  @Get('restaurant/analytics')
+  async restaurantAnalytics(@Req() req) {
+    return this.ordersService.restaurantAnalyticsByUser(req.user.sub);
   }
 
   @Roles(UserRole.ADMIN)
