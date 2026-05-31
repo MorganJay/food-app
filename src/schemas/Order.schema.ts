@@ -80,7 +80,7 @@ export class Order extends BaseEntity {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
-OrderSchema.index({ vendorId: 1 });
+OrderSchema.index({ restaurantId: 1 });
 OrderSchema.index({ status: 1 });
 
 OrderSchema.pre('save', async function (next) {

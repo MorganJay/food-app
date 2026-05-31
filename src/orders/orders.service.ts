@@ -7,7 +7,6 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
-import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { Rider, RiderDocument } from '../schemas/Rider.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
 import {
@@ -16,7 +15,6 @@ import {
 } from '../schemas/DeliveryAddress.schema';
 import { UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
-import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
 
 export type OrderRequester = { sub: string; role: UserRole };
@@ -26,14 +24,13 @@ export class OrdersService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    // @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
     @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
     @InjectModel(DeliveryAddress.name)
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
 
-    // pricing engine
+  // pricing engine
   private async calculatePricing(input: { cartTotal: number; restaurantId: string }) {
     const serviceFee = Math.round(input.cartTotal * 0.1);
     const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
@@ -92,9 +89,9 @@ export class OrdersService {
         items: [],
         total: 0,
         restaurantId: null,
-      });
+      }).exec();
     } else {
-      if (!createDto.items?.length || !createDto.total || !createDto.restaurantId) {
+      if (!createDto.items?.length || !createDto.restaurantId) {
         throw new BadRequestException(
           'Orders require either a cartId or full item/total/restaurant details',
         );
@@ -106,7 +103,7 @@ export class OrdersService {
       );
 
       const pricing = await this.calculatePricing({
-        cartTotal: createDto.total,
+        cartTotal: subtotal,
         restaurantId: createDto.restaurantId,
       });
 
@@ -114,8 +111,6 @@ export class OrdersService {
         ...orderData,
         restaurantId: createDto.restaurantId,
         items: createDto.items,
-
-        // subtotal: createDto.total,
         subtotal,
         serviceFee: pricing.serviceFee,
         deliveryFee: pricing.deliveryFee,
@@ -126,7 +121,7 @@ export class OrdersService {
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
 
-    // keep your address logic unchanged
+    // address logic
     try {
       const addr = createDto.deliveryAddress;
       if (addr && typeof addr === 'object') {
@@ -155,220 +150,6 @@ export class OrdersService {
 
     return this.mapOrderResponse(savedOrder);
   }
-
-  // async create(userId: string, createDto: CreateOrderDto) {
-  //   const cart = await this.cartModel.findOne({
-  //     _id: createDto.cartId,
-  //     userId,
-  //     isDeleted: false,
-  //   });
-
-  //   if (!cart || !cart.items.length) {
-  //     throw new BadRequestException('Cart not found or empty');
-  //   }
-
-  //   const pricing = await this.calculatePricing({
-  //     cartTotal: cart.total,
-  //     restaurantId: cart.restaurantId,
-  //     userId,
-  //   });
-
-  //   const order = await this.orderModel.create({
-  //     userId,
-  //     restaurantId: cart.restaurantId,
-  //     items: cart.items,
-
-  //     subtotal: cart.total,
-  //     serviceFee: pricing.serviceFee,
-  //     deliveryFee: pricing.deliveryFee,
-  //     total: pricing.grandTotal,
-
-  //     deliveryAddress: createDto.deliveryAddress,
-  //     notes: createDto.notes,
-
-  //     paymentStatus: 'pending',
-  //     status: OrderStatus.PENDING,
-
-  //     orderReference: this.generateOrderReference(),
-  //   });
-
-  //   await this.cartModel.updateOne(
-  //     { _id: cart._id },
-  //     { items: [], total: 0, restaurantId: null },
-  //   );
-
-  //   return this.mapOrderResponse(order);
-  // }
-
-  // async create(userId: string, createDto: any) {
-  //   let orderData: Partial<Order> = {
-  //     userId,
-  //     deliveryAddress: createDto.deliveryAddress,
-  //     notes: createDto.notes,
-  //     paymentStatus: 'pending',
-  //   };
-
-  //   if (createDto.cartId) {
-  //     const cart = await this.cartModel
-  //       .findOne({
-  //         _id: createDto.cartId,
-  //         userId,
-  //         isDeleted: false,
-  //       })
-  //       .exec();
-
-  //     if (!cart || !cart.items.length) {
-  //       throw new BadRequestException('Cart not found or empty');
-  //     }
-
-  //     const pricing = await this.calculatePricing({
-  //       cartTotal: cart.total,
-  //       restaurantId: cart.restaurantId,
-  //     });
-
-  //     orderData = {
-  //       ...orderData,
-  //       restaurantId: cart.restaurantId,
-  //       items: cart.items,
-  //       total: pricing.grandTotal,
-  //       serviceFee: pricing.serviceFee,
-  //       deliveryFee: pricing.deliveryFee,
-  //     };
-
-  //     await this.cartModel.findByIdAndUpdate(cart._id, {
-  //       items: [],
-  //       total: 0,
-  //       restaurantId: null,
-  //     });
-  //   } else {
-  //     if (!createDto.items?.length || !createDto.total ||!createDto.restaurantId) {
-  //       throw new BadRequestException(
-  //         'Orders require either a cartId or full item/total/restaurant details',
-  //       );
-  //     }
-
-  //     const pricing = await this.calculatePricing({
-  //       cartTotal: createDto.total,
-  //       restaurantId: createDto.restaurantId,
-  //     });
-
-  //     orderData = {
-  //       ...orderData,
-  //       restaurantId: createDto.restaurantId,
-  //       items: createDto.items,
-  //       total: pricing.grandTotal,
-  //       serviceFee: pricing.serviceFee,
-  //       deliveryFee: pricing.deliveryFee,
-  //     };
-  //   }
-
-  //   const order = new this.orderModel(orderData);
-  //   const savedOrder = await order.save();
-
-  //   // If deliveryAddress supplied as an object and consumer has no saved addresses, persist it as first address
-  //   try {
-  //     const addr = createDto.deliveryAddress;
-  //     if (addr && typeof addr === 'object') {
-  //       const count = await this.addressModel
-  //         .countDocuments({ consumerId: userId, isDeleted: false })
-  //         .exec();
-  //       if (!count) {
-  //         await this.addressModel.create({
-  //           consumerId: userId,
-  //           label: addr.label || 'Home',
-  //           addressLine: addr.addressLine || addr.address || '',
-  //           city: addr.city,
-  //           state: addr.state,
-  //           postalCode: addr.postalCode,
-  //           country: addr.country,
-  //           location: addr.location,
-  //           instructions: addr.instructions,
-  //           isDefault: true,
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // don't block order on address persistence
-  //     console.error('Error saving first delivery address:', e);
-  //   }
-
-  //   return this.mapOrderResponse(savedOrder);
-  // }
-
-  // async create(userId: string, createDto: any) {
-  //   let orderData: Partial<Order> = {
-  //     userId,
-  //     deliveryAddress: createDto.deliveryAddress,
-  //     notes: createDto.notes,
-  //     paymentStatus: 'pending',
-  //   };
-
-  //   if (createDto.cartId) {
-  //     const cart = await this.cartModel
-  //       .findOne({ _id: createDto.cartId, userId, isDeleted: false })
-  //       .exec();
-  //     if (!cart || !cart.items.length) {
-  //       throw new BadRequestException('Cart not found or empty');
-  //     }
-  //     orderData = {
-  //       ...orderData,
-  //       restaurantId: cart.restaurantId,
-  //       items: cart.items,
-  //       total: cart.total,
-  //       orderReference: createDto.orderReference,
-  //     };
-  //     await this.cartModel.findByIdAndUpdate(cart._id, {
-  //       items: [],
-  //       total: 0,
-  //       vendorId: null,
-  //     });
-      
-  //   } else {
-  //     if (!createDto.items?.length || !createDto.total || !createDto.restaurantId) {
-  //       throw new BadRequestException(
-  //         'Orders require either a cartId or full item/total/vendor details',
-  //       );
-  //     }
-  //     orderData = {
-  //       ...orderData,
-  //       restaurantId: createDto.restaurantId,
-  //       items: createDto.items,
-  //       total: createDto.total + serviceFee + deliveryFee,
-  //       // orderReference: createDto.orderReference,
-  //     };
-  //   }
-
-  //   const order = new this.orderModel(orderData);
-  //   const savedOrder = await order.save();
-
-  //   // If deliveryAddress supplied as an object and consumer has no saved addresses, persist it as first address
-  //   try {
-  //     const addr = createDto.deliveryAddress;
-  //     if (addr && typeof addr === 'object') {
-  //       const count = await this.addressModel
-  //         .countDocuments({ consumerId: userId, isDeleted: false })
-  //         .exec();
-  //       if (!count) {
-  //         await this.addressModel.create({
-  //           consumerId: userId,
-  //           label: addr.label || 'Home',
-  //           addressLine: addr.addressLine || addr.address || '',
-  //           city: addr.city,
-  //           state: addr.state,
-  //           postalCode: addr.postalCode,
-  //           country: addr.country,
-  //           location: addr.location,
-  //           instructions: addr.instructions,
-  //           isDefault: true,
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // don't block order on address persistence
-  //     console.error('Error saving first delivery address:', e);
-  //   }
-  //   return this.mapOrderResponse(savedOrder);
-  // }
 
   async getCheckoutSummary(userId: string) {
     const cart = await this.cartModel.findOne({ userId, isDeleted: false });
@@ -412,16 +193,6 @@ export class OrdersService {
     return restaurant._id.toString();
   }
 
-  // private async getVendorIdForUser(userId: string) {
-  //   const vendor = await this.vendorModel
-  //     .findOne({ userId, isDeleted: false })
-  //     .exec();
-  //   if (!vendor) {
-  //     throw new NotFoundException('Vendor profile not found');
-  //   }
-  //   return vendor._id.toString();
-  // }
-
   private async getRiderIdForUser(userId: string) {
     const rider = await this.riderModel
       .findOne({ userId, isDeleted: false })
@@ -446,10 +217,6 @@ export class OrdersService {
       const restaurantId = await this.getRestaurantIdForUser(requester.sub);
       return order.restaurantId === restaurantId;
     }
-    // if (requester.role === UserRole.VENDOR) {
-    //   const vendorId = await this.getVendorIdForUser(requester.sub);
-    //   return order.vendorId === vendorId;
-    // }
     if (requester.role === UserRole.RIDER) {
       if (!order.riderId) {
         return false;
@@ -492,22 +259,6 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
-  async findByVendor(vendorId: string, skip: number = 0, limit: number = 20) {
-    const orders = await this.orderModel
-      .find({ vendorId, isDeleted: false })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-
-    return orders.map((order) => this.mapOrderResponse(order));
-  }
-
-  // async findByVendorUser(userId: string, skip: number = 0, limit: number = 20) {
-  //   const vendorId = await this.getVendorIdForUser(userId);
-  //   return this.findByVendor(vendorId, skip, limit);
-  // }
-
   async findByRestaurant(restaurantId: string, skip: number = 0, limit: number = 20) {
     const orders = await this.orderModel
       .find({ restaurantId, isDeleted: false })
@@ -547,19 +298,6 @@ export class OrdersService {
     return { totalOrders, byStatus };
   }
 
-  async vendorAnalytics(vendorId: string) {
-    const totalOrders = await this.orderModel.countDocuments({
-      vendorId,
-      isDeleted: false,
-    });
-    const byStatus = await this.orderModel.aggregate([
-      { $match: { vendorId, isDeleted: false } },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]);
-
-    return { vendorId, totalOrders, byStatus };
-  }
-
   async restaurantAnalytics(restaurantId: string) {
     const totalOrders = await this.orderModel.countDocuments({
       restaurantId,
@@ -577,11 +315,6 @@ export class OrdersService {
     const restaurantId = await this.getRestaurantIdForUser(userId);
     return this.restaurantAnalytics(restaurantId);
   }
-
-  // async vendorAnalyticsByUser(userId: string) {
-  //   const vendorId = await this.getVendorIdForUser(userId);
-  //   return this.vendorAnalytics(vendorId);
-  // }
 
   private async applyStatusUpdate(id: string, status: OrderStatus) {
     const order = await this.orderModel

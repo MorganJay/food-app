@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsArray,
   IsOptional,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '../../schemas/Order.schema';
@@ -64,17 +65,15 @@ export class CreateOrderDto {
   })
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemDto)
   items?: OrderItemDto[];
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  total?: number;
 
   @ApiProperty()
   @IsNotEmpty()
+  @ValidateNested()
   @Type(() => CreateDeliveryAddressDto)
-  deliveryAddress: CreateDeliveryAddressDto;;
+  deliveryAddress: CreateDeliveryAddressDto;
 
   @ApiPropertyOptional({
     example: 'Please deliver quickly',
@@ -130,8 +129,10 @@ export class OrderResponseDto {
   @ApiProperty()
   total: number;
 
-  @ApiProperty()
-  deliveryAddress: string;
+  @ApiProperty({
+    type: CreateDeliveryAddressDto,
+  })
+  deliveryAddress: CreateDeliveryAddressDto;
 
   @ApiProperty({ enum: OrderStatus })
   status: OrderStatus;
@@ -142,8 +143,8 @@ export class OrderResponseDto {
   })
   notes?: string;
 
-  @ApiProperty()
-  riderId: string;
+  @ApiPropertyOptional()
+  riderId?: string;
 
   @ApiProperty()
   paymentStatus: string;

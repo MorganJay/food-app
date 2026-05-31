@@ -21,7 +21,7 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
-  ) { }
+  ) {}
 
   private async assertRestaurantOwnedByVendor(
     restaurantId: string,

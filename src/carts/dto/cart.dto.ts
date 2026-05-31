@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsNotEmpty, IsString, IsNumber, IsPositive } from 'class-validator';
 
 export class AddToCartDto {
   @ApiProperty({
-    example: 'prod_12345',
+    example: '66b1f7c3a12d4e5f67890123',
     description: 'ID of the product being added to cart',
   })
   @IsNotEmpty()
@@ -11,38 +12,14 @@ export class AddToCartDto {
   productId: string;
 
   @ApiProperty({
-    example: 'restaurant_67890',
-    description: 'ID of the restaurant selling the product',
-  })
-  @IsNotEmpty()
-  @IsString()
-  restaurantId: string;
-
-  @ApiProperty({
     example: 2,
     description: 'Quantity of the product',
   })
   @IsNotEmpty()
+  @Type(() => Number)
   @IsNumber()
   @IsPositive()
   quantity: number;
-
-  @ApiProperty({
-    example: 1500,
-    description: 'Price per unit of the product',
-  })
-  @IsNotEmpty()
-  @IsNumber()
-  @IsPositive()
-  price: number;
-
-  @ApiProperty({
-    example: 'Chicken Burger',
-    description: 'Name of the product',
-  })
-  @IsNotEmpty()
-  @IsString()
-  name: string;
 }
 
 export class UpdateCartItemDto {

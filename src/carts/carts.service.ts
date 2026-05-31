@@ -7,43 +7,60 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
 import { AddToCartDto, CartResponseDto, UpdateCartItemDto } from './dto/cart.dto';
+import { Product } from 'src/schemas/Product.schema';
 
 @Injectable()
 export class CartsService {
-  constructor(@InjectModel(Cart.name) private cartModel: Model<CartDocument>) { }
+  constructor(
+    @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
+  ) {}
 
   async getCart(userId: string) {
     let cart = await this.cartModel
       .findOne({ userId, isDeleted: false })
       .exec();
     if (!cart) {
-      cart = new this.cartModel({ userId, items: [], total: 0 });
+      cart = new this.cartModel({ userId, items: [], total: 0, restaurantId: null });
       await cart.save();
     }
     return this.mapCartResponse(cart);
   }
 
   async addItem(userId: string, addDto: AddToCartDto) {
+    const product = await this.productModel.findById(addDto.productId).exec();
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
     let cart = await this.cartModel
       .findOne({ userId, isDeleted: false })
       .exec();
+
+    const restaurantId = product.restaurantId;
+
+    if (!restaurantId) {
+      throw new BadRequestException('Product has no restaurant assigned');
+    }
+
     if (!cart) {
       cart = new this.cartModel({
         userId,
-        restaurantId: addDto.restaurantId,
+        restaurantId,
         items: [],
         total: 0,
       });
     }
 
-    if (cart.restaurantId && cart.restaurantId !== addDto.restaurantId) {
+    if (cart.restaurantId && cart.restaurantId !== restaurantId) {
       throw new BadRequestException(
         'Cannot add items from different restaurants to the same cart',
       );
     }
 
     if (!cart.restaurantId) {
-      cart.restaurantId = addDto.restaurantId;
+      cart.restaurantId = restaurantId;
     }
 
     const existingItem = cart.items.find(
@@ -56,15 +73,13 @@ export class CartsService {
       cart.items.push({
         productId: addDto.productId,
         quantity: addDto.quantity,
-        price: addDto.price,
-        name: addDto.name,
+        price: product.price,
+        name: product.name,
       });
     }
 
-    cart.total = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+    cart.total = this.calculateTotal(cart.items);
+    
     const savedCart = await cart.save();
     return this.mapCartResponse(savedCart);
   }
@@ -74,7 +89,7 @@ export class CartsService {
     productId: string,
     updateDto: UpdateCartItemDto,
   ) {
-    const cart = await this.cartModel.findOne({ userId }).exec();
+    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
     if (!cart) {
       throw new NotFoundException('Cart not found');
     }
@@ -93,13 +108,15 @@ export class CartsService {
       item.quantity = updateDto.quantity;
     }
 
-    cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    // cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    cart.total = this.calculateTotal(cart.items);
+    
     const savedCart = await cart.save();
     return this.mapCartResponse(savedCart);
   }
 
   async removeItem(userId: string, productId: string) {
-    const cart = await this.cartModel.findOne({ userId }).exec();
+    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
     if (!cart) {
       throw new NotFoundException('Cart not found');
     }
@@ -108,8 +125,9 @@ export class CartsService {
 
     if (cart.items.length === 0) {
       cart.total = 0;
+      cart.restaurantId = null;
     } else {
-      cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      cart.total = this.calculateTotal(cart.items);
     }
 
     const savedCart = await cart.save();
@@ -118,7 +136,7 @@ export class CartsService {
 
   async clearCart(userId: string) {
     const cart = await this.cartModel.findOneAndUpdate(
-      { userId },
+      { userId, isDeleted: false },
       { items: [], total: 0, restaurantId: null,},
       { new: true },
     );
@@ -128,6 +146,13 @@ export class CartsService {
     }
 
     return this.mapCartResponse(cart);
+  }
+
+   private calculateTotal(items: any[]) {
+    return items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
   }
 
   private mapCartResponse(cart: CartDocument): CartResponseDto {

@@ -34,7 +34,7 @@ export class OrdersController {
   constructor(
     private ordersService: OrdersService,
     private ordersGateway: OrdersGateway,
-  ) { }
+  ) {}
 
   @Roles(UserRole.CONSUMER)
   @Post()
@@ -85,33 +85,8 @@ export class OrdersController {
     );
   }
 
-  // @Roles(UserRole.VENDOR)
-  // @Get('vendor')
-  // @ApiQuery({
-  //   name: 'skip',
-  //   required: false,
-  //   description: 'Number of records to skip',
-  //   example: 0,
-  // })
-  // @ApiQuery({
-  //   name: 'limit',
-  //   required: false,
-  //   description: 'Maximum number of records to return',
-  //   example: 20,
-  // })
-  // async findByVendor(
-  //   @Req() req,
-  //   @Query('skip') skip: string = '0',
-  //   @Query('limit') limit: string = '20',
-  // ) {
-  //   return this.ordersService.findByVendorUser(
-  //     req.user.sub,
-  //     parseInt(skip, 10),
-  //     parseInt(limit, 10),
-  //   );
-  // }
-    @Roles(UserRole.VENDOR)
-  @Get('vendor')
+  @Roles(UserRole.VENDOR)
+  @Get('restaurant')
   @ApiQuery({
     name: 'skip',
     required: false,
@@ -136,12 +111,7 @@ export class OrdersController {
     );
   }
 
-  // @Roles(UserRole.VENDOR)
-  // @Get('vendor/analytics')
-  // async vendorAnalytics(@Req() req) {
-  //   return this.ordersService.vendorAnalyticsByUser(req.user.sub);
-  // }
-    @Roles(UserRole.VENDOR)
+  @Roles(UserRole.VENDOR)
   @Get('restaurant/analytics')
   async restaurantAnalytics(@Req() req) {
     return this.ordersService.restaurantAnalyticsByUser(req.user.sub);
