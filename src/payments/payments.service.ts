@@ -25,37 +25,59 @@ export class PaymentsService {
   async initialize(
     orderId: string,
     consumerId: string,
-    amount: number,
     paymentMethod: PaymentMethod,
-    currency: string = 'NGN',
     gateway: PaymentGateway = PaymentGateway.PAYSTACK,
   ) {
-    if (amount <= 0) {
-      throw new BadRequestException('Amount must be greater than zero');
-    }
     const order = await this.orderModel
       .findOne({ _id: orderId, isDeleted: false })
       .exec();
+
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    if (order.userId !== consumerId) {
-      throw new ForbiddenException('You can only pay for your own orders');
+
+    if (order.userId !== consumerId) { 
+      throw new ForbiddenException('You can only pay for your own orders'); 
     }
-    if (order.total !== amount) {
-      throw new BadRequestException('Amount must match the order total');
+
+    if (order.paymentStatus === 'paid') {
+      throw new BadRequestException('Order has already been paid for');
     }
+
+    const existingPayment = await this.paymentModel.findOne({
+      orderId,
+      status: {
+        $in: [PaymentStatus.PENDING, PaymentStatus.COMPLETED],
+      },
+    });
+
+    if (existingPayment) {
+      throw new BadRequestException(
+        'A payment already exists for this order',
+      );
+    }
+
+    const amount = order.total;
+
+    if (amount <= 0) {
+      throw new BadRequestException('Invalid order amount');
+    }
+
+    const transactionRef = `PAY-${Date.now()}-${order.serialNumber}`;
 
     const payment = new this.paymentModel({
       orderId,
-      consumerId,
+      consumerId: order.userId,
       amount,
-      currency,
+      currency: 'NGN',
       paymentMethod,
       gateway,
+      transactionRef,
       status: PaymentStatus.PENDING,
     });
-    return payment.save();
+
+    const savedPayment = await payment.save();
+    return this.mapPaymentResponse(savedPayment);
   }
 
   async verify(id: string, transactionRef: string, consumerId: string) {
@@ -66,22 +88,25 @@ export class PaymentsService {
     if (payment.consumerId !== consumerId) {
       throw new ForbiddenException('You cannot verify this payment');
     }
-    return this.paymentModel
+    const updated = await this.paymentModel
       .findByIdAndUpdate(
         id,
         { transactionRef, status: PaymentStatus.COMPLETED },
         { new: true },
       )
       .exec();
+    return this.mapPaymentResponse(updated);
   }
 
   async getHistory(consumerId: string, skip: number = 0, limit: number = 20) {
-    return this.paymentModel
+    const payments = await this.paymentModel
       .find({ consumerId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return payments.map((payment) => this.mapPaymentResponse(payment));
   }
 
   async getWalletBalance(consumerId: string) {
@@ -107,19 +132,22 @@ export class PaymentsService {
         'Only completed payments can request refunds',
       );
     }
-    return this.paymentModel
+    const updated = await this.paymentModel
       .findByIdAndUpdate(
         id,
         { status: PaymentStatus.REFUND_REQUESTED },
         { new: true },
       )
       .exec();
+    return this.mapPaymentResponse(updated);
   }
 
   async refund(id: string) {
-    return this.paymentModel
+    const updated = await this.paymentModel
       .findByIdAndUpdate(id, { status: PaymentStatus.REFUNDED }, { new: true })
       .exec();
+
+    return this.mapPaymentResponse(updated);
   }
 
   async findById(id: string) {
@@ -129,6 +157,23 @@ export class PaymentsService {
     if (!payment) {
       throw new NotFoundException(`Payment with ID ${id} not found`);
     }
-    return payment;
+    return this.mapPaymentResponse(payment);
+  }
+
+  private mapPaymentResponse(payment: any) {
+    return {
+      id: payment._id,
+      orderId: payment.orderId,
+      consumerId: payment.consumerId,
+      amount: payment.amount,
+      currency: payment.currency,
+      paymentMethod: payment.paymentMethod,
+      gateway: payment.gateway,
+      transactionRef: payment.transactionRef,
+      status: payment.status,
+      serialNumber: payment.serialNumber,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+    };
   }
 }
