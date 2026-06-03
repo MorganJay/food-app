@@ -88,6 +88,12 @@ export class PaymentsService {
     if (payment.consumerId !== consumerId) {
       throw new ForbiddenException('You cannot verify this payment');
     }
+    if (payment.transactionRef !== transactionRef) {
+      throw new BadRequestException('Transaction reference mismatch');
+    }
+    if (payment.status === PaymentStatus.COMPLETED) {
+      throw new BadRequestException('Payment already completed');
+    }
     const updated = await this.paymentModel
       .findByIdAndUpdate(
         id,
