@@ -159,7 +159,6 @@ export class CartsService {
     return {
       id: cart._id.toString(),
       serialNumber: cart.serialNumber,
-      userId: cart.userId,
       restaurantId: cart.restaurantId,
 
       items: cart.items.map((item) => ({

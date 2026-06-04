@@ -46,28 +46,18 @@ export class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @ApiPropertyOptional({
-    example: 'cart_12345',
-    description: 'Cart ID (if creating order from cart)',
-  })
-  @IsOptional()
+  @ApiProperty()
   @IsString()
-  cartId?: string;
+  restaurantId: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  restaurantId?: string;
-
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: [OrderItemDto],
     description: 'List of items in the order',
   })
-  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items?: OrderItemDto[];
+  items: OrderItemDto[];
 
   @ApiProperty()
   @IsNotEmpty()

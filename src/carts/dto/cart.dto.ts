@@ -73,12 +73,6 @@ export class CartResponseDto {
   serialNumber: number;
 
   @ApiProperty({
-    example: 'user_12345',
-    description: 'User ID that owns the cart',
-  })
-  userId: string;
-
-  @ApiProperty({
     example: '66b1f7c3a12d4e5f67890999',
     description: 'Restaurant ID',
     required: false,

@@ -3,7 +3,7 @@ import { OrderItemResponseDto } from './order.dto';
 
 export class CheckoutSummaryResponseDto {
   @ApiProperty()
-  cartTotal: number;
+  subtotal: number;
 
   @ApiProperty()
   serviceFee: number;
@@ -12,7 +12,7 @@ export class CheckoutSummaryResponseDto {
   deliveryFee: number;
 
   @ApiProperty()
-  grandTotal: number;
+  total: number;
 
   @ApiProperty({ type: [OrderItemResponseDto] })
   items: OrderItemResponseDto[];

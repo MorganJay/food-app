@@ -31,15 +31,15 @@ export class OrdersService {
   ) {}
 
   // pricing engine
-  private async calculatePricing(input: { cartTotal: number; restaurantId: string }) {
-    const serviceFee = Math.round(input.cartTotal * 0.1);
+  private async calculatePricing(input: { subtotal: number; restaurantId: string }) {
+    const serviceFee = Math.round(input.subtotal * 0.1);
     const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
-    const grandTotal = input.cartTotal + serviceFee + deliveryFee;
+    const total = input.subtotal + serviceFee + deliveryFee;
 
     return {
       serviceFee,
       deliveryFee,
-      grandTotal,
+      total,
     };
   }
 
@@ -50,76 +50,47 @@ export class OrdersService {
   }
 
   async create(userId: string, createDto: CreateOrderDto) {
-    let orderData: Partial<Order> = {
-      userId,
+    if (!createDto.items?.length || !createDto.restaurantId) {
+      throw new BadRequestException(
+        'Orders require either a cartId or full item/total/restaurant details',
+      );
+    }
+
+    const subtotal = createDto.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+
+    const pricing = await this.calculatePricing({
+      subtotal: subtotal,
+      restaurantId: createDto.restaurantId,
+    });
+
+    const orderData: Partial<Order> = {
+       userId,
+      restaurantId: createDto.restaurantId,
+      items: createDto.items,
       deliveryAddress: createDto.deliveryAddress,
       notes: createDto.notes,
       paymentStatus: 'pending',
+      subtotal,
+      serviceFee: pricing.serviceFee,
+      deliveryFee: pricing.deliveryFee,
+      total: pricing.total,
     };
-
-    if (createDto.cartId) {
-      const cart = await this.cartModel
-        .findOne({
-          _id: createDto.cartId,
-          userId,
-          isDeleted: false,
-        })
-        .exec();
-
-      if (!cart || !cart.items.length) {
-        throw new BadRequestException('Cart not found or empty');
-      }
-
-      const pricing = await this.calculatePricing({
-        cartTotal: cart.total,
-        restaurantId: cart.restaurantId,
-      });
-
-      orderData = {
-        ...orderData,
-        restaurantId: cart.restaurantId,
-        items: cart.items,
-        subtotal: cart.total,
-        serviceFee: pricing.serviceFee,
-        deliveryFee: pricing.deliveryFee,
-        total: pricing.grandTotal,
-      };
-
-      await this.cartModel.findByIdAndUpdate(cart._id, {
-        items: [],
-        total: 0,
-        restaurantId: null,
-      }).exec();
-    } else {
-      if (!createDto.items?.length || !createDto.restaurantId) {
-        throw new BadRequestException(
-          'Orders require either a cartId or full item/total/restaurant details',
-        );
-      }
-
-      const subtotal = createDto.items.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0,
-      );
-
-      const pricing = await this.calculatePricing({
-        cartTotal: subtotal,
-        restaurantId: createDto.restaurantId,
-      });
-
-      orderData = {
-        ...orderData,
-        restaurantId: createDto.restaurantId,
-        items: createDto.items,
-        subtotal,
-        serviceFee: pricing.serviceFee,
-        deliveryFee: pricing.deliveryFee,
-        total: pricing.grandTotal,
-      };
-    }
 
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
+
+    // Clear cart after successful order
+    await this.cartModel.findOneAndUpdate(
+      { userId, isDeleted: false },
+      {
+        items: [],
+        total: 0,
+        restaurantId: null,
+      },
+    ).exec();
 
     // address logic
     try {
@@ -164,15 +135,14 @@ export class OrdersService {
       throw new NotFoundException('Restaurant not found');
     }
 
-    const pricing = await this.calculatePricing({ cartTotal: cart.total, restaurantId: cart.restaurantId });
+    const pricing = await this.calculatePricing({ subtotal: cart.total, restaurantId: cart.restaurantId });
 
     return {
       restaurantId: restaurant.id,
-      cartId: cart.id,
       subtotal: cart.total,
       serviceFee: pricing.serviceFee,
       deliveryFee: pricing.deliveryFee,
-      total: pricing.grandTotal,
+      total: pricing.total,
 
       items: cart.items.map((item) => ({
         productId: item.productId,
@@ -423,15 +393,6 @@ export class OrdersService {
         );
       }
     }
-
-    // if (requester.role === UserRole.VENDOR) {
-    //   const vendorId = await this.getVendorIdForUser(requester.sub);
-    //   if (order.vendorId !== vendorId) {
-    //     throw new ForbiddenException(
-    //       'You can only assign riders to your orders',
-    //     );
-    //   }
-    // }
 
     const rider = await this.riderModel
       .findOne({ _id: riderId, isDeleted: false })
