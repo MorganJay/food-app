@@ -181,6 +181,7 @@ export class VendorsService {
           { folder: "nin-verification-images" },
           (error, result) => {
             if (error) return reject(error);
+            if (!result) return reject(new Error('Cloudinary upload failed'));
             resolve(result);
           },
         );
@@ -234,7 +235,7 @@ export class VendorsService {
       image: vendor.image?.secure_url,
       ninNumber: vendor.ninNumber,
       isNinVerified: vendor.isNinVerified,
-      ninPhoto: vendor.ninPhoto.secure_url,
+      ninPhoto: vendor.ninPhoto?.secure_url,
 
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
