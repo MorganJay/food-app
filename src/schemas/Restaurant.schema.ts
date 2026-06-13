@@ -27,6 +27,12 @@ export class Restaurant extends BaseEntity {
   @Prop({ required: true })
   address: string;
 
+  @Prop({ required: true })
+  openHours: string;
+
+  @Prop({ required: true })
+  closeHours: string;
+
   @Prop({ default: true })
   isActive: boolean;
 

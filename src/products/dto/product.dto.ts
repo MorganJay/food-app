@@ -29,10 +29,10 @@ export class CreateProductDto {
   @ApiProperty({
     example: 'A juicy beef burger topped with cheddar cheese and fresh lettuce',
     description: 'Detailed description of the food product',
+    required: false,
   })
-  @IsNotEmpty()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiProperty({
     example: 3500,

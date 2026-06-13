@@ -38,17 +38,28 @@ export class Vendor extends BaseEntity {
     coordinates: number[];
   };
 
-  @Prop({ required: true })
-  openHours: string;
-
-  @Prop({ required: true })
-  closeHours: string;
-
   @Prop({ default: 0 })
   avgRating: number;
 
   @Prop({ default: 0 })
   reviewsCount: number;
+
+  @Prop()
+  ninNumber: string;
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  ninPhoto: {
+    secure_url: string;
+    public_id: string;
+  };
+
+  @Prop({ default: false })
+  isNinVerified: boolean;
 
   @Prop({ default: false })
   isVerified: boolean;

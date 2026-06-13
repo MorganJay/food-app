@@ -8,6 +8,9 @@ import {
   Query,
   UseGuards,
   Req,
+  UseInterceptors,
+  UploadedFile,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
@@ -22,6 +26,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
+import { NinVerificationDto, VerifyNinDto } from './dto/nin-verification-vendor.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Vendors')
 @Controller('vendors')
@@ -89,5 +95,32 @@ export class VendorsController {
     @Req() req
   ) {
     return this.vendorsService.updateProfile(id, req.user.sub, updateData);
+  }
+
+  @Post("nin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor("ninPhoto"))
+  @ApiBearerAuth('jwt')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Submit NIN verification with photo upload' })
+  async submitNin(
+    @Req() req,
+    @Body() dto: NinVerificationDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.vendorsService.ninVerification(
+      req.user.sub,
+      dto.ninNumber,
+      file,
+    );
+  }
+
+  @Post("verify-nin")
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Manually verify vendor NIN (Admin only)' })
+  @ApiResponse({ status: 200, description: 'NIN verified successfully' })
+  async verifyNin(@Body() dto: VerifyNinDto) {
+    return this.vendorsService.verifyNin(dto.vendorId);
   }
 }

@@ -11,6 +11,7 @@ import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
 import { UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
+import { v2 as cloudinary } from "cloudinary";
 
 @Injectable()
 export class UsersService {
@@ -75,9 +76,6 @@ export class UsersService {
   async verifyPhoneNumber(phoneNumber: string) {
     const existing = await this.userModel.findOne({ phoneNumber }).exec();
     if (!existing) throw new NotFoundException('User not found');
-    // if (existing.isPhoneVerified) {
-    //   throw new BadRequestException('Phone already verified');
-    // }
     const savedUser = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { $set: { isPhoneVerified: true } },
@@ -139,7 +137,8 @@ export class UsersService {
         throw new BadRequestException('Email already exists');
       }
     }
-
+    
+    // phone check
     if (dto.phoneNumber && dto.phoneNumber !== user.phoneNumber) {
       const existingPhone = await this.userModel.findOne({
         phoneNumber: dto.phoneNumber,
@@ -150,6 +149,8 @@ export class UsersService {
       }
     }
 
+
+    // username check
     if (dto.username && dto.username !== user.username) {
       const existingUsername = await this.userModel.findOne({
         username: dto.username,
@@ -168,6 +169,66 @@ export class UsersService {
     );
 
     return this.mapUserResponse(updatedUser);
+  }
+
+  async uploadAvatar(userId: string, file: Express.Multer.File) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    try {
+      const uploaded = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'avatars' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          },
+        );
+
+        stream.end(file.buffer);
+      });
+
+      if (user.avatar?.public_id) {
+        await cloudinary.uploader.destroy(user.avatar.public_id);
+      }
+
+      user.avatar = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
+
+      await user.save();
+
+      return {
+        avatar: user.avatar.secure_url,
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to upload avatar');
+    }
+  }
+
+  async getMe(userId: string) {
+    const user = await this.userModel.findById(userId).lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user._id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      avatar: user.avatar?.secure_url,
+      isPhoneVerified: user.isPhoneVerified,
+      createdAt: user.createdAt,
+    };
   }
 
   private mapUserResponse(user: UserDocument): UserResponseDto {

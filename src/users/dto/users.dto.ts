@@ -63,3 +63,12 @@ export class UpdateUserProfileDto {
   @IsString()
   phoneNumber?: string;
 }
+
+export class UpdateAvatarDto {
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'User avatar image file',
+  })
+  avatar: any;
+}

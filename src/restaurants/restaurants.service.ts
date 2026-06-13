@@ -26,6 +26,8 @@ export class RestaurantsService {
     const restaurantData: any = {
       name: createDto.name,
       description: createDto.description,
+      openHours: createDto.openHours,
+      closeHours: createDto.closeHours,
       address,
       vendorId,
     };
@@ -130,6 +132,14 @@ export class RestaurantsService {
       updatePayload.isActive = updateDto.isActive;
     }
 
+    if (updateDto.openHours !== undefined) {
+      updatePayload.openHours = updateDto.openHours;
+    }
+
+    if (updateDto.closeHours !== undefined) {
+      updatePayload.closeHours = updateDto.closeHours;
+    }
+
     // handle location transformation
     if (updateDto.location) {
       const { address, latitude, longitude } = updateDto.location;
@@ -176,6 +186,8 @@ export class RestaurantsService {
       description: restaurant.description,
       vendorId: restaurant.vendorId,
       isActive: restaurant.isActive,
+      openHours: restaurant.openHours,
+      closeHours: restaurant.closeHours,
       location: {
         address: restaurant.address,
         latitude: restaurant.location?.coordinates?.[1],

@@ -49,9 +49,8 @@ export class CreateVendorDto {
     description: 'Short description of the vendor and what they offer',
     example: 'Local food vendor serving delicious Nigerian dishes and soups',
   })
-  @IsNotEmpty()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiPropertyOptional({
     description: 'Vendor location details including address and coordinates',
@@ -61,22 +60,6 @@ export class CreateVendorDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location?: LocationDto;
-
-  @ApiProperty({
-    description: 'Daily opening time of the vendor',
-    example: '08:00',
-  })
-  @IsNotEmpty()
-  @IsString()
-  openHours: string;
-
-  @ApiProperty({
-    description: 'Daily closing time of the vendor',
-    example: '22:00',
-  })
-  @IsNotEmpty()
-  @IsString()
-  closeHours: string;
 
   @ApiPropertyOptional({
     description: 'Vendor image URL stored in Cloudinary',
@@ -129,6 +112,20 @@ export class VendorResponseDto {
     type: LocationDto,
   })
   location: LocationDto;
+
+  @ApiPropertyOptional({
+    example: '12345678901',
+    description: 'User NIN number',
+  })
+  ninNumber?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+  })
+  isNinVerified?: boolean;
+
+  @ApiPropertyOptional()
+  ninPhoto?: string;
 
   @ApiProperty()
   createdAt: Date;

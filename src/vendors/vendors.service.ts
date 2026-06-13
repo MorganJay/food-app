@@ -13,6 +13,7 @@ import {
 } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from '../common/geojson';
 import { v2 as cloudinary } from "cloudinary";
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class VendorsService {
@@ -83,8 +84,6 @@ export class VendorsService {
       userId,
       businessName: createVendor.businessName,
       description: createVendor.description,
-      openHours: createVendor.openHours,
-      closeHours: createVendor.closeHours,
       address: createVendor.location?.address,
       location: geo,
       isVerified: false,
@@ -131,14 +130,6 @@ export class VendorsService {
       updatePayload.description = updateData.description;
     }
 
-    if (updateData.openHours) {
-      updatePayload.openHours = updateData.openHours;
-    }
-
-    if (updateData.closeHours) {
-      updatePayload.closeHours = updateData.closeHours;
-    }
-
     if (updateData.location?.address) {
       updatePayload.address = updateData.location?.address;
     }
@@ -171,6 +162,62 @@ export class VendorsService {
     return this.mapVendorResponse(updatedVendor);
   }
 
+  async ninVerification(userId: string, ninNumber: string, ninPhoto?: Express.Multer.File,) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor with ID ${userId} not found`);
+    }
+
+    const updatePayload: any = {
+      ninNumber,
+      isNinVerified: false,
+    };
+
+    // upload NIN photo to Cloudinary
+    if (ninPhoto) {
+      const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "nin-verification-images" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          },
+        );
+
+        stream.end(ninPhoto.buffer);
+      });
+
+      updatePayload.ninPhoto = {
+        secure_url: uploaded.secure_url,
+        public_id: uploaded.public_id,
+      };
+    }
+
+    const updated = await this.vendorModel.findOneAndUpdate({ userId },
+      updatePayload,
+      { new: true },
+    );
+
+    return this.mapVendorResponse(updated);
+  }
+
+  // manual verification by admin - in production this would be an automated process using a third-party service
+  async verifyNin(vendorId: string) {
+    const vendor = await this.vendorModel.findById(vendorId).exec();
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor not found`);
+    }
+
+    // todo: logic to verify NIN number and photo goes here - for now we just set it to verified
+
+    vendor.isNinVerified = true;
+    await vendor.save();
+
+    return this.mapVendorResponse(vendor);
+  }
+
   private mapVendorResponse(vendor: any): VendorResponseDto {
     return {
       id: vendor._id.toString(),
@@ -185,6 +232,10 @@ export class VendorsService {
         longitude: vendor.location?.coordinates?.[0],
       },
       image: vendor.image?.secure_url,
+      ninNumber: vendor.ninNumber,
+      isNinVerified: vendor.isNinVerified,
+      ninPhoto: vendor.ninPhoto.secure_url,
+
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
       serialNumber: vendor.serialNumber,

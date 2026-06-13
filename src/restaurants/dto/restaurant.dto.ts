@@ -43,17 +43,15 @@ export class CreateRestaurantDto {
     description: 'Name of the restaurant',
     example: 'Chicken Republic',
   })
-  @IsNotEmpty()
   @IsString()
-  name: string;
+  name?: string;
 
   @ApiProperty({
     description: 'Detailed description of the restaurant',
     example: 'A fast-food restaurant specailizing in fried chicken meals',
   })
-  @IsNotEmpty()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiProperty({
     description: 'Restaurant location details',
@@ -62,6 +60,14 @@ export class CreateRestaurantDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location: LocationDto;
+
+  @ApiProperty({ example: '8:00' })
+  @IsString()
+  openHours?: string;
+
+  @ApiProperty({ example: '22:00' })
+  @IsString()
+  closeHours?: string;
 }
 
 export class UpdateRestaurantDto {
@@ -103,6 +109,14 @@ export class UpdateRestaurantDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location?: LocationDto;
+
+  @ApiProperty({ example: '8:00' })
+  @IsString()
+  openHours?: string;
+
+  @ApiProperty({ example: '22:00' })
+  @IsString()
+  closeHours?: string;
 }
 
 export class RestaurantResponseDto {
@@ -120,6 +134,12 @@ export class RestaurantResponseDto {
 
   @ApiProperty({ example: true })
   isActive: boolean;
+
+  @ApiProperty({ example: '8:00' })
+  openHours?: string;
+
+  @ApiProperty({ example: '22:00' })
+  closeHours?: string;
 
   @ApiPropertyOptional()
   rating?: number;
