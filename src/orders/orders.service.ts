@@ -56,10 +56,12 @@ export class OrdersService {
       );
     }
 
-    const subtotal = createDto.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+    const subtotal = createDto.items.reduce((sum, item) => {
+      const choicesCost = Array.isArray(item.selectedChoices)
+        ? item.selectedChoices.reduce((choiceSum, choice) => choiceSum + (Number(choice.price) || 0), 0)
+        : 0;
+      return sum + (item.price + choicesCost) * item.quantity;
+    }, 0);
 
     const pricing = await this.calculatePricing({
       subtotal: subtotal,
@@ -67,7 +69,7 @@ export class OrdersService {
     });
 
     const orderData: Partial<Order> = {
-       userId,
+      userId,
       restaurantId: createDto.restaurantId,
       items: createDto.items,
       deliveryAddress: createDto.deliveryAddress,
@@ -130,16 +132,25 @@ export class OrdersService {
     }
 
     const restaurant = await this.restaurantModel.findById(cart.restaurantId);
-
     if (!restaurant) {
       throw new NotFoundException('Restaurant not found');
     }
 
-    const pricing = await this.calculatePricing({ subtotal: cart.total, restaurantId: cart.restaurantId });
+    const calculatedSubtotal = cart.items.reduce((sum, item) => {
+      const choicesCost = Array.isArray((item as any).selectedChoices)
+        ? (item as any).selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
+        : 0;
+      return sum + (item.price + choicesCost) * item.quantity;
+    }, 0);
+
+    const pricing = await this.calculatePricing({ 
+      subtotal: calculatedSubtotal, 
+      restaurantId: cart.restaurantId 
+    });
 
     return {
       restaurantId: restaurant.id,
-      subtotal: cart.total,
+      subtotal: calculatedSubtotal,
       serviceFee: pricing.serviceFee,
       deliveryFee: pricing.deliveryFee,
       total: pricing.total,
@@ -149,6 +160,11 @@ export class OrdersService {
         name: item.name,
         quantity: item.quantity,
         price: item.price,
+        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
+          groupName: choice.groupName || 'Options',
+          name: choice.name,
+          price: choice.price,
+        })),
       })),
     };
   }
@@ -427,6 +443,11 @@ export class OrdersService {
         quantity: item.quantity,
         price: item.price,
         name: item.name,
+        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
+          groupName: choice.groupName || 'Options',
+          name: choice.name,
+          price: choice.price,
+        })),
       })),
 
       subtotal: order.subtotal,

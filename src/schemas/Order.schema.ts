@@ -17,11 +17,18 @@ export enum OrderStatus {
   CANCELLED_BY_VENDOR = 'cancelled_by_vendor',
 }
 
+export interface SelectedChoice {
+  groupName: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
+  selectedChoices?: SelectedChoice[];
 }
 
 @Schema({ timestamps: true })
@@ -35,10 +42,21 @@ export class Order extends BaseEntity {
   @Prop({
     type: [
       {
-        productId: Types.ObjectId,
+        productId: { type: Types.ObjectId, ref: 'Product' },
         quantity: Number,
         price: Number,
         name: String,
+        selectedChoices: {
+          type: [
+            {
+              groupName: { type: String, trim: true },
+              name: { type: String, trim: true },
+              price: { type: Number, default: 0 }
+            }
+          ],
+          _id: false, // Stops Mongoose from inserting auto _ids into customer options arrays
+          default: [],
+        }
       },
     ],
     required: true,

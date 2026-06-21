@@ -29,6 +29,12 @@ export class Vendor extends BaseEntity {
     public_id: string;
   };
 
+  @Prop({ type: [String], default: [] })
+  workingDays: string[];
+
+  @Prop()
+  orderType: string;
+
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: [Number],
@@ -45,7 +51,7 @@ export class Vendor extends BaseEntity {
   reviewsCount: number;
 
   @Prop()
-  ninNumber: string;
+  nin: string;
 
   @Prop({
     type: {
@@ -53,7 +59,18 @@ export class Vendor extends BaseEntity {
       public_id: { type: String },
     },
   })
-  ninPhoto: {
+  ninDocument: {
+    secure_url: string;
+    public_id: string;
+  };
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  selfie: {
     secure_url: string;
     public_id: string;
   };

@@ -12,8 +12,8 @@ import {
   VendorResponseDto,
 } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from '../common/geojson';
-import { v2 as cloudinary } from "cloudinary";
-import { UploadApiResponse } from 'cloudinary';
+import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
+import { SetupStoreDto } from './dto/setup-store.dto';
 
 @Injectable()
 export class VendorsService {
@@ -89,20 +89,44 @@ export class VendorsService {
       isVerified: false,
     };
 
-    if (createVendor.image) {
-      const uploaded = await cloudinary.uploader.upload(
-        createVendor.image,
-        { folder: 'vendors' },
-      );
+    const vendor = await this.vendorModel.create(vendorData);
+    return this.mapVendorResponse(vendor);
+  }
 
-      vendorData.image = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+  async setupStore(userId: string, setupStoreDto: SetupStoreDto, storeBannerFile?: Express.Multer.File) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new NotFoundException(`Vendor profile not found for this user`);
+    }
+
+    const updatePayload: any = {
+      workingDays: setupStoreDto.workingDays,
+    };
+
+    if (setupStoreDto.orderType) {
+      updatePayload.orderType = setupStoreDto.orderType;
+    }
+
+    // Handle Banner Image upload
+    if (storeBannerFile) {
+      if (vendor.image?.public_id) {
+        await deleteFromCloudinary(vendor.image.public_id);
+      }
+
+      const uploadedBanner = await uploadToCloudinary(storeBannerFile, 'vendors');
+      updatePayload.image = {
+        secure_url: uploadedBanner.secure_url,
+        public_id: uploadedBanner.public_id,
       };
     }
 
-    const vendor = await this.vendorModel.create(vendorData);
-    return this.mapVendorResponse(vendor);
+    const updatedVendor = await this.vendorModel.findOneAndUpdate(
+      { userId },
+      updatePayload,
+      { new: true },
+    ).exec();
+
+    return this.mapVendorResponse(updatedVendor);
   }
 
   async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
@@ -110,7 +134,7 @@ export class VendorsService {
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
     }
-    if (vendor.userId !== userId) {
+    if (vendor.userId.toString() !== userId.toString()) {
       throw new BadRequestException(
         'You can only update your own vendor profile',
       );
@@ -138,23 +162,6 @@ export class VendorsService {
       updatePayload.location = geo;
     }
 
-    if (updateData.image) {
-      // delete old image first
-      if (vendor.image?.public_id) {
-        await cloudinary.uploader.destroy(vendor.image.public_id);
-      }
-
-      const uploaded = await cloudinary.uploader.upload(
-        updateData.image,
-        { folder: 'vendors' },
-      );
-
-      updatePayload.image = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
-      };
-    }
-
     const updatedVendor = await this.vendorModel
       .findByIdAndUpdate(id, updatePayload, { new: true })
       .exec();
@@ -162,7 +169,7 @@ export class VendorsService {
     return this.mapVendorResponse(updatedVendor);
   }
 
-  async ninVerification(userId: string, ninNumber: string, ninPhoto?: Express.Multer.File,) {
+  async submitNin(userId: string, nin: string, ninDocument?: Express.Multer.File, selfie?: Express.Multer.File) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
 
     if (!vendor) {
@@ -170,32 +177,34 @@ export class VendorsService {
     }
 
     const updatePayload: any = {
-      ninNumber,
+      nin,
       isNinVerified: false,
     };
 
-    // upload NIN photo to Cloudinary
-    if (ninPhoto) {
-      const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "nin-verification-images" },
-          (error, result) => {
-            if (error) return reject(error);
-            if (!result) return reject(new Error('Cloudinary upload failed'));
-            resolve(result);
-          },
-        );
+    if (!ninDocument || !selfie) {
+      throw new BadRequestException('Both your NIN document and a live selfie are required.');
+    }
 
-        stream.end(ninPhoto.buffer);
-      });
-
-      updatePayload.ninPhoto = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+    // Upload NIN Document
+    if (ninDocument) {
+      const uploadedNin = await uploadToCloudinary(ninDocument, 'nin-verification-images');
+      updatePayload.ninDocument = {
+        secure_url: uploadedNin.secure_url,
+        public_id: uploadedNin.public_id,
       };
     }
 
-    const updated = await this.vendorModel.findOneAndUpdate({ userId },
+    // Upload Selfie
+    if (selfie) {
+      const uploadedSelfie = await uploadToCloudinary(selfie, 'vendor-selfies');
+      updatePayload.selfie = {
+        secure_url: uploadedSelfie.secure_url,
+        public_id: uploadedSelfie.public_id,
+      };
+    }
+
+    const updated = await this.vendorModel.findOneAndUpdate(
+      { userId },
       updatePayload,
       { new: true },
     );
@@ -224,8 +233,6 @@ export class VendorsService {
       id: vendor._id.toString(),
       businessName: vendor.businessName,
       description: vendor.description,
-      openHours: vendor.openHours,
-      closeHours: vendor.closeHours,
       isVerified: vendor.isVerified,
       location: {
         address: vendor.address,
@@ -233,9 +240,12 @@ export class VendorsService {
         longitude: vendor.location?.coordinates?.[0],
       },
       image: vendor.image?.secure_url,
-      ninNumber: vendor.ninNumber,
+      workingDays: vendor.workingDays,
+      orderType: vendor.orderType,
+      nin: vendor.nin,
+      ninDocument: vendor.ninDocument?.secure_url,
+      selfie: vendor.selfie?.secure_url,
       isNinVerified: vendor.isNinVerified,
-      ninPhoto: vendor.ninPhoto?.secure_url,
 
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,

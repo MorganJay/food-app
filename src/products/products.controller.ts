@@ -134,11 +134,11 @@ export class ProductsController {
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
-    @Body() createDto: CreateProductDto,
+    @Body() createProductDto: CreateProductDto,
     @UploadedFile() file: Express.Multer.File,
     @Req() req,
   ) {
-    return this.productsService.create(createDto, req.user.sub, file);
+    return this.productsService.create(createProductDto, req.user.sub, file);
   }
 
   @UseGuards(JwtAuthGuard)

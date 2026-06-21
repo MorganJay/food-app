@@ -63,9 +63,22 @@ export class CartsService {
       cart.restaurantId = restaurantId;
     }
 
-    const existingItem = cart.items.find(
-      (item) => item.productId.toString() === addDto.productId,
-    );
+    const incomingChoices = addDto.selectedChoices || [];
+
+    const existingItem = cart.items.find((item) => {
+      if (item.productId.toString() !== addDto.productId) return false;
+      
+      const itemChoices = (item as any).selectedChoices || [];
+      if (itemChoices.length !== incomingChoices.length) return false;
+
+      // Check if every customization matches perfectly
+      return incomingChoices.every((incoming) =>
+        itemChoices.some(
+          (existing: any) =>
+            existing.name === incoming.name && existing.price === incoming.price,
+        ),
+      );
+    });
 
     if (existingItem) {
       existingItem.quantity += addDto.quantity;
@@ -75,6 +88,7 @@ export class CartsService {
         quantity: addDto.quantity,
         price: product.price,
         name: product.name,
+        selectedChoices: incomingChoices,
       });
     }
 
@@ -108,7 +122,6 @@ export class CartsService {
       item.quantity = updateDto.quantity;
     }
 
-    // cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     cart.total = this.calculateTotal(cart.items);
     
     const savedCart = await cart.save();
@@ -148,11 +161,13 @@ export class CartsService {
     return this.mapCartResponse(cart);
   }
 
-   private calculateTotal(items: any[]) {
-    return items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+  private calculateTotal(items: any[]) {
+    return items.reduce((sum, item) => {
+      const choicesCost = Array.isArray(item.selectedChoices)
+        ? item.selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
+        : 0;
+      return sum + (item.price + choicesCost) * item.quantity;
+    }, 0);
   }
 
   private mapCartResponse(cart: CartDocument): CartResponseDto {
@@ -166,6 +181,11 @@ export class CartsService {
         quantity: item.quantity,
         price: item.price,
         name: item.name,
+        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
+          groupName: choice.groupName || 'Options',
+          name: choice.name,
+          price: choice.price,
+        })),
       })),
 
       total: cart.total,

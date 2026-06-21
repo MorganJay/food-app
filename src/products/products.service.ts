@@ -13,7 +13,7 @@ import {
   ProductResponseDto,
   UpdateProductDto,
 } from './dto/product.dto';
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
 
 @Injectable()
 export class ProductsService {
@@ -34,6 +34,35 @@ export class ProductsService {
     if (restaurant.vendorId !== vendorUserId) {
       throw new ForbiddenException('You do not own this restaurant');
     }
+  }
+
+ private parseChoiceGroups(choiceGroupsInput: any): any[] {
+    if (!choiceGroupsInput) return [];
+    
+    let parsed = choiceGroupsInput;
+    
+    // If it arrives as a string from FormData, parse it manually
+    if (typeof choiceGroupsInput === 'string') {
+      try {
+        parsed = JSON.parse(choiceGroupsInput);
+      } catch (error) {
+        throw new BadRequestException('Invalid JSON format for choiceGroups');
+      }
+    }
+
+    if (!Array.isArray(parsed)) return [];
+
+    // Explicit structural mapping to match Mongoose Schema exactly
+    return parsed.map((group) => ({
+      groupName: group.groupName,
+      isRequired: group.isRequired === 'true' || group.isRequired === true,
+      options: Array.isArray(group.options)
+        ? group.options.map((opt) => ({
+            name: opt.name,
+            price: Number(opt.price) || 0,
+          }))
+        : [],
+    }));
   }
 
   async create(
@@ -63,23 +92,19 @@ export class ProductsService {
     }
 
     const productData: Record<string, unknown> = {
-      ...createDto,
+      restaurantId: createDto.restaurantId,
       name,
+      description: createDto.description,
+      price: createDto.price,
+      unit: createDto.unit,
+      prepTime: createDto.prepTime,
+      category: createDto.category,
+      isAvailable: createDto.isAvailable,
+      choiceGroups: this.parseChoiceGroups(createDto.choiceGroups),
     };
 
     if (file) {
-      const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: 'products' },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          },
-        );
-
-        stream.end(file.buffer);
-      });
-
+      const uploaded = await uploadToCloudinary(file, 'products');
       productData.image = {
         secure_url: uploaded.secure_url,
         public_id: uploaded.public_id,
@@ -159,24 +184,11 @@ export class ProductsService {
     }
 
     if (file) {
-      // delete old image first
       if (product.image?.public_id) {
-        await cloudinary.uploader.destroy(product.image.public_id);
+        await deleteFromCloudinary(product.image.public_id);
       }
 
-      // upload new image
-      const uploaded = await new Promise<any>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: 'products' },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          },
-        );
-
-        stream.end(file.buffer);
-      });
-
+      const uploaded = await uploadToCloudinary(file, 'products');
       updatePayload.image = {
         secure_url: uploaded.secure_url,
         public_id: uploaded.public_id,
@@ -200,6 +212,9 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+    if (product.image?.public_id) {
+      await deleteFromCloudinary(product.image.public_id);
+    }
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
       vendorUserId,
@@ -221,6 +236,7 @@ export class ProductsService {
       image: product.image?.secure_url,
       isAvailable: product.isAvailable,
       restaurantId: product.restaurantId,
+      choiceGroups: product.choiceGroups || [],
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
       serialNumber: product.serialNumber,

@@ -4,18 +4,25 @@ import { IsString, IsNotEmpty, IsMongoId } from 'class-validator';
 export class NinVerificationDto {
   @ApiProperty({
     example: '98765432109',
-    description: 'User NIN number',
+    description: 'User NIN',
   })
   @IsString()
   @IsNotEmpty()
-  ninNumber: string;
+  nin: string;
+
+ @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'picture of the NIN document',
+  })
+  ninDocument?: any;
 
   @ApiProperty({
     type: 'string',
     format: 'binary',
-    description: 'Selfie or NIN verification image',
+    description: 'live selfie picture of the vendor',
   })
-  ninPhoto?: any;
+  selfie?: any;
 }
 
 export class VerifyNinDto {

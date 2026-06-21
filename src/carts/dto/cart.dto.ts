@@ -1,6 +1,24 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsString, IsNumber, IsPositive } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, IsPositive, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
+
+export class SelectedCartChoiceDto {
+  @ApiProperty({ example: 'Protein', description: 'The heading/group name for the customization' })
+  @IsNotEmpty()
+  @IsString()
+  groupName: string;
+  
+  @ApiProperty({ example: 'Beef', description: 'Name of the selected customization' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 1500, description: 'Extra cost upcharge for this item selection' })
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  price: number;
+}
 
 export class AddToCartDto {
   @ApiProperty({
@@ -20,6 +38,17 @@ export class AddToCartDto {
   @IsNumber()
   @IsPositive()
   quantity: number;
+
+  @ApiPropertyOptional({
+    type: [SelectedCartChoiceDto],
+    description: 'Array of custom selected buyer modifications or side choices',
+    example: [{ groupName: 'Protein', name: 'Beef', price: 1500 }]
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SelectedCartChoiceDto)
+  selectedChoices?: SelectedCartChoiceDto[];
 }
 
 export class UpdateCartItemDto {
@@ -57,6 +86,9 @@ class CartItemResponseDto {
     description: 'Name of the product',
   })
   name: string;
+
+  @ApiProperty({ type: [SelectedCartChoiceDto], description: 'List of item modifications' })
+  selectedChoices: SelectedCartChoiceDto[];
 }
 
 export class CartResponseDto {

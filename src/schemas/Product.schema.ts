@@ -4,6 +4,31 @@ import { BaseEntity } from './BaseEntity';
 
 export type ProductDocument = HydratedDocument<Product>;
 
+@Schema({ _id: false })
+class SelectionOption {
+  @Prop({ required: true, trim: true })
+  name: string;
+
+  @Prop({ required: true, default: 0 })
+  price: number;
+}
+
+const SelectionOptionSchema = SchemaFactory.createForClass(SelectionOption);
+
+@Schema({ _id: false })
+class ChoiceGroup {
+  @Prop({ required: true, trim: true })
+  groupName: string;
+
+  @Prop({ required: true, default: false })
+  isRequired: boolean;
+
+  @Prop({ type: [SelectionOptionSchema], default: [] })
+  options: SelectionOption[];
+}
+
+const ChoiceGroupSchema = SchemaFactory.createForClass(ChoiceGroup);
+
 @Schema({ timestamps: true })
 export class Product extends BaseEntity {
   @Prop({ required: true })
@@ -46,6 +71,10 @@ export class Product extends BaseEntity {
 
   @Prop({ default: true })
   isAvailable: boolean;
+
+  // added the Buyer Choices subdocument array here
+  @Prop({ type: [ChoiceGroupSchema], default: [] })
+  choiceGroups: ChoiceGroup[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

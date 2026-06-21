@@ -63,6 +63,7 @@ export class PaymentsService {
       throw new BadRequestException('Invalid order amount');
     }
 
+    // Clean transaction ref incorporating order data for tracking
     const transactionRef = `PAY-${Date.now()}-${order.serialNumber}`;
 
     const payment = new this.paymentModel({
@@ -94,13 +95,21 @@ export class PaymentsService {
     if (payment.status === PaymentStatus.COMPLETED) {
       throw new BadRequestException('Payment already completed');
     }
+
+    // update payment and mark corresponding order as paid
     const updated = await this.paymentModel
       .findByIdAndUpdate(
         id,
-        { transactionRef, status: PaymentStatus.COMPLETED },
+        { status: PaymentStatus.COMPLETED },
         { new: true },
       )
       .exec();
+
+    await this.orderModel.findOneAndUpdate(
+      { _id: payment.orderId },
+      { paymentStatus: 'paid' }
+    ).exec();
+
     return this.mapPaymentResponse(updated);
   }
 
@@ -153,6 +162,14 @@ export class PaymentsService {
       .findByIdAndUpdate(id, { status: PaymentStatus.REFUNDED }, { new: true })
       .exec();
 
+    // Reflect refund back to order details
+    if (updated) {
+      await this.orderModel.findOneAndUpdate(
+        { _id: updated.orderId },
+        { paymentStatus: 'refunded' }
+      ).exec();
+    }
+
     return this.mapPaymentResponse(updated);
   }
 
@@ -168,7 +185,7 @@ export class PaymentsService {
 
   private mapPaymentResponse(payment: any) {
     return {
-      id: payment._id,
+      id: payment._id.toString(),
       orderId: payment.orderId,
       consumerId: payment.consumerId,
       amount: payment.amount,

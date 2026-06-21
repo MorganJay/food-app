@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  UploadedFiles,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,7 +28,8 @@ import { UserRole } from '../schemas/User.schema';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
 import { NinVerificationDto, VerifyNinDto } from './dto/nin-verification-vendor.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { SetupStoreDto } from './dto/setup-store.dto';
 
 @ApiTags('Vendors')
 @Controller('vendors')
@@ -97,30 +99,54 @@ export class VendorsController {
     return this.vendorsService.updateProfile(id, req.user.sub, updateData);
   }
 
-  @Post("nin")
+@Post('setup-store')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('jwt')
+@ApiConsumes('multipart/form-data')
+@ApiOperation({ summary: 'Setup or update store banner image, working days, and order type' })
+@UseInterceptors(FileInterceptor('image'))
+async setupOrUpdateStore(
+  @Req() req,
+  @Body() dto: SetupStoreDto,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.vendorsService.setupStore(req.user.sub, dto, file);
+}
+
+@Post('nin')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseInterceptors(FileInterceptor("ninPhoto"))
   @ApiBearerAuth('jwt')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Submit NIN verification with photo upload' })
+  @ApiOperation({ summary: 'Submit NIN verification and selfie photo upload' })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'ninDocument', maxCount: 1 },
+      { name: 'selfie', maxCount: 1 },
+    ]),
+  )
   async submitNin(
     @Req() req,
     @Body() dto: NinVerificationDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: { ninDocument?: Express.Multer.File[]; selfie?: Express.Multer.File[] },
   ) {
-    return this.vendorsService.ninVerification(
+    const ninDocFile = files?.ninDocument?.[0];
+    const selfieFile = files?.selfie?.[0];
+
+    return this.vendorsService.submitNin(
       req.user.sub,
-      dto.ninNumber,
-      file,
+      dto.nin,
+      ninDocFile,
+      selfieFile,
     );
   }
 
-  @Post("verify-nin")
+  @Post('verify-nin')
   @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Manually verify vendor NIN (Admin only)' })
   @ApiResponse({ status: 200, description: 'NIN verified successfully' })
   async verifyNin(@Body() dto: VerifyNinDto) {
     return this.vendorsService.verifyNin(dto.vendorId);
-  }
+  };
 }

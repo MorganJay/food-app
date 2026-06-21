@@ -60,14 +60,6 @@ export class CreateVendorDto {
   @ValidateNested()
   @Type(() => LocationDto)
   location?: LocationDto;
-
-  @ApiPropertyOptional({
-    description: 'Vendor image URL stored in Cloudinary',
-    example: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80',
-  })
-  @IsOptional()
-  @IsString()
-  image?: string;
 }
 
 export class UpdateVendorDto extends PartialType(CreateVendorDto) { }
@@ -89,19 +81,22 @@ export class VendorResponseDto {
   description: string;
 
   @ApiPropertyOptional({
-    example: 'https://res.cloudinary.com/.../image.jpg',
+    example: 'https://res.cloudinary.com/.../banner.jpg',
+    description: 'Store banner image URL',
   })
   image?: string;
 
   @ApiProperty({
-    example: '08:00',
+    example: ['Monday', 'Tuesday', 'Wednesday'],
+    description: 'Days of the week the vendor operates',
   })
-  openHours: string;
+  workingDays: string[];
 
-  @ApiProperty({
-    example: '22:00',
+  @ApiPropertyOptional({
+    example: 'delivery',
+    description: 'how the vendor accepts orders',
   })
-  closeHours: string;
+  orderType?: string;
 
   @ApiProperty({
     example: false,
@@ -115,17 +110,24 @@ export class VendorResponseDto {
 
   @ApiPropertyOptional({
     example: '12345678901',
-    description: 'User NIN number',
+    description: 'User NIN',
   })
-  ninNumber?: string;
+  nin?: string;
 
   @ApiPropertyOptional({
     example: false,
   })
   isNinVerified?: boolean;
 
-  @ApiPropertyOptional()
-  ninPhoto?: string;
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/.../nin.jpg',
+  })
+  ninDocument?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/.../selfie.jpg',
+  })
+  selfie?: string;
 
   @ApiProperty()
   createdAt: Date;

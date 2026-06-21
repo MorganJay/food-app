@@ -12,6 +12,7 @@ import { User, UserDocument } from '../schemas/User.schema';
 import { UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
 import { v2 as cloudinary } from "cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
 
 @Injectable()
 export class UsersService {
@@ -179,21 +180,11 @@ export class UsersService {
     }
 
     try {
-      const uploaded = await new Promise<any>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: 'avatars' },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          },
-        );
-
-        stream.end(file.buffer);
-      });
-
       if (user.avatar?.public_id) {
-        await cloudinary.uploader.destroy(user.avatar.public_id);
+        await deleteFromCloudinary(user.avatar.public_id);
       }
+
+      const uploaded = await uploadToCloudinary(file, 'avatars');
 
       user.avatar = {
         secure_url: uploaded.secure_url,

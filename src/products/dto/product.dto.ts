@@ -5,9 +5,63 @@ import {
   IsOptional,
   IsBoolean,
   Min,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
+
+export class SelectionOptionDto {
+  @ApiProperty({ 
+    example: 'Beef', 
+    description: 'Name of the option field input (e.g., Chicken, Extra Plantain)' 
+  })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ 
+    example: 1500, 
+    description: 'The extra price field input added to the base meal cost' 
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  price: number;
+}
+
+export class ChoiceGroupDto {
+  @ApiProperty({ 
+    example: 'Choose your protein', 
+    description: 'The customization header field input (e.g., Choose your protein, Add extras)' 
+  })
+  @IsNotEmpty()
+  @IsString()
+  groupName: string;
+
+  @ApiProperty({ 
+    example: true, 
+    description: 'Toggle switch or boolean value field' 
+  })
+  @IsNotEmpty()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isRequired: boolean;
+
+  @ApiProperty({ 
+    type: () => [SelectionOptionDto], 
+    description: 'Array of the customizable sub-option list',
+    example: [
+      { name: 'Beef', price: 1500 },
+      { name: 'Chicken', price: 1000 }
+    ]
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SelectionOptionDto)
+  options: SelectionOptionDto[];
+}
+
 
 export class CreateProductDto {
   @ApiProperty({
@@ -69,7 +123,7 @@ export class CreateProductDto {
     description: 'Availability status of the food product',
   })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isAvailable?: boolean;
 
@@ -79,6 +133,32 @@ export class CreateProductDto {
     description: 'Product image file',
   })
   image?: any;
+
+  // --- CHANGED HERE: Stripped validation decorators to let the Service process the raw FormData text safely ---
+  @ApiPropertyOptional({
+    type: () => [ChoiceGroupDto],
+    description: 'Structured array list or JSON string for configuring custom buyer choices and extra options.',
+    example: [
+      {
+        groupName: 'Choose your protein',
+        isRequired: true,
+        options: [
+          { name: 'Beef', price: 1500 },
+          { name: 'Chicken', price: 1000 }
+        ]
+      },
+      {
+        groupName: 'Add Extras',
+        isRequired: false,
+        options: [
+          { name: 'Extra Plantain', price: 500 },
+          { name: 'Egg', price: 400 }
+        ]
+      }
+    ]
+  })
+  @IsOptional()
+  choiceGroups?: any; 
 }
 
 export class UpdateProductDto {
@@ -139,9 +219,27 @@ export class UpdateProductDto {
     description: 'Availability status of the food product',
   })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isAvailable?: boolean;
+
+  // --- CHANGED HERE TOO: Keeps Swagger documentation structure intact while using service mapping ---
+  @ApiPropertyOptional({
+    type: () => [ChoiceGroupDto],
+    description: 'Structured array list or JSON string for configuring custom buyer choices and extra options.',
+    example: [
+      {
+        groupName: 'Choose your protein',
+        isRequired: true,
+        options: [
+          { name: 'Beef', price: 1500 },
+          { name: 'Chicken', price: 1000 }
+        ]
+      }
+    ]
+  })
+  @IsOptional()
+  choiceGroups?: any;
 }
 
 export class ProductResponseDto {
@@ -187,4 +285,7 @@ export class ProductResponseDto {
 
   @ApiProperty({ example: 1 })
   serialNumber: number;
+
+  @ApiProperty({ type: [ChoiceGroupDto], description: 'Configured option choices for tailoring the order' })
+  choiceGroups: ChoiceGroupDto[];
 }
