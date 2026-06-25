@@ -25,34 +25,23 @@ export class RestaurantsService {
     private categoryModel: Model<CategoryDocument>,
   ) {}
 
-  async create(createDto: CreateRestaurantDto, vendorId: string, file?: Express.Multer.File) {
-    const { address, latitude, longitude } = createDto.location;
+async create(createDto: CreateRestaurantDto, vendorId: string, file?: Express.Multer.File) {
+    if (!createDto.location) {
+      throw new BadRequestException('Restaurant location object details are required.');
+    }
+
+    const { address, latitude, longitude } = JSON.parse(createDto.location);
+    
+    if (!address || address.trim() === '') {
+      throw new BadRequestException('The location address field text is required.');
+    }
 
     if (!file) {
       throw new BadRequestException('A restaurant banner image is required.');
     }
 
     const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
-
-    let chosenCategories: string[] = [];
-    if (createDto.categories) {
-      if (Array.isArray(createDto.categories)) {
-        chosenCategories = createDto.categories;
-      } else if (typeof (createDto.categories as any) === 'string') {
-        const rawStr = (createDto.categories as any).replace(/[\[\]"]/g, '').trim(); 
-        chosenCategories = rawStr ? rawStr.split(',').map(c => c.trim()) : [];
-      }
-    }
-
-    let parsedWorkingDays: string[] = [];
-    if (createDto.workingDays) {
-      if (Array.isArray(createDto.workingDays)) {
-        parsedWorkingDays = createDto.workingDays;
-      } else if (typeof (createDto.workingDays as any) === 'string') {
-        const rawStr = (createDto.workingDays as any).replace(/[\[\]"]/g, '').trim();
-        parsedWorkingDays = rawStr ? rawStr.split(',').map(d => d.trim()) : [];
-      }
-    }
+    const chosenCategories: string[] = createDto.categories || [];
 
     if (chosenCategories.length > 0) {
       await Promise.all(
@@ -72,14 +61,14 @@ export class RestaurantsService {
       description: createDto.description,
       openHours: createDto.openHours,
       closeHours: createDto.closeHours,
-      workingDays: parsedWorkingDays,
+      workingDays: createDto.workingDays || [],
       orderType: createDto.orderType,
       categories: chosenCategories.map((c) => c.trim()),
       bannerImage: {
         secure_url: cloudinaryResult.secure_url,
         public_id: cloudinaryResult.public_id,
       },
-      address,
+      address: address.trim(),
       vendorId,
     };
 

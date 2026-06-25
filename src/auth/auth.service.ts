@@ -166,19 +166,6 @@ export class AuthService {
 
     const user = await this.usersService.verifyPhoneNumber(phoneNumber);
 
-    if (user.role === UserRole.VENDOR) {
-      const vendorProfile = await this.vendorsService.findById(user.id).catch(() => null);
-      
-      if (!vendorProfile) {
-        // Auto-generate the missing merchant shell for this legacy user
-        await this.vendorsService.createVendor(user.id, {
-          businessName: `${user.username}'s Kitchen`,
-          description: 'Welcome to my store!',
-          location: undefined
-        });
-      }
-    }
-
     const payload = {
       sub: user.id,
       role: user.role,

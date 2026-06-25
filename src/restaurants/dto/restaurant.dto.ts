@@ -6,11 +6,13 @@ import {
   ValidateNested,
   IsArray,
   IsBoolean,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
+import { BadRequestException } from '@nestjs/common';
 
-class LocationDto {
+export class LocationDto {
   @ApiProperty({
     description: 'Physical address text details of the restaurant',
     example: 'Ikeja, Lagos State',
@@ -60,13 +62,12 @@ export class CreateRestaurantDto {
   description: string;
 
   @ApiProperty({
-    description: 'Restaurant location details parameters',
-    type: LocationDto,
-    required: false
+    type: String,
+    example:
+      '{"address":"lagos, state","latitude":7.234,"longitude":6.45}',
   })
-  @ValidateNested()
-  @Type(() => LocationDto)
-  location: LocationDto;
+  @IsString()
+  location: string;
 
   @ApiProperty({ example: '08:00', description: 'Opening operational hours', required: false })
   @IsString()
@@ -79,13 +80,35 @@ export class CreateRestaurantDto {
   closeHours: string;
 
   @ApiProperty({ example: ['Swallow', 'Rice', 'Soups', 'Proteins', 'Local Dishes'], type: [String], description: 'Select food categories', required: false })
-  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value
+        .replace(/[\[\]"]/g, '') 
+        .split(',')              
+        .map(item => item.trim());
+    }
+
+    return [];
+  })
   @IsArray()
   @IsString({ each: true })
   categories: string[];
 
   @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], type: [String], required: false })
-  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value
+        .replace(/[\[\]"]/g, '') 
+        .split(',')              
+        .map(item => item.trim());
+    }
+
+    return [];
+  })
   @IsArray()
   @IsString({ each: true })
   workingDays: string[];
@@ -135,27 +158,35 @@ export class UpdateRestaurantDto {
   @IsOptional()
   @IsString({ each: true })
   @Transform(({ value }) => {
-    if (typeof value === 'string') {
-      return value.split(',').map(cat => cat.trim());
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value
+        .replace(/[\[\]"]/g, '') 
+        .split(',')              
+        .map(item => item.trim());
     }
-    return value;
+
+    return [];
   })
   categories?: string[];
 
-   @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday'] })
-   @Transform(({ value }) => {
-     if (typeof value === 'string') {
-       try {
-         return JSON.parse(value);
-       } catch {
-         return [value];
-       }
-     }
-     return value;
-   })
-   @IsArray()
-   @IsString({ each: true })
-   workingDays: string[];
+  @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday'] })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value
+        .replace(/[\[\]"]/g, '') 
+        .split(',')              
+        .map(item => item.trim());
+    }
+
+    return [];
+  })
+  @IsArray()
+  @IsString({ each: true })
+  workingDays: string[];
 
   @ApiProperty({ example: 'same day delivery', required: false })
   @IsString()

@@ -37,7 +37,7 @@ export class BanksService implements OnModuleInit {
     }).exec();
     
     if (existing) {
-      throw new ConflictException('A bank with this name or routing code already exists.');
+      throw new ConflictException('A bank with this name or bank code already exists.');
     }
     
     const newBank = await this.bankModel.create({ name: cleanName, code: cleanCode });
