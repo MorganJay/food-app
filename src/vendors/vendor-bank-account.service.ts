@@ -1,50 +1,48 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import {
-  VendorBankAccount,
-  VendorBankAccountDocument,
-} from 'src/schemas/VendorBankAccount.schema';
+import { VendorBankAccount, VendorBankAccountDocument } from 'src/schemas/VendorBankAccount.schema';
+import { Bank, BankDocument } from 'src/schemas/Bank.schema';
 import {
   CreateVendorBankAccountDto,
   UpdateVendorBankAccountDto,
   VendorBankAccountResponseDto,
 } from './dto/create-vendor-bank-account.dto';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class VendorBankAccountService {
   constructor(
-    @InjectModel(VendorBankAccount.name)
-    private readonly accountModel: Model<VendorBankAccountDocument>,
+    @InjectModel(VendorBankAccount.name) private readonly accountModel: Model<VendorBankAccountDocument>,
+    @InjectModel(Bank.name) private readonly bankModel: Model<BankDocument>,
   ) {}
 
   async create(vendorId: string, dto: CreateVendorBankAccountDto): Promise<VendorBankAccountResponseDto> {
+    const validBank = await this.bankModel.findOne({ code: dto.bankCode, isDeleted: false }).exec();
+    if (!validBank) {
+      throw new BadRequestException(`Invalid bank code: ${dto.bankCode}. Please select a valid bank.`);
+    }
+
     const existingAccount = await this.accountModel.findOne({
       vendorId,
       accountNumber: dto.accountNumber,
-      bankName: dto.bankName,
+      bankCode: dto.bankCode,
       isDeleted: { $ne: true },
     }).exec();
 
     if (existingAccount) {
-      throw new BadRequestException(
-        'Bank account already exists',
-      );
+      throw new BadRequestException('Bank account already exists');
     }
 
     if (dto.isDefault) {
       await this.accountModel.updateMany(
-        {
-          vendorId
-        },
-        {
-          isDefault: false,
-        },
+        { vendorId },
+        { isDefault: false },
       );
     }
 
     const account = await this.accountModel.create({
       ...dto,
+      bankName: validBank.name, 
       vendorId,
     });
 
@@ -75,9 +73,7 @@ export class VendorBankAccountService {
     }).exec();
 
     if (!account) {
-      throw new NotFoundException(
-        'Account not found',
-      );
+      throw new NotFoundException('Account not found');
     }
 
     return account;
@@ -96,12 +92,20 @@ export class VendorBankAccountService {
   ): Promise<VendorBankAccountResponseDto> {
     const account = await this.findOne(vendorId, accountId);
 
-    // If this account is being set as default, reset others
     if (dto.isDefault) {
       await this.accountModel.updateMany(
         { vendorId },
         { $set: { isDefault: false } },
       );
+    }
+
+    if (dto.bankCode !== undefined) {
+      const validBank = await this.bankModel.findOne({ code: dto.bankCode, isDeleted: false }).exec();
+      if (!validBank) {
+        throw new BadRequestException(`Invalid bank code: ${dto.bankCode}`);
+      }
+      account.bankCode = dto.bankCode;
+      account.bankName = validBank.name;
     }
 
     if (dto.accountName !== undefined) {
@@ -110,14 +114,6 @@ export class VendorBankAccountService {
 
     if (dto.accountNumber !== undefined) {
       account.accountNumber = dto.accountNumber;
-    }
-
-    if (dto.bankName !== undefined) {
-      account.bankName = dto.bankName;
-    }
-
-    if (dto.bankCode !== undefined) {
-      account.bankCode = dto.bankCode;
     }
 
     if (dto.isDefault !== undefined) {
@@ -129,16 +125,11 @@ export class VendorBankAccountService {
     return this.mapAccountResponse(account);
   }
 
-  async remove(
-    vendorId: string,
-    accountId: string,
-  ) {
-    const account = await this.findOne(
-      vendorId,
-      accountId,
-    );
+  async remove(vendorId: string, accountId: string) {
+    const account = await this.findOne(vendorId, accountId);
 
-    await account.deleteOne();
+    account.isDeleted = true;
+    await account.save();
 
     return {
       message: 'Account deleted successfully',
@@ -146,18 +137,14 @@ export class VendorBankAccountService {
   }
 
   async setDefault(vendorId: string, accountId: string): Promise<VendorBankAccountResponseDto> {
-    const account = await this.findOne(
-      vendorId,
-      accountId,
-    );
+    const account = await this.findOne(vendorId, accountId);
 
     await this.accountModel.updateMany(
-      { vendorId, isDeleted: { $ne: true }, },
+      { vendorId, isDeleted: { $ne: true } },
       { isDefault: false },
     ).exec();
 
     account.isDefault = true;
-
     await account.save();
 
     return this.mapAccountResponse(account);
@@ -172,7 +159,7 @@ export class VendorBankAccountService {
       accountName: account.accountName,
       accountNumber: account.accountNumber,
       bankName: account.bankName,
-      bankCode: account?.bankCode,
+      bankCode: account.bankCode || '',
       isDefault: account.isDefault,
       createdAt: account.createdAt,
       updatedAt: account.updatedAt,

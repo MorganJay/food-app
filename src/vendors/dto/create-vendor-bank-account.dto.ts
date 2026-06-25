@@ -5,6 +5,7 @@ import {
 } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Length,
@@ -12,41 +13,33 @@ import {
 
 export class CreateVendorBankAccountDto {
   @ApiProperty({
-    description: 'Name of the bank account holder',
+    description: 'Name of the bank account holder (Should match the verified BVN/NIN name)',
     example: 'John Doe',
   })
   @IsString()
+  @IsNotEmpty()
   accountName: string;
 
   @ApiProperty({
-    description: 'Bank account number',
+    description: '10-digit NUBAN bank account number',
     example: '0123456789',
     minLength: 10,
     maxLength: 10,
   })
   @IsString()
-  @Length(10, 10)
+  @Length(10, 10, { message: 'Account number must be exactly 10 digits' })
   accountNumber: string;
 
   @ApiProperty({
-    description: 'Name of the bank',
-    example: 'GTBank',
-  })
-  @IsString()
-  bankName: string;
-
-  @ApiPropertyOptional({
-    description:
-      'Bank code used for payment provider integrations such as Paystack or Flutterwave',
+    description: 'The official routing code of the bank fetched from the GET /banks endpoint',
     example: '058',
   })
-  @IsOptional()
   @IsString()
-  bankCode?: string;
+  @IsNotEmpty()
+  bankCode: string;
 
   @ApiPropertyOptional({
-    description:
-      'Whether this account should be set as the vendor default account',
+    description: 'Whether this account should be set as the vendor default payout account',
     example: true,
     default: false,
   })
@@ -67,7 +60,7 @@ export class VendorBankAccountResponseDto {
   id: string;
 
   @ApiProperty({
-    description: 'Vendor identifier',
+    description: 'Vendor profile wrapper identifier',
     example: '684fa91234567890abcdef12',
   })
   vendorId: string;
@@ -85,16 +78,16 @@ export class VendorBankAccountResponseDto {
   accountNumber: string;
 
   @ApiProperty({
-    description: 'Bank name',
-    example: 'GTBank',
+    description: 'The official name of the bank mapped internally from your seed database',
+    example: 'Guaranty Trust Bank',
   })
   bankName: string;
 
-  @ApiPropertyOptional({
-    description: 'Bank code',
+  @ApiProperty({
+    description: 'The unique Paystack-compliant bank code',
     example: '058',
   })
-  bankCode?: string;
+  bankCode: string;
 
   @ApiProperty({
     description: 'Indicates whether this is the default account',

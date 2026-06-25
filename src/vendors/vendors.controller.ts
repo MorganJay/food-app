@@ -75,15 +75,15 @@ export class VendorsController {
     return this.vendorsService.findById(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Post()
-  @Roles(UserRole.VENDOR)
-  @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Create vendor profile' })
-  @ApiResponse({ status: 201, description: 'Vendor created' })
-  async create(@Body() vendorData: CreateVendorDto, @Req() req) {
-    return this.vendorsService.createVendor(req.user.sub, vendorData);
-  }
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Post()
+  // @Roles(UserRole.VENDOR)
+  // @ApiBearerAuth('jwt')
+  // @ApiOperation({ summary: 'Create vendor profile' })
+  // @ApiResponse({ status: 201, description: 'Vendor created' })
+  // async create(@Body() vendorData: CreateVendorDto, @Req() req) {
+  //   return this.vendorsService.createVendor(req.user.sub, vendorData);
+  // }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
@@ -99,21 +99,7 @@ export class VendorsController {
     return this.vendorsService.updateProfile(id, req.user.sub, updateData);
   }
 
-@Post('setup-store')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('jwt')
-@ApiConsumes('multipart/form-data')
-@ApiOperation({ summary: 'Setup or update store banner image, working days, and order type' })
-@UseInterceptors(FileInterceptor('image'))
-async setupOrUpdateStore(
-  @Req() req,
-  @Body() dto: SetupStoreDto,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  return this.vendorsService.setupStore(req.user.sub, dto, file);
-}
-
-@Post('nin')
+  @Post('nin')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('jwt')
   @ApiConsumes('multipart/form-data')

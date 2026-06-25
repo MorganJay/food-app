@@ -6,7 +6,7 @@ import {
   Param,
   Patch,
   Post,
-  Request,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,131 +20,135 @@ import { VendorBankAccountService } from './vendor-bank-account.service';
 import {
   CreateVendorBankAccountDto,
   UpdateVendorBankAccountDto,
+  VendorBankAccountResponseDto,
 } from './dto/create-vendor-bank-account.dto';
-import { JwtAuthGuard } from 'src/auth/auth-guards';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { UserRole } from 'src/schemas/User.schema';
-import { Roles } from 'src/auth/roles.decorator';
-
+import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../schemas/User.schema';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('Vendor Bank Accounts')
 @Controller('vendors/accounts')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class VendorBankAccountController {
   constructor(
-    private readonly account: VendorBankAccountService,
+    private readonly accountService: VendorBankAccountService,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Post()
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Post()
   @ApiOperation({
-    summary: 'Create vendor bank account',
+    summary: 'Create vendor bank account payout channel',
+    description: 'Adds a new bank account profile for settlements. The bankCode property must be a valid code fetched from the main GET /banks directory endpoint.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Bank account created successfully',
+    description: 'Bank account added successfully.',
+    type: VendorBankAccountResponseDto,
   })
   async create(
-    @Request() req,
+    @Req() req,
     @Body() dto: CreateVendorBankAccountDto,
   ) {
     const vendorId = req.user.sub;
-    return this.account.create(vendorId, dto);
+    return this.accountService.create(vendorId, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('all')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Get('all')
   @ApiOperation({
-    summary: 'Get all vendor bank accounts',
+    summary: 'Get all saved bank accounts for the logged-in vendor',
   })
   @ApiResponse({
     status: 200,
-    description: 'Vendor bank accounts retrieved successfully',
+    description: 'Vendor bank accounts retrieved successfully.',
+    type: [VendorBankAccountResponseDto],
   })
   async findAll(
-    @Request() req,
+    @Req() req,
   ) {
     const vendorId = req.user.sub;
-    return this.account.findAll(vendorId);
+    return this.accountService.findAll(vendorId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get(':accountId')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Get(':accountId')
   @ApiOperation({
-    summary: 'Get a vendor bank account',
+    summary: 'Get details of a single specific vendor bank account',
   })
   @ApiResponse({
     status: 200,
-    description: 'Bank account details',
+    description: 'Bank account details successfully fetched.',
+    type: VendorBankAccountResponseDto,
   })
   async findOne(
-    @Request() req,
+    @Req() req,
     @Param('accountId') accountId: string,
   ) {
     const vendorId = req.user.sub;
-    return this.account.getOne(vendorId, accountId);
+    return this.accountService.getOne(vendorId, accountId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Patch(':accountId')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Patch(':accountId')
   @ApiOperation({
-    summary: 'Update vendor bank account',
+    summary: 'Update saved vendor bank account information fields',
+    description: 'Modifies profile routing attributes. Note that providing a updated bankCode will automatically recalculate and reassign the internal bankName property label.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Bank account updated successfully',
+    description: 'Bank account updated successfully.',
+    type: VendorBankAccountResponseDto,
   })
   async update(
-    @Request() req,
+    @Req() req,
     @Param('accountId') accountId: string,
     @Body() dto: UpdateVendorBankAccountDto,
   ) {
     const vendorId = req.user.sub;
-    return this.account.update(vendorId, accountId, dto);
+    return this.accountService.update(vendorId, accountId, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Delete(':accountId')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Delete(':accountId')
   @ApiOperation({
-    summary: 'Delete vendor bank account',
+    summary: 'Soft-delete a vendor bank account record from the system profile',
   })
   @ApiResponse({
     status: 200,
-    description: 'Bank account deleted successfully',
+    description: 'Account deactivated and flagged as deleted successfully.',
+    schema: { example: { message: 'Account deleted successfully' } },
   })
   async remove(
-    @Request() req,
+    @Req() req,
     @Param('accountId') accountId: string,
   ) {
     const vendorId = req.user.sub;
-    return this.account.remove(vendorId, accountId);
+    return this.accountService.remove(vendorId, accountId);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Patch(':accountId/default')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @Patch(':accountId/default')
   @ApiOperation({
-    summary: 'Set bank account as default',
+    summary: 'Designate a specific bank account as the default payout target',
+    description: 'Sets the targeted account target flag to true and switches all other associated accounts to false.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Default bank account updated successfully',
+    description: 'Default payout settlement configurations successfully updated.',
+    type: VendorBankAccountResponseDto,
   })
   async setDefault(
-    @Request() req,
+    @Req() req,
     @Param('accountId') accountId: string,
   ) {
     const vendorId = req.user.sub;
-    return this.account.setDefault(vendorId, accountId);
+    return this.accountService.setDefault(vendorId, accountId);
   }
 }

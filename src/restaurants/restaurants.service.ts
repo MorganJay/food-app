@@ -2,38 +2,88 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
+import { Category, CategoryDocument } from '../schemas/Category.schema';
 import {
   CreateRestaurantDto,
   RestaurantResponseDto,
   UpdateRestaurantDto,
 } from './dto/restaurant.dto';
 import { mapToGeoLocation } from '../common/geojson';
+import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
 
 @Injectable()
 export class RestaurantsService {
   constructor(
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Category.name)
+    private categoryModel: Model<CategoryDocument>,
   ) {}
 
-  async create(createDto: CreateRestaurantDto, vendorId: string) {
+  async create(createDto: CreateRestaurantDto, vendorId: string, file?: Express.Multer.File) {
     const { address, latitude, longitude } = createDto.location;
+
+    if (!file) {
+      throw new BadRequestException('A restaurant banner image is required.');
+    }
+
+    const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
+
+    let chosenCategories: string[] = [];
+    if (createDto.categories) {
+      if (Array.isArray(createDto.categories)) {
+        chosenCategories = createDto.categories;
+      } else if (typeof (createDto.categories as any) === 'string') {
+        const rawStr = (createDto.categories as any).replace(/[\[\]"]/g, '').trim(); 
+        chosenCategories = rawStr ? rawStr.split(',').map(c => c.trim()) : [];
+      }
+    }
+
+    let parsedWorkingDays: string[] = [];
+    if (createDto.workingDays) {
+      if (Array.isArray(createDto.workingDays)) {
+        parsedWorkingDays = createDto.workingDays;
+      } else if (typeof (createDto.workingDays as any) === 'string') {
+        const rawStr = (createDto.workingDays as any).replace(/[\[\]"]/g, '').trim();
+        parsedWorkingDays = rawStr ? rawStr.split(',').map(d => d.trim()) : [];
+      }
+    }
+
+    if (chosenCategories.length > 0) {
+      await Promise.all(
+        chosenCategories.map(async (categoryName) => {
+          const cleanName = categoryName.trim();
+          await this.categoryModel.findOneAndUpdate(
+            { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+            { $setOnInsert: { name: cleanName } },
+            { upsert: true },
+          ).exec();
+        }),
+      );
+    }
 
     const restaurantData: any = {
       name: createDto.name,
       description: createDto.description,
       openHours: createDto.openHours,
       closeHours: createDto.closeHours,
+      workingDays: parsedWorkingDays,
+      orderType: createDto.orderType,
+      categories: chosenCategories.map((c) => c.trim()),
+      bannerImage: {
+        secure_url: cloudinaryResult.secure_url,
+        public_id: cloudinaryResult.public_id,
+      },
       address,
       vendorId,
     };
 
     const geoLocation = mapToGeoLocation(longitude, latitude);
-
     if (geoLocation) {
       restaurantData.location = geoLocation;
     }
@@ -109,7 +159,7 @@ export class RestaurantsService {
     );
   }
 
-  async update(id: string, vendorId: string, updateDto: UpdateRestaurantDto) {
+  async update(id: string, vendorId: string, updateDto: UpdateRestaurantDto, file?: Express.Multer.File) {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -120,34 +170,48 @@ export class RestaurantsService {
 
     const updatePayload: any = {};
 
-    if (updateDto.name !== undefined) {
-      updatePayload.name = updateDto.name;
+    // Swap files out in Cloudinary securely if a new one arrives
+    if (file) {
+      if (restaurant.bannerImage?.public_id) {
+        await deleteFromCloudinary(restaurant.bannerImage.public_id).catch((err) =>
+          console.error('Failed to clear old banner out of Cloudinary storage:', err),
+        );
+      }
+      const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
+      updatePayload.bannerImage = {
+        secure_url: cloudinaryResult.secure_url,
+        public_id: cloudinaryResult.public_id,
+      };
     }
 
-    if (updateDto.description !== undefined) {
-      updatePayload.description = updateDto.description;
+    if (updateDto.categories !== undefined) {
+      const chosenCategories = updateDto.categories || [];
+      if (chosenCategories.length > 0) {
+        await Promise.all(
+          chosenCategories.map(async (categoryName) => {
+            const cleanName = categoryName.trim();
+            await this.categoryModel.findOneAndUpdate(
+              { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+              { $setOnInsert: { name: cleanName } },
+              { upsert: true },
+            ).exec();
+          }),
+        );
+      }
+      updatePayload.categories = chosenCategories.map((c) => c.trim());
     }
 
-    if (updateDto.isActive !== undefined) {
-      updatePayload.isActive = updateDto.isActive;
-    }
+    if (updateDto.name !== undefined) updatePayload.name = updateDto.name;
+    if (updateDto.description !== undefined) updatePayload.description = updateDto.description;
+    if (updateDto.isActive !== undefined) updatePayload.isActive = updateDto.isActive;
+    if (updateDto.openHours !== undefined) updatePayload.openHours = updateDto.openHours;
+    if (updateDto.closeHours !== undefined) updatePayload.closeHours = updateDto.closeHours;
+    if (updateDto.workingDays !== undefined) updatePayload.workingDays = updateDto.workingDays;
+    if (updateDto.orderType !== undefined) updatePayload.orderType = updateDto.orderType;
 
-    if (updateDto.openHours !== undefined) {
-      updatePayload.openHours = updateDto.openHours;
-    }
-
-    if (updateDto.closeHours !== undefined) {
-      updatePayload.closeHours = updateDto.closeHours;
-    }
-
-    // handle location transformation
     if (updateDto.location) {
       const { address, latitude, longitude } = updateDto.location;
-
-      if (address) {
-        updatePayload.address = address;
-      }
-
+      if (address) updatePayload.address = address;
       if (latitude !== undefined && longitude !== undefined) {
         const geoLocation = mapToGeoLocation(longitude, latitude);
         if (geoLocation) {
@@ -163,10 +227,7 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(
-    id: string,
-    vendorId: string,
-  ): Promise<{ status: string; message: string }> {
+  async delete(id: string, vendorId: string): Promise<{ status: string; message: string }> {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -174,8 +235,14 @@ export class RestaurantsService {
     if (restaurant.vendorId !== vendorId) {
       throw new ForbiddenException('You can only delete your own restaurants');
     }
-    await this.restaurantModel.findByIdAndDelete(id).exec();
 
+    if (restaurant.bannerImage?.public_id) {
+      await deleteFromCloudinary(restaurant.bannerImage.public_id).catch((err) =>
+        console.error('Failed to drop storage assets during hard deletion purge:', err),
+      );
+    }
+
+    await this.restaurantModel.findByIdAndDelete(id).exec();
     return { status: 'ok', message: 'Restaurant deleted successfully' };
   }
 
@@ -188,6 +255,10 @@ export class RestaurantsService {
       isActive: restaurant.isActive,
       openHours: restaurant.openHours,
       closeHours: restaurant.closeHours,
+      workingDays: restaurant.workingDays || [], 
+      orderType: restaurant.orderType,
+      categories: restaurant.categories || [],
+      bannerImage: restaurant.bannerImage?.secure_url || '',
       location: {
         address: restaurant.address,
         latitude: restaurant.location?.coordinates?.[1],

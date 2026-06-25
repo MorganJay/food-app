@@ -11,11 +11,13 @@ import { UsersService } from '../users/users.service';
 import { OtpDeliveryService } from './otp-delivery.service';
 import { UserRole } from '../schemas/User.schema';
 import { isBcryptHash, verifyPassword } from '../common/password.util';
+import { VendorsService } from 'src/vendors/vendors.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private vendorsService: VendorsService,
     private jwtService: JwtService,
     private otpService: OtpService,
     private otpDelivery: OtpDeliveryService,
@@ -54,6 +56,18 @@ export class AuthService {
   }
 
   async login(user: any) {
+    if (user.role === UserRole.VENDOR) {
+      const vendorProfile = await this.vendorsService.findById(user._id.toString()).catch(() => null);
+      
+      if (!vendorProfile) {
+        // Auto-generate the missing merchant shell for this legacy user
+        await this.vendorsService.createVendor(user._id.toString(), {
+          businessName: `${user.username}'s Kitchen`,
+          description: 'Welcome to my store!',
+          location: undefined
+        });
+      }
+    }
     const payload = {
       username: user.username,
       phoneNumber: user.phoneNumber,
@@ -72,10 +86,20 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    await this.usersService.createByPhoneNumber(
+    // Create the user core account
+    const newUser = await this.usersService.createByPhoneNumber(
       dto.phoneNumber,
       dto,
     );
+
+    // Run createVendor service if role is vendor ---
+    if (dto.role === UserRole.VENDOR) {
+      await this.vendorsService.createVendor(newUser.id, {
+        businessName: `${dto.username}'s Kitchen`, // Starter placeholder name
+        description: 'Welcome to my store!',      // Starter placeholder description
+        location: undefined                       // Kept optional for onboarding setup later
+      });
+    }
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)
@@ -141,6 +165,20 @@ export class AuthService {
     await this.otpService.verify(phoneNumber, code);
 
     const user = await this.usersService.verifyPhoneNumber(phoneNumber);
+
+    if (user.role === UserRole.VENDOR) {
+      const vendorProfile = await this.vendorsService.findById(user.id).catch(() => null);
+      
+      if (!vendorProfile) {
+        // Auto-generate the missing merchant shell for this legacy user
+        await this.vendorsService.createVendor(user.id, {
+          businessName: `${user.username}'s Kitchen`,
+          description: 'Welcome to my store!',
+          location: undefined
+        });
+      }
+    }
+
     const payload = {
       sub: user.id,
       role: user.role,

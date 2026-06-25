@@ -21,6 +21,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CategoriesModule } from './categories/categories.module';
+import { BanksModule } from './banks/banks.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     RestaurantsModule,
     ProductsModule,
     CartsModule,
+    CategoriesModule,
+    BanksModule,
     OrdersModule,
     DeliveriesModule,
     ConsumersModule,

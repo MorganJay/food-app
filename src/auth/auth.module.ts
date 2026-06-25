@@ -11,12 +11,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { OtpDeliveryService } from './otp-delivery.service';
 import { ConfigService } from '@nestjs/config';
+import { VendorsModule } from 'src/vendors/vendors.module';
 
 @Module({
   imports: [
     UsersModule,
     OtpModule,
     PassportModule,
+    VendorsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

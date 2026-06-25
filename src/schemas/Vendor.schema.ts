@@ -29,12 +29,6 @@ export class Vendor extends BaseEntity {
     public_id: string;
   };
 
-  @Prop({ type: [String], default: [] })
-  workingDays: string[];
-
-  @Prop()
-  orderType: string;
-
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: [Number],
