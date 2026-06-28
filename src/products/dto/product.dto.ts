@@ -134,7 +134,6 @@ export class CreateProductDto {
   })
   image?: any;
 
-  // --- CHANGED HERE: Stripped validation decorators to let the Service process the raw FormData text safely ---
   @ApiPropertyOptional({
     type: () => [ChoiceGroupDto],
     description: 'Structured array list or JSON string for configuring custom buyer choices and extra options.',
@@ -223,7 +222,6 @@ export class UpdateProductDto {
   @IsBoolean()
   isAvailable?: boolean;
 
-  // --- CHANGED HERE TOO: Keeps Swagger documentation structure intact while using service mapping ---
   @ApiPropertyOptional({
     type: () => [ChoiceGroupDto],
     description: 'Structured array list or JSON string for configuring custom buyer choices and extra options.',

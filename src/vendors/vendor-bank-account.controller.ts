@@ -51,8 +51,7 @@ export class VendorBankAccountController {
     @Req() req,
     @Body() dto: CreateVendorBankAccountDto,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.create(vendorId, dto);
+    return this.accountService.create(req.user.sub, dto);
   }
 
   @Get('all')
@@ -69,8 +68,7 @@ export class VendorBankAccountController {
   async findAll(
     @Req() req,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.findAll(vendorId);
+    return this.accountService.findAll(req.user.sub);
   }
 
   @Get(':accountId')
@@ -88,8 +86,7 @@ export class VendorBankAccountController {
     @Req() req,
     @Param('accountId') accountId: string,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.getOne(vendorId, accountId);
+    return this.accountService.getOne(req.user.sub, accountId);
   }
 
   @Patch(':accountId')
@@ -109,8 +106,7 @@ export class VendorBankAccountController {
     @Param('accountId') accountId: string,
     @Body() dto: UpdateVendorBankAccountDto,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.update(vendorId, accountId, dto);
+    return this.accountService.update(req.user.sub, accountId, dto);
   }
 
   @Delete(':accountId')
@@ -128,8 +124,7 @@ export class VendorBankAccountController {
     @Req() req,
     @Param('accountId') accountId: string,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.remove(vendorId, accountId);
+    return this.accountService.remove(req.user.sub, accountId);
   }
 
   @Patch(':accountId/default')
@@ -148,7 +143,6 @@ export class VendorBankAccountController {
     @Req() req,
     @Param('accountId') accountId: string,
   ) {
-    const vendorId = req.user.sub;
-    return this.accountService.setDefault(vendorId, accountId);
+    return this.accountService.setDefault(req.user.sub, accountId);
   }
 }

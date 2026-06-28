@@ -29,6 +29,7 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../schemas/User.schema';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto, UpdateRestaurantDto, RestaurantResponseDto } from './dto/restaurant.dto';
+import { ParsedMultipartBody } from 'src/common/decorators/parsed-multipart-body.decorator';
 
 @ApiTags('Restaurants')
 @Controller('restaurants')
@@ -102,7 +103,11 @@ export class RestaurantsController {
   @ApiResponse({ status: 201, description: 'Restaurant profile created successfully', type: RestaurantResponseDto })
   @UseInterceptors(FileInterceptor('image'))
   async create(
-    @Body() createDto: CreateRestaurantDto, 
+    @ParsedMultipartBody({
+      objects: ['location'],
+      arrays: ['categories', 'workingDays'],
+    })
+    createDto: CreateRestaurantDto, 
     @Req() req,
     @UploadedFile() file: Express.Multer.File
   ) {

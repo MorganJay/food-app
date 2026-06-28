@@ -93,51 +93,46 @@ export class VendorsService {
     return this.mapVendorResponse(vendor);
   }
 
-  async setupStore(userId: string, setupStoreDto: SetupStoreDto, storeBannerFile?: Express.Multer.File) {
+  // async setupStore(userId: string, setupStoreDto: SetupStoreDto, storeBannerFile?: Express.Multer.File) {
+  //   const vendor = await this.vendorModel.findOne({ userId }).exec();
+  //   if (!vendor) {
+  //     throw new NotFoundException(`Vendor profile not found for this user`);
+  //   }
+
+  //   const updatePayload: any = {
+  //     workingDays: setupStoreDto.workingDays,
+  //   };
+
+  //   if (setupStoreDto.orderType) {
+  //     updatePayload.orderType = setupStoreDto.orderType;
+  //   }
+
+  //   // Handle Banner Image upload
+  //   if (storeBannerFile) {
+  //     if (vendor.image?.public_id) {
+  //       await deleteFromCloudinary(vendor.image.public_id);
+  //     }
+
+  //     const uploadedBanner = await uploadToCloudinary(storeBannerFile, 'vendors');
+  //     updatePayload.image = {
+  //       secure_url: uploadedBanner.secure_url,
+  //       public_id: uploadedBanner.public_id,
+  //     };
+  //   }
+
+  //   const updatedVendor = await this.vendorModel.findOneAndUpdate(
+  //     { userId },
+  //     updatePayload,
+  //     { new: true },
+  //   ).exec();
+
+  //   return this.mapVendorResponse(updatedVendor);
+  // }
+
+  async updateProfile(userId: string, updateData: UpdateVendorDto) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
-      throw new NotFoundException(`Vendor profile not found for this user`);
-    }
-
-    const updatePayload: any = {
-      workingDays: setupStoreDto.workingDays,
-    };
-
-    if (setupStoreDto.orderType) {
-      updatePayload.orderType = setupStoreDto.orderType;
-    }
-
-    // Handle Banner Image upload
-    if (storeBannerFile) {
-      if (vendor.image?.public_id) {
-        await deleteFromCloudinary(vendor.image.public_id);
-      }
-
-      const uploadedBanner = await uploadToCloudinary(storeBannerFile, 'vendors');
-      updatePayload.image = {
-        secure_url: uploadedBanner.secure_url,
-        public_id: uploadedBanner.public_id,
-      };
-    }
-
-    const updatedVendor = await this.vendorModel.findOneAndUpdate(
-      { userId },
-      updatePayload,
-      { new: true },
-    ).exec();
-
-    return this.mapVendorResponse(updatedVendor);
-  }
-
-  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
-    const vendor = await this.vendorModel.findById(id).exec();
-    if (!vendor) {
-      throw new NotFoundException(`Vendor with ID ${id} not found`);
-    }
-    if (vendor.userId.toString() !== userId.toString()) {
-      throw new BadRequestException(
-        'You can only update your own vendor profile',
-      );
+      throw new NotFoundException('Vendor profile not found for this user account context.');
     }
 
     const geo = updateData.location
@@ -154,8 +149,8 @@ export class VendorsService {
       updatePayload.description = updateData.description;
     }
 
-    if (updateData.location?.address) {
-      updatePayload.address = updateData.location?.address;
+    if (updateData.location?.address !== undefined) {
+      updatePayload.address = updateData.location.address;
     }
 
     if (geo) {
@@ -163,7 +158,7 @@ export class VendorsService {
     }
 
     const updatedVendor = await this.vendorModel
-      .findByIdAndUpdate(id, updatePayload, { new: true })
+      .findByIdAndUpdate(vendor._id, updatePayload, { new: true })
       .exec();
 
     return this.mapVendorResponse(updatedVendor);

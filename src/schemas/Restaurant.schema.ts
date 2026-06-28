@@ -6,10 +6,10 @@ export type RestaurantDocument = HydratedDocument<Restaurant>;
 
 @Schema({ timestamps: true })
 export class Restaurant extends BaseEntity {
-  @Prop({ required: true, unique: true })
+  @Prop({ unique: true })
   name: string;
 
-  @Prop({ required: true })
+  @Prop()
   description: string;
 
   @Prop({ required: true })
@@ -36,7 +36,7 @@ export class Restaurant extends BaseEntity {
     coordinates: number[];
   };
 
-  @Prop({ required: true })
+  @Prop()
   address: string;
 
   @Prop({ type: [String], default: [] })
@@ -45,10 +45,10 @@ export class Restaurant extends BaseEntity {
   @Prop()
   orderType: string;
 
-  @Prop({ required: true })
+  @Prop()
   openHours: string;
 
-  @Prop({ required: true })
+  @Prop()
   closeHours: string;
 
   @Prop({ type: [String], default: [] })

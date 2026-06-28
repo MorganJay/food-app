@@ -6,7 +6,6 @@ import { Vendor, VendorSchema } from '../schemas/Vendor.schema';
 import { VendorBankAccountController } from './vendor-bank-account.controller';
 import { VendorBankAccount, VendorBankAccountSchema } from 'src/schemas/VendorBankAccount.schema';
 import { VendorBankAccountService } from './vendor-bank-account.service';
-import { BanksModule } from 'src/banks/banks.module';
 import { Bank, BankSchema } from 'src/schemas/Bank.schema';
 
 @Module({
@@ -19,6 +18,6 @@ import { Bank, BankSchema } from 'src/schemas/Bank.schema';
   ],
   providers: [VendorsService, VendorBankAccountService],
   controllers: [VendorsController, VendorBankAccountController],
-  exports: [VendorsService, VendorBankAccountService],
+  exports: [MongooseModule, VendorsService, VendorBankAccountService],
 })
 export class VendorsModule {}

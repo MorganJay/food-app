@@ -15,30 +15,36 @@ import {
 } from './dto/restaurant.dto';
 import { mapToGeoLocation } from '../common/geojson';
 import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
+import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 
 @Injectable()
 export class RestaurantsService {
   constructor(
-    @InjectModel(Restaurant.name)
-    private restaurantModel: Model<RestaurantDocument>,
-    @InjectModel(Category.name)
-    private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
 
-async create(createDto: CreateRestaurantDto, vendorId: string, file?: Express.Multer.File) {
+  async create(createDto: CreateRestaurantDto, userId: string, file?: Express.Multer.File) {
     if (!createDto.location) {
       throw new BadRequestException('Restaurant location object details are required.');
     }
 
-    const { address, latitude, longitude } = JSON.parse(createDto.location);
+    const { address, latitude, longitude } = createDto.location;
     
     if (!address || address.trim() === '') {
       throw new BadRequestException('The location address field text is required.');
-    }
+    } 
 
     if (!file) {
       throw new BadRequestException('A restaurant banner image is required.');
     }
+
+    const vendor = await this.vendorModel.findOne({ userId }); 
+    if (!vendor) {
+      throw new NotFoundException('No active vendor profile record matches this user account context.');
+    }
+    const vendorId = vendor.id || vendor._id.toString();
 
     const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
     const chosenCategories: string[] = createDto.categories || [];
@@ -79,7 +85,7 @@ async create(createDto: CreateRestaurantDto, vendorId: string, file?: Express.Mu
 
     const restaurant = await this.restaurantModel.create(restaurantData);
     return this.mapRestaurantResponse(restaurant);
-  }
+}
 
   async findAll(skip: number = 0, limit: number = 10) {
     const restaurants = await this.restaurantModel

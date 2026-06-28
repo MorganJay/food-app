@@ -8,15 +8,27 @@ import {
   VendorBankAccountResponseDto,
 } from './dto/create-vendor-bank-account.dto';
 import { Model } from 'mongoose';
+import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 
 @Injectable()
 export class VendorBankAccountService {
   constructor(
     @InjectModel(VendorBankAccount.name) private readonly accountModel: Model<VendorBankAccountDocument>,
     @InjectModel(Bank.name) private readonly bankModel: Model<BankDocument>,
+    @InjectModel(Vendor.name) private readonly vendorModel: Model<VendorDocument>,
   ) {}
 
-  async create(vendorId: string, dto: CreateVendorBankAccountDto): Promise<VendorBankAccountResponseDto> {
+  private async getVendorIdByUserId(userId: string): Promise<string> {
+    const vendorProfile = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendorProfile) {
+      throw new NotFoundException('No active vendor profile record found for this user context.');
+    }
+    return vendorProfile.id || vendorProfile._id.toString();
+  }
+
+  async create(userId: string, dto: CreateVendorBankAccountDto): Promise<VendorBankAccountResponseDto> {
+    const vendorId = await this.getVendorIdByUserId(userId);
+
     const validBank = await this.bankModel.findOne({ code: dto.bankCode, isDeleted: false }).exec();
     if (!validBank) {
       throw new BadRequestException(`Invalid bank code: ${dto.bankCode}. Please select a valid bank.`);
@@ -49,7 +61,9 @@ export class VendorBankAccountService {
     return this.mapAccountResponse(account);
   }
 
-  async findAll(vendorId: string): Promise<VendorBankAccountResponseDto[]> {
+  async findAll(userId: string): Promise<VendorBankAccountResponseDto[]> {
+    const vendorId = await this.getVendorIdByUserId(userId);
+
     const accounts = await this.accountModel
       .find({ 
         vendorId,
@@ -60,9 +74,7 @@ export class VendorBankAccountService {
         createdAt: -1,
       }).exec();
 
-    return accounts.map((account) =>
-      this.mapAccountResponse(account),
-    );
+    return accounts.map((account) => this.mapAccountResponse(account));
   }
 
   async findOne(vendorId: string, accountId: string): Promise<VendorBankAccountDocument> {
@@ -73,23 +85,25 @@ export class VendorBankAccountService {
     }).exec();
 
     if (!account) {
-      throw new NotFoundException('Account not found');
+      throw new NotFoundException('Account not found or access denied');
     }
 
     return account;
   }
 
-  async getOne(vendorId: string, accountId: string): Promise<VendorBankAccountResponseDto> {
+  async getOne(userId: string, accountId: string): Promise<VendorBankAccountResponseDto> {
+    const vendorId = await this.getVendorIdByUserId(userId);
     const account = await this.findOne(vendorId, accountId);
 
     return this.mapAccountResponse(account);
   }
 
   async update(
-    vendorId: string,
+    userId: string,
     accountId: string,
     dto: UpdateVendorBankAccountDto,
   ): Promise<VendorBankAccountResponseDto> {
+    const vendorId = await this.getVendorIdByUserId(userId);
     const account = await this.findOne(vendorId, accountId);
 
     if (dto.isDefault) {
@@ -108,24 +122,17 @@ export class VendorBankAccountService {
       account.bankName = validBank.name;
     }
 
-    if (dto.accountName !== undefined) {
-      account.accountName = dto.accountName;
-    }
-
-    if (dto.accountNumber !== undefined) {
-      account.accountNumber = dto.accountNumber;
-    }
-
-    if (dto.isDefault !== undefined) {
-      account.isDefault = dto.isDefault;
-    }
+    if (dto.accountName !== undefined) account.accountName = dto.accountName;
+    if (dto.accountNumber !== undefined) account.accountNumber = dto.accountNumber;
+    if (dto.isDefault !== undefined) account.isDefault = dto.isDefault;
 
     await account.save();
 
     return this.mapAccountResponse(account);
   }
 
-  async remove(vendorId: string, accountId: string) {
+  async remove(userId: string, accountId: string) {
+    const vendorId = await this.getVendorIdByUserId(userId);
     const account = await this.findOne(vendorId, accountId);
 
     account.isDeleted = true;
@@ -136,7 +143,8 @@ export class VendorBankAccountService {
     };
   }
 
-  async setDefault(vendorId: string, accountId: string): Promise<VendorBankAccountResponseDto> {
+  async setDefault(userId: string, accountId: string): Promise<VendorBankAccountResponseDto> {
+    const vendorId = await this.getVendorIdByUserId(userId);
     const account = await this.findOne(vendorId, accountId);
 
     await this.accountModel.updateMany(

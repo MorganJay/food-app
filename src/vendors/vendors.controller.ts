@@ -75,28 +75,17 @@ export class VendorsController {
     return this.vendorsService.findById(id);
   }
 
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Post()
-  // @Roles(UserRole.VENDOR)
-  // @ApiBearerAuth('jwt')
-  // @ApiOperation({ summary: 'Create vendor profile' })
-  // @ApiResponse({ status: 201, description: 'Vendor created' })
-  // async create(@Body() vendorData: CreateVendorDto, @Req() req) {
-  //   return this.vendorsService.createVendor(req.user.sub, vendorData);
-  // }
-
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Patch(':id')
+  @Patch('profile')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
   async update(
-    @Param('id') id: string,
     @Body() updateData: UpdateVendorDto,
     @Req() req
   ) {
-    return this.vendorsService.updateProfile(id, req.user.sub, updateData);
+    return this.vendorsService.updateProfile(req.user.sub, updateData);
   }
 
   @Post('nin')

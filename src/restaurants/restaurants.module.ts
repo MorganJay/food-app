@@ -4,6 +4,7 @@ import { RestaurantsService } from './restaurants.service';
 import { RestaurantsController } from './restaurants.controller';
 import { Restaurant, RestaurantSchema } from '../schemas/Restaurant.schema';
 import { CategoriesModule } from 'src/categories/categories.module';
+import { VendorsModule } from 'src/vendors/vendors.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { CategoriesModule } from 'src/categories/categories.module';
       { name: Restaurant.name, schema: RestaurantSchema },
     ]),
     CategoriesModule,
+    VendorsModule,
   ],
   providers: [RestaurantsService],
   controllers: [RestaurantsController],

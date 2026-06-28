@@ -86,20 +86,20 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    // Create the user core account
     const newUser = await this.usersService.createByPhoneNumber(
       dto.phoneNumber,
       dto,
     );
 
     // Run createVendor service if role is vendor ---
-    if (dto.role === UserRole.VENDOR) {
-      await this.vendorsService.createVendor(newUser.id, {
-        businessName: `${dto.username}'s Kitchen`, // Starter placeholder name
-        description: 'Welcome to my store!',      // Starter placeholder description
-        location: undefined                       // Kept optional for onboarding setup later
-      });
-    }
+    const shortPhone = dto.phoneNumber.slice(-4); 
+    const uniquePlaceholderName = `${dto.username}'s Kitchen (${shortPhone})`;
+
+    await this.vendorsService.createVendor(newUser.id, {
+      businessName: uniquePlaceholderName,
+      description: 'Welcome to my store!',      
+      location: undefined                       
+    });
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)

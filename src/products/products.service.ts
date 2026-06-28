@@ -14,34 +14,42 @@ import {
   UpdateProductDto,
 } from './dto/product.dto';
 import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
+import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    @InjectModel(Restaurant.name)
-    private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
+
+  private async getVendorIdByUserId(userId: string): Promise<string> {
+    const vendorProfile = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendorProfile) {
+      throw new ForbiddenException('No active vendor profile record found for this user context.');
+    }
+    return vendorProfile.id || vendorProfile._id.toString();
+  }
 
   private async assertRestaurantOwnedByVendor(
     restaurantId: string,
-    vendorUserId: string,
+    vendorId: string,
   ) {
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
       throw new NotFoundException('Restaurant not found');
     }
-    if (restaurant.vendorId !== vendorUserId) {
+    if (restaurant.vendorId !== vendorId) {
       throw new ForbiddenException('You do not own this restaurant');
     }
   }
 
- private parseChoiceGroups(choiceGroupsInput: any): any[] {
+  private parseChoiceGroups(choiceGroupsInput: any): any[] {
     if (!choiceGroupsInput) return [];
     
     let parsed = choiceGroupsInput;
     
-    // If it arrives as a string from FormData, parse it manually
     if (typeof choiceGroupsInput === 'string') {
       try {
         parsed = JSON.parse(choiceGroupsInput);
@@ -52,7 +60,6 @@ export class ProductsService {
 
     if (!Array.isArray(parsed)) return [];
 
-    // Explicit structural mapping to match Mongoose Schema exactly
     return parsed.map((group) => ({
       groupName: group.groupName,
       isRequired: group.isRequired === 'true' || group.isRequired === true,
@@ -65,14 +72,12 @@ export class ProductsService {
     }));
   }
 
-  async create(
-    createDto: CreateProductDto,
-    vendorUserId: string,
-    file?: Express.Multer.File,
-  ) {
+  async create(createDto: CreateProductDto, userId: string, file?: Express.Multer.File) {
+    const vendorId = await this.getVendorIdByUserId(userId);
+    
     await this.assertRestaurantOwnedByVendor(
       createDto.restaurantId,
-      vendorUserId,
+      vendorId,
     );
 
     const name = createDto.name.trim();
@@ -164,17 +169,20 @@ export class ProductsService {
 
   async update(
     id: string,
-    vendorUserId: string,
+    userId: string,
     updateDto: UpdateProductDto,
     file?: Express.Multer.File,
   ) {
+    const vendorId = await this.getVendorIdByUserId(userId);
+    
     const product = await this.productModel.findById(id).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+    
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
-      vendorUserId,
+      vendorId,
     );
 
     const updatePayload: Record<string, unknown> = { ...updateDto };
@@ -206,19 +214,24 @@ export class ProductsService {
 
   async delete(
     id: string,
-    vendorUserId: string,
+    userId: string,
   ): Promise<{ status: string; message: string }> {
+    const vendorId = await this.getVendorIdByUserId(userId);
+    
     const product = await this.productModel.findById(id).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+    
     if (product.image?.public_id) {
       await deleteFromCloudinary(product.image.public_id);
     }
+    
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
-      vendorUserId,
+      vendorId,
     );
+    
     await this.productModel.findByIdAndDelete(id).exec();
 
     return { status: 'ok', message: 'Product deleted successfully' };
