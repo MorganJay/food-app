@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiParam,
@@ -28,7 +29,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../schemas/User.schema';
 import { RestaurantsService } from './restaurants.service';
-import { CreateRestaurantDto, UpdateRestaurantDto, RestaurantResponseDto } from './dto/restaurant.dto';
+import {
+  CreateRestaurantDto,
+  UpdateRestaurantDto,
+  RestaurantResponseDto,
+} from './dto/restaurant.dto';
 import { ParsedMultipartBody } from 'src/common/decorators/parsed-multipart-body.decorator';
 
 @ApiTags('Restaurants')
@@ -40,20 +45,30 @@ export class RestaurantsController {
   @ApiOperation({ summary: 'Get all restaurants (paginated)' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiResponse({ status: 200, description: 'List of restaurants', type: [RestaurantResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of restaurants',
+    type: [RestaurantResponseDto],
+  })
   async findAll(
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '10',
   ) {
-    return this.restaurantsService.findAll(parseInt(skip, 10), parseInt(limit, 10));
+    return this.restaurantsService.findAll(
+      parseInt(skip, 10),
+      parseInt(limit, 10),
+    );
   }
 
   @Get('nearby')
   @ApiOperation({ summary: 'Find nearby restaurants by location coords' })
   @ApiQuery({ name: 'latitude', required: true, type: Number, example: 7.3775 })
-  @ApiQuery({ name: 'longitude', required: true, type: Number, example: 3.9470 })
+  @ApiQuery({ name: 'longitude', required: true, type: Number, example: 3.947 })
   @ApiQuery({ name: 'radius', required: false, type: Number, example: 5 })
-  @ApiResponse({ status: 200, description: 'Nearby restaurants list context matches' })
+  @ApiResponse({
+    status: 200,
+    description: 'Nearby restaurants list context matches',
+  })
   async findNearby(
     @Query('latitude') latitude: string,
     @Query('longitude') longitude: string,
@@ -67,7 +82,10 @@ export class RestaurantsController {
   }
 
   @Get('search')
-  @ApiOperation({ summary: 'Search active marketplace restaurants via full-text index parameters' })
+  @ApiOperation({
+    summary:
+      'Search active marketplace restaurants via full-text index parameters',
+  })
   @ApiQuery({ name: 'q', required: true, example: 'Amala' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -77,7 +95,9 @@ export class RestaurantsController {
     @Query('limit') limit: string = '10',
   ) {
     if (!query) {
-      throw new BadRequestException('Search query string input parameter is required');
+      throw new BadRequestException(
+        'Search query string input parameter is required',
+      );
     }
     return this.restaurantsService.search(
       query,
@@ -99,17 +119,25 @@ export class RestaurantsController {
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Create restaurant payload',
+    type: CreateRestaurantDto,
+  })
   @ApiOperation({ summary: 'Create and setup store' })
-  @ApiResponse({ status: 201, description: 'Restaurant profile created successfully', type: RestaurantResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Restaurant profile created successfully',
+    type: RestaurantResponseDto,
+  })
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @ParsedMultipartBody({
       objects: ['location'],
       arrays: ['categories', 'workingDays'],
     })
-    createDto: CreateRestaurantDto, 
+    createDto: CreateRestaurantDto,
     @Req() req,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file: Express.Multer.File,
   ) {
     return this.restaurantsService.create(createDto, req.user.sub, file);
   }
@@ -119,15 +147,26 @@ export class RestaurantsController {
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update an existing vendor restaurant configuration settings profile' })
+  @ApiBody({
+    description: 'Update restaurant payload',
+    type: UpdateRestaurantDto,
+  })
+  @ApiOperation({
+    summary:
+      'Update an existing vendor restaurant configuration settings profile',
+  })
   @ApiParam({ name: 'id', example: '64f123abc...' })
-  @ApiResponse({ status: 200, description: 'Restaurant updated successfully', type: RestaurantResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Restaurant updated successfully',
+    type: RestaurantResponseDto,
+  })
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateRestaurantDto,
     @Req() req,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file: Express.Multer.File,
   ) {
     return this.restaurantsService.update(id, req.user.sub, updateDto, file);
   }
@@ -136,9 +175,14 @@ export class RestaurantsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Purge a restaurant profile document and clear storage assets' })
+  @ApiOperation({
+    summary: 'Purge a restaurant profile document and clear storage assets',
+  })
   @ApiParam({ name: 'id', example: '64f123abc...' })
-  @ApiResponse({ status: 200, description: 'Restaurant and storage properties successfully removed' })
+  @ApiResponse({
+    status: 200,
+    description: 'Restaurant and storage properties successfully removed',
+  })
   async delete(@Param('id') id: string, @Req() req) {
     return this.restaurantsService.delete(id, req.user.sub);
   }

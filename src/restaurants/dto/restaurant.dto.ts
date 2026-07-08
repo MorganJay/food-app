@@ -62,30 +62,46 @@ export class CreateRestaurantDto {
   @ApiProperty({
     description: 'Restaurant location details parameters',
     type: LocationDto,
-    required: false,
+    required: true,
   })
-  @IsOptional()
   @ValidateNested()
   @Type(() => LocationDto)
-  location?: LocationDto;
+  location: LocationDto;
 
-  @ApiProperty({ example: '08:00', description: 'Opening operational hours', required: false })
+  @ApiProperty({
+    example: '08:00',
+    description: 'Opening operational hours',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   openHours?: string;
 
-  @ApiProperty({ example: '22:00', description: 'Closing operational hours', required: false })
+  @ApiProperty({
+    example: '22:00',
+    description: 'Closing operational hours',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   closeHours?: string;
 
-  @ApiProperty({ example: ['Swallow', 'Rice', 'Soups', 'Proteins', 'Local Dishes'], type: [String], description: 'Select food categories', required: false })
+  @ApiProperty({
+    example: ['Swallow', 'Rice', 'Soups', 'Proteins', 'Local Dishes'],
+    type: [String],
+    description: 'Select food categories',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   categories?: string[];
 
-  @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], type: [String], required: false })
+  @ApiProperty({
+    example: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    type: [String],
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -96,8 +112,13 @@ export class CreateRestaurantDto {
   @IsOptional()
   orderType?: string;
 
-  @ApiPropertyOptional({ type: 'string', format: 'binary', description: 'Multipart frontend banner graphic file upload', required: false })
-  image?: any;
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Multipart frontend banner graphic file upload',
+    required: true,
+  })
+  image: any;
 }
 
 export class UpdateRestaurantDto {
@@ -106,7 +127,10 @@ export class UpdateRestaurantDto {
   @IsString()
   name?: string;
 
-  @ApiProperty({ example: 'Popular fast-food chain offering chicken and fries', required: false })
+  @ApiProperty({
+    example: 'Popular fast-food chain offering chicken and fries',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   description?: string;
@@ -132,13 +156,21 @@ export class UpdateRestaurantDto {
   @IsString()
   closeHours?: string;
 
-  @ApiProperty({ example: ['Swallow', 'Fast Food'], type: [String], required: false })
+  @ApiProperty({
+    example: ['Swallow', 'Fast Food'],
+    type: [String],
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   categories?: string[];
 
-  @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday'], type: [String], required: false })
+  @ApiProperty({
+    example: ['Monday', 'Tuesday', 'Wednesday'],
+    type: [String],
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -149,7 +181,12 @@ export class UpdateRestaurantDto {
   @IsOptional()
   orderType?: string;
 
-  @ApiPropertyOptional({ type: 'string', format: 'binary', description: 'Update banner graphic asset', required: false })
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    description: 'Update banner graphic asset',
+    required: false,
+  })
   image?: any;
 }
 
