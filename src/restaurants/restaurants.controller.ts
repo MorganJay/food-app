@@ -34,7 +34,6 @@ import {
   UpdateRestaurantDto,
   RestaurantResponseDto,
 } from './dto/restaurant.dto';
-import { ParsedMultipartBody } from 'src/common/decorators/parsed-multipart-body.decorator';
 
 @ApiTags('Restaurants')
 @Controller('restaurants')
@@ -118,7 +117,6 @@ export class RestaurantsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Create restaurant payload',
     type: CreateRestaurantDto,
@@ -130,16 +128,8 @@ export class RestaurantsController {
     type: RestaurantResponseDto,
   })
   @UseInterceptors(FileInterceptor('image'))
-  async create(
-    @ParsedMultipartBody({
-      objects: ['location'],
-      arrays: ['categories', 'workingDays'],
-    })
-    createDto: CreateRestaurantDto,
-    @Req() req,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.restaurantsService.create(createDto, req.user.sub, file);
+  async create(createDto: CreateRestaurantDto, @Req() req) {
+    return this.restaurantsService.create(createDto, req.user.sub);
   }
 
   @Put(':id')

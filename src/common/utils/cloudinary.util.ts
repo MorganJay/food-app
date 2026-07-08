@@ -8,11 +8,13 @@ import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
  * @param folder The target folder name in your Cloudinary account
  */
 export const uploadToCloudinary = async (
-  file: Express.Multer.File, 
-  folder: string
+  file: Express.Multer.File,
+  folder: string,
 ): Promise<UploadApiResponse> => {
   if (!file || !file.buffer) {
-    throw new BadRequestException('Invalid file upload payload: No file buffer found');
+    throw new BadRequestException(
+      'Invalid file upload payload: No file buffer found',
+    );
   }
 
   return new Promise<UploadApiResponse>((resolve, reject) => {

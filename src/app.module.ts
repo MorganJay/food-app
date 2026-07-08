@@ -23,6 +23,7 @@ import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CategoriesModule } from './categories/categories.module';
 import { BanksModule } from './banks/banks.module';
+import { UtilitiesModule } from './utilities/utilities.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { BanksModule } from './banks/banks.module';
     CartsModule,
     CategoriesModule,
     BanksModule,
+    UtilitiesModule,
     OrdersModule,
     DeliveriesModule,
     ConsumersModule,

@@ -47,8 +47,7 @@ export class CreateRestaurantDto {
     required: false,
   })
   @IsString()
-  @IsOptional()
-  name?: string;
+  name: string;
 
   @ApiProperty({
     description: 'Detailed description of the restaurant',
@@ -112,13 +111,14 @@ export class CreateRestaurantDto {
   @IsOptional()
   orderType?: string;
 
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'Multipart frontend banner graphic file upload',
-    required: true,
+  @ApiPropertyOptional({
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1234/restaurants/banner.jpg',
+    description: 'Pre-uploaded image URL for the restaurant banner',
+    required: false,
   })
-  image: any;
+  @IsString()
+  imageUrl: string;
 }
 
 export class UpdateRestaurantDto {

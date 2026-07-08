@@ -14,50 +14,70 @@ import {
   UpdateRestaurantDto,
 } from './dto/restaurant.dto';
 import { mapToGeoLocation } from '../common/geojson';
-import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from 'src/common/utils/cloudinary.util';
 import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 
 @Injectable()
 export class RestaurantsService {
   constructor(
-    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
 
-  async create(createDto: CreateRestaurantDto, userId: string, file?: Express.Multer.File) {
+  async create(createDto: CreateRestaurantDto, userId: string) {
     if (!createDto.location) {
-      throw new BadRequestException('Restaurant location object details are required.');
+      throw new BadRequestException(
+        'Restaurant location object details are required.',
+      );
+    }
+
+    const vendor = await this.vendorModel.findOne({ userId });
+    if (!vendor) {
+      throw new NotFoundException(
+        'No active vendor profile record matches this user account context.',
+      );
     }
 
     const { address, latitude, longitude } = createDto.location;
-    
-    if (!address || address.trim() === '') {
-      throw new BadRequestException('The location address field text is required.');
-    } 
 
-    if (!file) {
-      throw new BadRequestException('A restaurant banner image is required.');
+    if (!address || address.trim() === '') {
+      throw new BadRequestException(
+        'The location address field text is required.',
+      );
     }
 
-    const vendor = await this.vendorModel.findOne({ userId }); 
-    if (!vendor) {
-      throw new NotFoundException('No active vendor profile record matches this user account context.');
+    let bannerImage: { secure_url: string; public_id: string };
+
+    if (!(createDto.imageUrl && createDto.imageUrl.trim() !== '')) {
+      throw new BadRequestException(
+        'A restaurant banner image or imageUrl is required.',
+      );
+    } else {
+      bannerImage = {
+        secure_url: createDto.imageUrl.trim(),
+        public_id: createDto.imageUrl.trim(),
+      };
     }
     const vendorId = vendor.id || vendor._id.toString();
 
-    const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
     const chosenCategories: string[] = createDto.categories || [];
 
     if (chosenCategories.length > 0) {
       await Promise.all(
         chosenCategories.map(async (categoryName) => {
           const cleanName = categoryName.trim();
-          await this.categoryModel.findOneAndUpdate(
-            { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
-            { $setOnInsert: { name: cleanName } },
-            { upsert: true },
-          ).exec();
+          await this.categoryModel
+            .findOneAndUpdate(
+              { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+              { $setOnInsert: { name: cleanName } },
+              { upsert: true },
+            )
+            .exec();
         }),
       );
     }
@@ -70,10 +90,7 @@ export class RestaurantsService {
       workingDays: createDto.workingDays || [],
       orderType: createDto.orderType,
       categories: chosenCategories.map((c) => c.trim()),
-      bannerImage: {
-        secure_url: cloudinaryResult.secure_url,
-        public_id: cloudinaryResult.public_id,
-      },
+      bannerImage,
       address: address.trim(),
       vendorId,
     };
@@ -85,7 +102,7 @@ export class RestaurantsService {
 
     const restaurant = await this.restaurantModel.create(restaurantData);
     return this.mapRestaurantResponse(restaurant);
-}
+  }
 
   async findAll(skip: number = 0, limit: number = 10) {
     const restaurants = await this.restaurantModel
@@ -123,7 +140,9 @@ export class RestaurantsService {
       })
       .exec();
 
-    return restaurants.map((restaurant) => this.mapRestaurantResponse(restaurant));
+    return restaurants.map((restaurant) =>
+      this.mapRestaurantResponse(restaurant),
+    );
   }
 
   async search(query: string, skip: number = 0, limit: number = 10) {
@@ -154,7 +173,12 @@ export class RestaurantsService {
     );
   }
 
-  async update(id: string, vendorId: string, updateDto: UpdateRestaurantDto, file?: Express.Multer.File) {
+  async update(
+    id: string,
+    vendorId: string,
+    updateDto: UpdateRestaurantDto,
+    file?: Express.Multer.File,
+  ) {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -168,8 +192,12 @@ export class RestaurantsService {
     // Swap files out in Cloudinary securely if a new one arrives
     if (file) {
       if (restaurant.bannerImage?.public_id) {
-        await deleteFromCloudinary(restaurant.bannerImage.public_id).catch((err) =>
-          console.error('Failed to clear old banner out of Cloudinary storage:', err),
+        await deleteFromCloudinary(restaurant.bannerImage.public_id).catch(
+          (err) =>
+            console.error(
+              'Failed to clear old banner out of Cloudinary storage:',
+              err,
+            ),
         );
       }
       const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
@@ -185,11 +213,13 @@ export class RestaurantsService {
         await Promise.all(
           chosenCategories.map(async (categoryName) => {
             const cleanName = categoryName.trim();
-            await this.categoryModel.findOneAndUpdate(
-              { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
-              { $setOnInsert: { name: cleanName } },
-              { upsert: true },
-            ).exec();
+            await this.categoryModel
+              .findOneAndUpdate(
+                { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+                { $setOnInsert: { name: cleanName } },
+                { upsert: true },
+              )
+              .exec();
           }),
         );
       }
@@ -197,12 +227,18 @@ export class RestaurantsService {
     }
 
     if (updateDto.name !== undefined) updatePayload.name = updateDto.name;
-    if (updateDto.description !== undefined) updatePayload.description = updateDto.description;
-    if (updateDto.isActive !== undefined) updatePayload.isActive = updateDto.isActive;
-    if (updateDto.openHours !== undefined) updatePayload.openHours = updateDto.openHours;
-    if (updateDto.closeHours !== undefined) updatePayload.closeHours = updateDto.closeHours;
-    if (updateDto.workingDays !== undefined) updatePayload.workingDays = updateDto.workingDays;
-    if (updateDto.orderType !== undefined) updatePayload.orderType = updateDto.orderType;
+    if (updateDto.description !== undefined)
+      updatePayload.description = updateDto.description;
+    if (updateDto.isActive !== undefined)
+      updatePayload.isActive = updateDto.isActive;
+    if (updateDto.openHours !== undefined)
+      updatePayload.openHours = updateDto.openHours;
+    if (updateDto.closeHours !== undefined)
+      updatePayload.closeHours = updateDto.closeHours;
+    if (updateDto.workingDays !== undefined)
+      updatePayload.workingDays = updateDto.workingDays;
+    if (updateDto.orderType !== undefined)
+      updatePayload.orderType = updateDto.orderType;
 
     if (updateDto.location) {
       const { address, latitude, longitude } = updateDto.location;
@@ -222,7 +258,10 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(id: string, vendorId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    id: string,
+    vendorId: string,
+  ): Promise<{ status: string; message: string }> {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
@@ -232,8 +271,12 @@ export class RestaurantsService {
     }
 
     if (restaurant.bannerImage?.public_id) {
-      await deleteFromCloudinary(restaurant.bannerImage.public_id).catch((err) =>
-        console.error('Failed to drop storage assets during hard deletion purge:', err),
+      await deleteFromCloudinary(restaurant.bannerImage.public_id).catch(
+        (err) =>
+          console.error(
+            'Failed to drop storage assets during hard deletion purge:',
+            err,
+          ),
       );
     }
 
@@ -250,7 +293,7 @@ export class RestaurantsService {
       isActive: restaurant.isActive,
       openHours: restaurant.openHours,
       closeHours: restaurant.closeHours,
-      workingDays: restaurant.workingDays || [], 
+      workingDays: restaurant.workingDays || [],
       orderType: restaurant.orderType,
       categories: restaurant.categories || [],
       bannerImage: restaurant.bannerImage?.secure_url || '',
