@@ -1,5 +1,6 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class UserResponseDto {
   @ApiProperty()
@@ -36,7 +37,6 @@ export class UserResponseDto {
   serialNumber: number;
 }
 
-
 export class UpdateUserProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -64,11 +64,32 @@ export class UpdateUserProfileDto {
   phoneNumber?: string;
 }
 
+// Reusable payload structure matching frontend expectations
+export class ImagePayloadDto {
+  @ApiProperty({
+    description: 'Secure image URL returned by the upload utility',
+    example: 'https://res.cloudinary.com/demo/image/upload/v1234/avatars/user_1.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  url: string;
+
+  @ApiProperty({
+    description: 'Cloudinary public identifier string',
+    example: 'avatars/user_1_abc123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  publicId: string;
+}
+
 export class UpdateAvatarDto {
   @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'User avatar image file',
+    description: 'Pre-uploaded user profile image metrics object',
+    type: ImagePayloadDto,
   })
-  avatar: any;
+  @ValidateNested()
+  @Type(() => ImagePayloadDto)
+  @IsNotEmpty()
+  avatar: ImagePayloadDto;
 }

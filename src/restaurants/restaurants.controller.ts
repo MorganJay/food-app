@@ -10,20 +10,16 @@ import {
   UseGuards,
   Req,
   BadRequestException,
-  UseInterceptors,
-  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -82,8 +78,7 @@ export class RestaurantsController {
 
   @Get('search')
   @ApiOperation({
-    summary:
-      'Search active marketplace restaurants via full-text index parameters',
+    summary: 'Search active marketplace restaurants via full-text index parameters',
   })
   @ApiQuery({ name: 'q', required: true, example: 'Amala' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
@@ -118,7 +113,7 @@ export class RestaurantsController {
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiBody({
-    description: 'Create restaurant payload',
+    description: 'Create restaurant payload (pure JSON)',
     type: CreateRestaurantDto,
   })
   @ApiOperation({ summary: 'Create and setup store' })
@@ -127,8 +122,7 @@ export class RestaurantsController {
     description: 'Restaurant profile created successfully',
     type: RestaurantResponseDto,
   })
-  @UseInterceptors(FileInterceptor('image'))
-  async create(createDto: CreateRestaurantDto, @Req() req) {
+  async create(@Body() createDto: CreateRestaurantDto, @Req() req) {
     return this.restaurantsService.create(createDto, req.user.sub);
   }
 
@@ -136,14 +130,12 @@ export class RestaurantsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
-  @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Update restaurant payload',
+    description: 'Update restaurant payload (pure JSON)',
     type: UpdateRestaurantDto,
   })
   @ApiOperation({
-    summary:
-      'Update an existing vendor restaurant configuration settings profile',
+    summary: 'Update an existing vendor restaurant configuration settings profile',
   })
   @ApiParam({ name: 'id', example: '64f123abc...' })
   @ApiResponse({
@@ -151,14 +143,12 @@ export class RestaurantsController {
     description: 'Restaurant updated successfully',
     type: RestaurantResponseDto,
   })
-  @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateRestaurantDto,
     @Req() req,
-    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.restaurantsService.update(id, req.user.sub, updateDto, file);
+    return this.restaurantsService.update(id, req.user.sub, updateDto);
   }
 
   @Delete(':id')

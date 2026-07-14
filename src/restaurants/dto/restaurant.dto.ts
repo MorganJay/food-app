@@ -40,13 +40,31 @@ export class LocationDto {
   longitude?: number;
 }
 
+export class ImagePayloadDto {
+  @ApiProperty({
+    description: 'Secure Cloudinary URL of the image',
+    example: 'https://res.cloudinary.com/demo/image/upload/v1234/restaurants/banner.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  url: string;
+
+  @ApiProperty({
+    description: 'Cloudinary public asset ID',
+    example: 'restaurants/banner_abc123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  publicId: string;
+}
+
 export class CreateRestaurantDto {
   @ApiProperty({
     description: 'Name of the restaurant',
     example: 'Chicken Republic',
-    required: false,
   })
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @ApiProperty({
@@ -111,14 +129,13 @@ export class CreateRestaurantDto {
   @IsOptional()
   orderType?: string;
 
-  @ApiPropertyOptional({
-    example:
-      'https://res.cloudinary.com/demo/image/upload/v1234/restaurants/banner.jpg',
-    description: 'Pre-uploaded image URL for the restaurant banner',
-    required: false,
+  @ApiProperty({
+    description: 'The uploaded banner image asset parameters returned from the utility upload API',
+    type: ImagePayloadDto,
   })
-  @IsString()
-  imageUrl: string;
+  @ValidateNested()
+  @Type(() => ImagePayloadDto)
+  bannerImage: ImagePayloadDto;
 }
 
 export class UpdateRestaurantDto {
@@ -182,12 +199,14 @@ export class UpdateRestaurantDto {
   orderType?: string;
 
   @ApiPropertyOptional({
-    type: 'string',
-    format: 'binary',
-    description: 'Update banner graphic asset',
+    description: 'Update banner image asset parameters',
+    type: ImagePayloadDto,
     required: false,
   })
-  image?: any;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ImagePayloadDto)
+  bannerImage?: ImagePayloadDto;
 }
 
 export class RestaurantResponseDto {

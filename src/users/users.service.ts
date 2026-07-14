@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
-import { UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
+import { UpdateAvatarDto, UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
 import { v2 as cloudinary } from "cloudinary";
 import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
@@ -172,7 +172,7 @@ export class UsersService {
     return this.mapUserResponse(updatedUser);
   }
 
-  async uploadAvatar(userId: string, file: Express.Multer.File) {
+  async uploadAvatar(userId: string, dto: UpdateAvatarDto) {
     const user = await this.userModel.findById(userId);
 
     if (!user) {
@@ -180,15 +180,16 @@ export class UsersService {
     }
 
     try {
+      // Clean up older verification/avatar resources inside Cloudinary storage
       if (user.avatar?.public_id) {
-        await deleteFromCloudinary(user.avatar.public_id);
+        await deleteFromCloudinary(user.avatar.public_id).catch((err) =>
+          console.error('Failed to clear old avatar asset:', err),
+        );
       }
 
-      const uploaded = await uploadToCloudinary(file, 'avatars');
-
       user.avatar = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+        secure_url: dto.avatar.url.trim(),
+        public_id: dto.avatar.publicId.trim(),
       };
 
       await user.save();
@@ -197,7 +198,7 @@ export class UsersService {
         avatar: user.avatar.secure_url,
       };
     } catch (error) {
-      throw new BadRequestException('Failed to upload avatar');
+      throw new BadRequestException('Failed to process user avatar update payload.');
     }
   }
 

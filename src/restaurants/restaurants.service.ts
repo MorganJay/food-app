@@ -14,10 +14,7 @@ import {
   UpdateRestaurantDto,
 } from './dto/restaurant.dto';
 import { mapToGeoLocation } from '../common/geojson';
-import {
-  deleteFromCloudinary,
-  uploadToCloudinary,
-} from 'src/common/utils/cloudinary.util';
+import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 
 @Injectable()
@@ -51,20 +48,13 @@ export class RestaurantsService {
       );
     }
 
-    let bannerImage: { secure_url: string; public_id: string };
-
-    if (!(createDto.imageUrl && createDto.imageUrl.trim() !== '')) {
+    if (!createDto.bannerImage || !createDto.bannerImage.url) {
       throw new BadRequestException(
-        'A restaurant banner image or imageUrl is required.',
+        'A pre-uploaded banner image payload (url & publicId) is required.',
       );
-    } else {
-      bannerImage = {
-        secure_url: createDto.imageUrl.trim(),
-        public_id: createDto.imageUrl.trim(),
-      };
     }
-    const vendorId = vendor.id || vendor._id.toString();
 
+    const vendorId = vendor.id || vendor._id.toString();
     const chosenCategories: string[] = createDto.categories || [];
 
     if (chosenCategories.length > 0) {
@@ -90,7 +80,10 @@ export class RestaurantsService {
       workingDays: createDto.workingDays || [],
       orderType: createDto.orderType,
       categories: chosenCategories.map((c) => c.trim()),
-      bannerImage,
+      bannerImage: {
+        secure_url: createDto.bannerImage.url.trim(),
+        public_id: createDto.bannerImage.publicId.trim(),
+      },
       address: address.trim(),
       vendorId,
     };
@@ -177,7 +170,6 @@ export class RestaurantsService {
     id: string,
     vendorId: string,
     updateDto: UpdateRestaurantDto,
-    file?: Express.Multer.File,
   ) {
     const restaurant = await this.restaurantModel.findById(id).exec();
     if (!restaurant) {
@@ -189,8 +181,8 @@ export class RestaurantsService {
 
     const updatePayload: any = {};
 
-    // Swap files out in Cloudinary securely if a new one arrives
-    if (file) {
+    // If a new banner image configuration object is supplied, clean out the old one!
+    if (updateDto.bannerImage) {
       if (restaurant.bannerImage?.public_id) {
         await deleteFromCloudinary(restaurant.bannerImage.public_id).catch(
           (err) =>
@@ -200,10 +192,9 @@ export class RestaurantsService {
             ),
         );
       }
-      const cloudinaryResult = await uploadToCloudinary(file, 'restaurants');
       updatePayload.bannerImage = {
-        secure_url: cloudinaryResult.secure_url,
-        public_id: cloudinaryResult.public_id,
+        secure_url: updateDto.bannerImage.url.trim(),
+        public_id: updateDto.bannerImage.publicId.trim(),
       };
     }
 

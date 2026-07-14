@@ -14,6 +14,7 @@ import {
 import { mapToGeoLocation } from '../common/geojson';
 import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
 import { SetupStoreDto } from './dto/setup-store.dto';
+import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
 
 @Injectable()
 export class VendorsService {
@@ -164,45 +165,51 @@ export class VendorsService {
     return this.mapVendorResponse(updatedVendor);
   }
 
-  async submitNin(userId: string, nin: string, ninDocument?: Express.Multer.File, selfie?: Express.Multer.File) {
+  async submitNin(userId: string, dto: NinVerificationDto) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
 
     if (!vendor) {
-      throw new NotFoundException(`Vendor with ID ${userId} not found`);
+      throw new NotFoundException(`Vendor profile tracking context not found for user ID ${userId}`);
+    }
+
+    if (!dto.ninDocument || !dto.ninDocument.url) {
+      throw new BadRequestException('A pre-uploaded NIN document verification payload is required.');
+    }
+
+    if (!dto.selfie || !dto.selfie.url) {
+      throw new BadRequestException('A pre-uploaded face live selfie verification payload is required.');
+    }
+
+    // Clean up older verification objects from Cloudinary if they already exist
+    if (vendor.ninDocument?.public_id) {
+      await deleteFromCloudinary(vendor.ninDocument.public_id).catch((err) =>
+        console.error('Failed to clear old verification image artifact:', err),
+      );
+    }
+    if (vendor.selfie?.public_id) {
+      await deleteFromCloudinary(vendor.selfie.public_id).catch((err) =>
+        console.error('Failed to clear old selfie artifact:', err),
+      );
     }
 
     const updatePayload: any = {
-      nin,
+      nin: dto.nin.trim(),
       isNinVerified: false,
+      ninDocument: {
+        secure_url: dto.ninDocument.url.trim(),
+        public_id: dto.ninDocument.publicId.trim(),
+      },
+      selfie: {
+        secure_url: dto.selfie.url.trim(),
+        public_id: dto.selfie.publicId.trim(),
+      },
     };
-
-    if (!ninDocument || !selfie) {
-      throw new BadRequestException('Both your NIN document and a live selfie are required.');
-    }
-
-    // Upload NIN Document
-    if (ninDocument) {
-      const uploadedNin = await uploadToCloudinary(ninDocument, 'nin-verification-images');
-      updatePayload.ninDocument = {
-        secure_url: uploadedNin.secure_url,
-        public_id: uploadedNin.public_id,
-      };
-    }
-
-    // Upload Selfie
-    if (selfie) {
-      const uploadedSelfie = await uploadToCloudinary(selfie, 'vendor-selfies');
-      updatePayload.selfie = {
-        secure_url: uploadedSelfie.secure_url,
-        public_id: uploadedSelfie.public_id,
-      };
-    }
 
     const updated = await this.vendorModel.findOneAndUpdate(
       { userId },
       updatePayload,
       { new: true },
-    );
+    ).exec();
 
     return this.mapVendorResponse(updated);
   }

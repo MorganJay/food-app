@@ -1,13 +1,12 @@
-import { Body, Controller, Get, Patch, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { UpdateAvatarDto, UpdateUserProfileDto } from './dto/users.dto';
 import { UsersService } from './users.service';
-import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService){}
+  constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -30,13 +29,15 @@ export class UsersController {
   @Patch('avatar')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt')
-  @UseInterceptors(FileInterceptor('avatar'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UpdateAvatarDto })
+  @ApiBody({
+    description: 'Update profile image using pre-uploaded URL data objects',
+    type: UpdateAvatarDto,
+  })
+  @ApiOperation({ summary: 'Update user avatar reference links (pure JSON)' })
   async uploadAvatar(
     @Req() req,
-    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UpdateAvatarDto,
   ) {
-    return this.usersService.uploadAvatar(req.user.sub, file);
+    return this.usersService.uploadAvatar(req.user.sub, dto);
   }
 }
