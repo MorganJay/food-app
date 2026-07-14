@@ -166,6 +166,16 @@ export class RestaurantsService {
     );
   }
 
+  async getRestaurantsByVendor(userId: string) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found.');
+    }
+
+    const vendorId = vendor.id || vendor._id.toString();
+    return this.findByVendor(vendorId);
+  }
+
   async update(
     id: string,
     vendorId: string,

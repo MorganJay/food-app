@@ -100,6 +100,16 @@ export class RestaurantsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.VENDOR)
+  @Get('vendor')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Get all restaurants owned by the logged-in vendor' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved vendor restaurants' })
+  async getMyRestaurants(@Req() req) {
+    return this.restaurantsService.getRestaurantsByVendor(req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get restaurant profile by id' })
   @ApiParam({ name: 'id', example: '64f123abc...' })

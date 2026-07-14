@@ -12,8 +12,7 @@ import {
   VendorResponseDto,
 } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from '../common/geojson';
-import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
-import { SetupStoreDto } from './dto/setup-store.dto';
+import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
 
 @Injectable()
@@ -93,42 +92,6 @@ export class VendorsService {
     const vendor = await this.vendorModel.create(vendorData);
     return this.mapVendorResponse(vendor);
   }
-
-  // async setupStore(userId: string, setupStoreDto: SetupStoreDto, storeBannerFile?: Express.Multer.File) {
-  //   const vendor = await this.vendorModel.findOne({ userId }).exec();
-  //   if (!vendor) {
-  //     throw new NotFoundException(`Vendor profile not found for this user`);
-  //   }
-
-  //   const updatePayload: any = {
-  //     workingDays: setupStoreDto.workingDays,
-  //   };
-
-  //   if (setupStoreDto.orderType) {
-  //     updatePayload.orderType = setupStoreDto.orderType;
-  //   }
-
-  //   // Handle Banner Image upload
-  //   if (storeBannerFile) {
-  //     if (vendor.image?.public_id) {
-  //       await deleteFromCloudinary(vendor.image.public_id);
-  //     }
-
-  //     const uploadedBanner = await uploadToCloudinary(storeBannerFile, 'vendors');
-  //     updatePayload.image = {
-  //       secure_url: uploadedBanner.secure_url,
-  //       public_id: uploadedBanner.public_id,
-  //     };
-  //   }
-
-  //   const updatedVendor = await this.vendorModel.findOneAndUpdate(
-  //     { userId },
-  //     updatePayload,
-  //     { new: true },
-  //   ).exec();
-
-  //   return this.mapVendorResponse(updatedVendor);
-  // }
 
   async updateProfile(userId: string, updateData: UpdateVendorDto) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
