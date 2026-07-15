@@ -16,6 +16,7 @@ import {
 import { mapToGeoLocation } from '../common/geojson';
 import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
+import { UserRole } from 'src/schemas/User.schema';
 
 @Injectable()
 export class RestaurantsService {
@@ -82,7 +83,7 @@ export class RestaurantsService {
       categories: chosenCategories.map((c) => c.trim()),
       bannerImage: {
         secure_url: createDto.bannerImage.url.trim(),
-        public_id: createDto.bannerImage.publicId.trim(),
+        public_id: createDto.bannerImage.publicId?.trim(),
       },
       address: address.trim(),
       vendorId,
@@ -176,24 +177,27 @@ export class RestaurantsService {
     return this.findByVendor(vendorId);
   }
 
-  async update(
-    id: string,
-    vendorId: string,
-    updateDto: UpdateRestaurantDto,
-  ) {
-    const restaurant = await this.restaurantModel.findById(id).exec();
-    if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${id} not found`);
+  async update(restaurantId: string, userId: string, updateDto: UpdateRestaurantDto) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new ForbiddenException('No active vendor profile found.');
     }
-    if (restaurant.vendorId !== vendorId) {
+    const vendorId = vendor.id || vendor._id.toString();
+
+    const restaurant = await this.restaurantModel.findById(restaurantId).exec();
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+    }
+    
+    if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only update your own restaurants');
     }
 
     const updatePayload: any = {};
 
-    // If a new banner image configuration object is supplied, clean out the old one!
     if (updateDto.bannerImage) {
-      if (restaurant.bannerImage?.public_id) {
+      if (updateDto.bannerImage.publicId && restaurant.bannerImage?.public_id) {
+        // Clear out the previous assets from Cloudinary
         await deleteFromCloudinary(restaurant.bannerImage.public_id).catch(
           (err) =>
             console.error(
@@ -201,11 +205,18 @@ export class RestaurantsService {
               err,
             ),
         );
+
+        updatePayload.bannerImage = {
+          secure_url: updateDto.bannerImage.url.trim(),
+          public_id: updateDto.bannerImage.publicId.trim(),
+        };
+      } else if (updateDto.bannerImage.url) {
+        // If there's no new publicId to swap (just updating metadata or keeping current), don't break
+        updatePayload.bannerImage = {
+          secure_url: updateDto.bannerImage.url.trim(),
+          public_id: restaurant.bannerImage?.public_id || '',
+        };
       }
-      updatePayload.bannerImage = {
-        secure_url: updateDto.bannerImage.url.trim(),
-        public_id: updateDto.bannerImage.publicId.trim(),
-      };
     }
 
     if (updateDto.categories !== undefined) {
@@ -253,21 +264,25 @@ export class RestaurantsService {
     }
 
     const updatedRestaurant = await this.restaurantModel
-      .findByIdAndUpdate(id, updatePayload, { new: true })
+      .findByIdAndUpdate(restaurantId, updatePayload, { new: true })
       .exec();
 
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(
-    id: string,
-    vendorId: string,
-  ): Promise<{ status: string; message: string }> {
-    const restaurant = await this.restaurantModel.findById(id).exec();
-    if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${id} not found`);
+  async delete(restaurantId: string, userId: string): Promise<{ status: string; message: string }> {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new ForbiddenException('No active vendor profile found.');
     }
-    if (restaurant.vendorId !== vendorId) {
+    const vendorId = vendor.id || vendor._id.toString();
+
+    const restaurant = await this.restaurantModel.findById(restaurantId).exec();
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+    }
+    
+    if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only delete your own restaurants');
     }
 
@@ -281,8 +296,38 @@ export class RestaurantsService {
       );
     }
 
-    await this.restaurantModel.findByIdAndDelete(id).exec();
+    await this.restaurantModel.findByIdAndDelete(restaurantId).exec();
     return { status: 'ok', message: 'Restaurant deleted successfully' };
+  }
+
+  async toggleStatus(restaurantId: string, user: { sub: string; role: string }) {
+    // Find the restaurant first
+    const restaurant = await this.restaurantModel.findById(restaurantId).exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    // If they are NOT an admin, enforce the vendor ownership check
+    if (user.role !== UserRole.ADMIN) {
+      const vendor = await this.vendorModel.findOne({ userId: user.sub }).exec();
+      if (!vendor) {
+        throw new ForbiddenException('No active vendor profile found.');
+      }
+      
+      const vendorId = vendor.id || vendor._id.toString();
+      if (restaurant.vendorId.toString() !== vendorId.toString()) {
+        throw new ForbiddenException('You do not own this restaurant');
+      }
+    }
+
+    // Toggle and save (works for both Admin and the authorized Vendor)
+    restaurant.isActive = !restaurant.isActive;
+    await restaurant.save();
+
+    return {
+      id: restaurant._id.toString(),
+      isActive: restaurant.isActive,
+    };
   }
 
   private mapRestaurantResponse(restaurant: any): RestaurantResponseDto {
@@ -297,7 +342,14 @@ export class RestaurantsService {
       workingDays: restaurant.workingDays || [],
       orderType: restaurant.orderType,
       categories: restaurant.categories || [],
-      bannerImage: restaurant.bannerImage?.secure_url || '',
+      
+      bannerImage: restaurant.bannerImage?.secure_url
+        ? {
+            url: restaurant.bannerImage.secure_url,
+            publicId: restaurant.bannerImage.public_id,
+          }
+        : undefined,
+
       location: {
         address: restaurant.address,
         latitude: restaurant.location?.coordinates?.[1],

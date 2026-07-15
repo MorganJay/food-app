@@ -71,8 +71,8 @@ export class ProductImageDto {
     example: 'products/burger_xyz123',
   })
   @IsString()
-  @IsNotEmpty()
-  publicId: string;
+  @IsOptional()
+  publicId?: string;
 }
 
 export class CreateProductDto {
@@ -237,8 +237,8 @@ export class ProductResponseDto {
   @ApiPropertyOptional({ example: 'Fast Food' })
   category?: string;
 
-  @ApiPropertyOptional({ example: 'https://your-cdn.com/uploads/burger.jpg' })
-  image?: string;
+  @ApiPropertyOptional({ type: ProductImageDto })
+  image?: ProductImageDto;
 
   @ApiPropertyOptional({ example: true })
   isAvailable?: boolean;

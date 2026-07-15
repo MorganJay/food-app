@@ -54,8 +54,8 @@ export class ImagePayloadDto {
     example: 'restaurants/banner_abc123',
   })
   @IsString()
-  @IsNotEmpty()
-  publicId: string;
+  @IsOptional()
+  publicId?: string;
 }
 
 export class CreateRestaurantDto {
@@ -222,8 +222,8 @@ export class RestaurantResponseDto {
   @ApiProperty({ example: 'vendor123' })
   vendorId: string;
 
-  @ApiProperty({ example: 'https://res.cloudinary.com/.../banner.jpg' })
-  bannerImage: string;
+  @ApiProperty({ type: ImagePayloadDto })
+  bannerImage: ImagePayloadDto;
 
   @ApiProperty({ example: ['Swallow', 'Burgers'] })
   categories: string[];

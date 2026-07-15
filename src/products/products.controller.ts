@@ -59,6 +59,7 @@ export class ProductsController {
 
   @Get('restaurant/:restaurantId')
   @ApiOperation({ summary: 'Get products by restaurant ID' })
+  @ApiParam({ name: 'restaurantId', example: '64f123abc...' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
   async findByRestaurant(
@@ -75,8 +76,9 @@ export class ProductsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a product by ID' })
-  async findById(@Param('id') id: string) {
-    return this.productsService.findById(id);
+  @ApiParam({ name: 'id', example: '64f456def...' })
+  async findById(@Param('id') productId: string) {
+    return this.productsService.findById(productId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -96,19 +98,21 @@ export class ProductsController {
   @ApiBearerAuth('jwt')
   @ApiBody({ type: UpdateProductDto })
   @ApiOperation({ summary: 'Update a product (pure JSON)' })
+  @ApiParam({ name: 'id', example: '64f456def...' })
   async update(
-    @Param('id') id: string,
+    @Param('id') productId: string,
     @Body() updateDto: UpdateProductDto,
     @Req() req,
   ) {
-    return this.productsService.update(id, req.user.sub, updateDto);
+    return this.productsService.update(productId, req.user.sub, updateDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Delete a product' })
-  async delete(@Param('id') id: string, @Req() req) {
-    return this.productsService.delete(id, req.user.sub);
+  @ApiParam({ name: 'id', example: '64f456def...' })
+  async delete(@Param('id') productId: string, @Req() req) {
+    return this.productsService.delete(productId, req.user.sub);
   }
 }

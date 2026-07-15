@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -118,6 +119,19 @@ export class RestaurantsController {
     return this.restaurantsService.findById(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  @Patch(':id/toggle-status')
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Toggle restaurant availability status (Admin or Vendor)' })
+  @ApiResponse({ status: 200, description: 'Returns the updated availability state' })
+  async toggleStatus(
+    @Param('id') restaurantId: string,
+    @Req() req,
+  ) {
+    return this.restaurantsService.toggleStatus(restaurantId, req.user);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
@@ -154,11 +168,11 @@ export class RestaurantsController {
     type: RestaurantResponseDto,
   })
   async update(
-    @Param('id') id: string,
+    @Param('id') restaurantId: string,
     @Body() updateDto: UpdateRestaurantDto,
     @Req() req,
   ) {
-    return this.restaurantsService.update(id, req.user.sub, updateDto);
+    return this.restaurantsService.update(restaurantId, req.user.sub, updateDto);
   }
 
   @Delete(':id')
@@ -173,7 +187,7 @@ export class RestaurantsController {
     status: 200,
     description: 'Restaurant and storage properties successfully removed',
   })
-  async delete(@Param('id') id: string, @Req() req) {
-    return this.restaurantsService.delete(id, req.user.sub);
+  async delete(@Param('id') restaurantId: string, @Req() req) {
+    return this.restaurantsService.delete(restaurantId, req.user.sub);
   }
 }
