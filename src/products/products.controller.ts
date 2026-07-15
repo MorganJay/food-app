@@ -59,6 +59,8 @@ export class ProductsController {
 
   @Get('restaurant/:restaurantId')
   @ApiOperation({ summary: 'Get products by restaurant ID' })
+  @ApiQuery({ name: 'skip', required: false, example: 0 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
   async findByRestaurant(
     @Param('restaurantId') restaurantId: string,
     @Query('skip') skip: string = '0',

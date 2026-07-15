@@ -72,7 +72,7 @@ export class ProductsService {
     }));
   }
 
-  async create(createDto: CreateProductDto, userId: string, file?: Express.Multer.File) {
+  async create(createDto: CreateProductDto, userId: string) {
     const vendorId = await this.getVendorIdByUserId(userId);
     
     await this.assertRestaurantOwnedByVendor(
@@ -84,11 +84,11 @@ export class ProductsService {
 
     const existingProduct = await this.productModel.findOne({
       restaurantId: createDto.restaurantId,
-      name: {
-        $regex: `^${name}$`,
-        $options: 'i',
-      },
-    });
+        name: {
+          $regex: `^${name}$`,
+          $options: 'i',
+        },
+      });
 
     if (existingProduct) {
       throw new BadRequestException(
@@ -108,16 +108,14 @@ export class ProductsService {
       choiceGroups: this.parseChoiceGroups(createDto.choiceGroups),
     };
 
-    if (file) {
-      const uploaded = await uploadToCloudinary(file, 'products');
+    if (createDto.image) {
       productData.image = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+        secure_url: createDto.image.url,
+        public_id: createDto.image.publicId,
       };
     }
 
     const product = await this.productModel.create(productData);
-
     return this.mapProductResponse(product);
   }
 
@@ -167,12 +165,7 @@ export class ProductsService {
     return products.map((product) => this.mapProductResponse(product));
   }
 
-  async update(
-    id: string,
-    userId: string,
-    updateDto: UpdateProductDto,
-    file?: Express.Multer.File,
-  ) {
+  async update(id: string, userId: string, updateDto: UpdateProductDto) {
     const vendorId = await this.getVendorIdByUserId(userId);
     
     const product = await this.productModel.findById(id).exec();
@@ -191,15 +184,16 @@ export class ProductsService {
       updatePayload.name = (updateDto.name as string).trim();
     }
 
-    if (file) {
+    // Map the pre-uploaded image update if provided
+    if (updateDto.image) {
+      // If the product already had an image, delete the old one from Cloudinary first
       if (product.image?.public_id) {
         await deleteFromCloudinary(product.image.public_id);
       }
 
-      const uploaded = await uploadToCloudinary(file, 'products');
       updatePayload.image = {
-        secure_url: uploaded.secure_url,
-        public_id: uploaded.public_id,
+        secure_url: updateDto.image.url,
+        public_id: updateDto.image.publicId,
       };
     }
 
@@ -212,10 +206,7 @@ export class ProductsService {
     return this.mapProductResponse(updatedProduct);
   }
 
-  async delete(
-    id: string,
-    userId: string,
-  ): Promise<{ status: string; message: string }> {
+  async delete(id: string, userId: string): Promise<{ status: string; message: string }> {
     const vendorId = await this.getVendorIdByUserId(userId);
     
     const product = await this.productModel.findById(id).exec();
@@ -223,14 +214,15 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
     
-    if (product.image?.public_id) {
-      await deleteFromCloudinary(product.image.public_id);
-    }
-    
+    // Safety check first: Make sure they own it BEFORE we delete anything from Cloudinary
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
       vendorId,
     );
+
+    if (product.image?.public_id) {
+      await deleteFromCloudinary(product.image.public_id);
+    }
     
     await this.productModel.findByIdAndDelete(id).exec();
 
