@@ -11,12 +11,20 @@ export interface SelectedChoice {
   price: number;
 }
 
+// Added optional image structure for the frontend UI
+export interface CartItemImage {
+  url: string;
+  publicId?: string;
+}
+
 export interface CartItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
-  selectedChoices?: SelectedChoice[]; // Made optional so old items don't break!
+  subtotal: number;
+  image?: CartItemImage;
+  selectedChoices?: SelectedChoice[];
 }
 
 @Schema({ timestamps: true })
@@ -31,6 +39,15 @@ export class Cart extends BaseEntity {
         quantity: Number,
         price: Number,
         name: String,
+        subtotal: { type: Number, default: 0 },
+        image: {
+          type: {
+            url: String,
+            publicId: String,
+          },
+          _id: false,
+          required: false,
+        },
         selectedChoices: {
           type: [
             {
@@ -39,8 +56,8 @@ export class Cart extends BaseEntity {
               price: Number,
             },
           ],
-          _id: false, // Prevents automatic nested subdocument _id fields
-          default: [], // Defaults to empty so old cart records remain perfectly intact
+          _id: false,
+          default: [],
         },
       },
     ],

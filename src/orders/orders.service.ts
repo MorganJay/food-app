@@ -30,7 +30,6 @@ export class OrdersService {
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
 
-  // pricing engine
   private async calculatePricing(input: { subtotal: number; restaurantId: string }) {
     const serviceFee = Math.round(input.subtotal * 0.1);
     const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
@@ -43,10 +42,16 @@ export class OrdersService {
     };
   }
 
-  // can later evolve into distance-based pricing
   private async calculateDeliveryFee(restaurantId: string) {
-    // placeholder logic for now
     return 4000;
+  }
+
+  // Helper method to compute single item subtotal (base price + modifications) * quantity
+  private calculateItemSubtotal(item: any): number {
+    const choicesCost = Array.isArray(item.selectedChoices)
+      ? item.selectedChoices.reduce((sum, choice) => sum + (Number(choice.price) || 0), 0)
+      : 0;
+    return (item.price + choicesCost) * item.quantity;
   }
 
   async create(userId: string, createDto: CreateOrderDto) {
@@ -56,12 +61,26 @@ export class OrdersService {
       );
     }
 
-    const subtotal = createDto.items.reduce((sum, item) => {
-      const choicesCost = Array.isArray(item.selectedChoices)
-        ? item.selectedChoices.reduce((choiceSum, choice) => choiceSum + (Number(choice.price) || 0), 0)
-        : 0;
-      return sum + (item.price + choicesCost) * item.quantity;
-    }, 0);
+    // Retrieve active cart to copy over pre-saved image parameters cleanly
+    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
+
+    // Map the incoming order items and append computed item subtotals and image URLs
+    const orderItems = createDto.items.map((item) => {
+      const cartItem = cart?.items.find((cItem) => cItem.productId.toString() === item.productId);
+      
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+        selectedChoices: item.selectedChoices || [],
+        subtotal: this.calculateItemSubtotal(item),
+        // Persist the image directly from the active cart item, or leave undefined
+        image: cartItem?.image ? { url: cartItem.image.url, publicId: cartItem.image.publicId } : undefined,
+      };
+    });
+
+    const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
     const pricing = await this.calculatePricing({
       subtotal: subtotal,
@@ -71,7 +90,7 @@ export class OrdersService {
     const orderData: Partial<Order> = {
       userId,
       restaurantId: createDto.restaurantId,
-      items: createDto.items,
+      items: orderItems,
       deliveryAddress: createDto.deliveryAddress,
       notes: createDto.notes,
       paymentStatus: 'pending',
@@ -94,7 +113,7 @@ export class OrdersService {
       },
     ).exec();
 
-    // address logic
+    // Address logic
     try {
       const addr = createDto.deliveryAddress;
       if (addr && typeof addr === 'object') {
@@ -137,10 +156,7 @@ export class OrdersService {
     }
 
     const calculatedSubtotal = cart.items.reduce((sum, item) => {
-      const choicesCost = Array.isArray((item as any).selectedChoices)
-        ? (item as any).selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
-        : 0;
-      return sum + (item.price + choicesCost) * item.quantity;
+      return sum + (item.subtotal || this.calculateItemSubtotal(item));
     }, 0);
 
     const pricing = await this.calculatePricing({ 
@@ -155,11 +171,14 @@ export class OrdersService {
       deliveryFee: pricing.deliveryFee,
       total: pricing.total,
 
+      // Maps both item subtotal and product image fields cleanly to the frontend checkout view
       items: cart.items.map((item) => ({
-        productId: item.productId,
+        productId: item.productId.toString(),
         name: item.name,
         quantity: item.quantity,
         price: item.price,
+        subtotal: item.subtotal || this.calculateItemSubtotal(item),
+        image: item.image?.url ? { url: item.image.url, publicId: item.image.publicId } : undefined,
         selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
           groupName: choice.groupName || 'Options',
           name: choice.name,
@@ -443,6 +462,8 @@ export class OrdersService {
         quantity: item.quantity,
         price: item.price,
         name: item.name,
+        subtotal: item.subtotal || this.calculateItemSubtotal(item), // Graceful fallback calculations
+        image: item.image?.url ? { url: item.image.url, publicId: item.image.publicId } : undefined,
         selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
           groupName: choice.groupName || 'Options',
           name: choice.name,

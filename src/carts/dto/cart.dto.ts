@@ -62,6 +62,15 @@ export class UpdateCartItemDto {
   quantity: number;
 }
 
+// Subdocument DTO definition for Swagger and strict typing
+export class CartItemImageDto {
+  @ApiProperty({ example: 'https://cloudinary.com/image.png', description: 'Secure URL of the image asset' })
+  url: string;
+
+  @ApiPropertyOptional({ example: 'cloudinary_id_abc123', description: 'Cloudinary storage unique resource identifier' })
+  publicId?: string;
+}
+
 class CartItemResponseDto {
   @ApiProperty({
     example: '66b1f7c3a12d4e5f67890123',
@@ -80,6 +89,18 @@ class CartItemResponseDto {
     description: 'Price per unit of the product',
   })
   price: number;
+
+  @ApiProperty({
+    example: 3500,
+    description: 'Aggregated subtotal calculation for this line item (base price + customized choices) multiplied by quantity',
+  })
+  subtotal: number; // Added field
+
+  @ApiPropertyOptional({
+    type: CartItemImageDto,
+    description: 'Image configurations of the product details',
+  })
+  image?: CartItemImageDto; // Added field
 
   @ApiProperty({
     example: 'Chicken Burger',

@@ -53,7 +53,7 @@ export class CartsService {
       });
     }
 
-    if (cart.restaurantId && cart.restaurantId !== restaurantId) {
+    if (cart.restaurantId && cart.restaurantId.toString() !== restaurantId.toString()) {
       throw new BadRequestException(
         'Cannot add items from different restaurants to the same cart',
       );
@@ -71,7 +71,6 @@ export class CartsService {
       const itemChoices = (item as any).selectedChoices || [];
       if (itemChoices.length !== incomingChoices.length) return false;
 
-      // Check if every customization matches perfectly
       return incomingChoices.every((incoming) =>
         itemChoices.some(
           (existing: any) =>
@@ -82,16 +81,29 @@ export class CartsService {
 
     if (existingItem) {
       existingItem.quantity += addDto.quantity;
+      // Recalculate subtotal for this item
+      existingItem.subtotal = this.calculateItemSubtotal(existingItem);
     } else {
-      cart.items.push({
+      // Map safe image schema if it exists on the product
+      const itemImage = product.image?.secure_url
+        ? { url: product.image.secure_url, publicId: product.image.public_id }
+        : undefined;
+
+      const newItem: any = {
         productId: addDto.productId,
         quantity: addDto.quantity,
         price: product.price,
         name: product.name,
+        image: itemImage,
         selectedChoices: incomingChoices,
-      });
+      };
+
+      // Calculate initial subtotal
+      newItem.subtotal = this.calculateItemSubtotal(newItem);
+      cart.items.push(newItem);
     }
 
+    // Accumulate total from each calculated item subtotal
     cart.total = this.calculateTotal(cart.items);
     
     const savedCart = await cart.save();
@@ -120,6 +132,8 @@ export class CartsService {
       );
     } else {
       item.quantity = updateDto.quantity;
+      // Recalculate subtotal for updated item
+      item.subtotal = this.calculateItemSubtotal(item);
     }
 
     cart.total = this.calculateTotal(cart.items);
@@ -150,7 +164,7 @@ export class CartsService {
   async clearCart(userId: string) {
     const cart = await this.cartModel.findOneAndUpdate(
       { userId, isDeleted: false },
-      { items: [], total: 0, restaurantId: null,},
+      { items: [], total: 0, restaurantId: null },
       { new: true },
     );
 
@@ -161,13 +175,17 @@ export class CartsService {
     return this.mapCartResponse(cart);
   }
 
-  private calculateTotal(items: any[]) {
-    return items.reduce((sum, item) => {
-      const choicesCost = Array.isArray(item.selectedChoices)
-        ? item.selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
-        : 0;
-      return sum + (item.price + choicesCost) * item.quantity;
-    }, 0);
+  // Helper method to calculate an individual item subtotal
+  private calculateItemSubtotal(item: any): number {
+    const choicesCost = Array.isArray(item.selectedChoices)
+      ? item.selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
+      : 0;
+    return (item.price + choicesCost) * item.quantity;
+  }
+
+  // Calculates overall total based on previously resolved individual subtotals
+  private calculateTotal(items: any[]): number {
+    return items.reduce((sum, item) => sum + (item.subtotal || this.calculateItemSubtotal(item)), 0);
   }
 
   private mapCartResponse(cart: CartDocument): CartResponseDto {
@@ -181,6 +199,13 @@ export class CartsService {
         quantity: item.quantity,
         price: item.price,
         name: item.name,
+        subtotal: item.subtotal || this.calculateItemSubtotal(item), // Fallback calculation if database has legacy items
+        image: item.image?.url
+          ? {
+              url: item.image.url,
+              publicId: item.image.publicId,
+            }
+          : undefined,
         selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
           groupName: choice.groupName || 'Options',
           name: choice.name,

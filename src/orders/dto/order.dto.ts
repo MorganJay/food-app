@@ -82,6 +82,15 @@ export class CreateOrderDto {
   notes?: string;
 }
 
+// Add the image DTO representation inside order.dto.ts
+export class OrderItemImageDto {
+  @ApiProperty({ example: 'https://cloudinary.com/image.png' })
+  url: string;
+
+  @ApiPropertyOptional({ example: 'cloudinary_id_abc123' })
+  publicId?: string;
+}
+
 export class OrderItemResponseDto {
   @ApiProperty()
   productId: string;
@@ -92,8 +101,14 @@ export class OrderItemResponseDto {
   @ApiProperty()
   price: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'pap' })
   name: string;
+
+  @ApiProperty({ example: 1500, description: 'Line item total value' })
+  subtotal: number;
+
+  @ApiPropertyOptional({ type: OrderItemImageDto })
+  image?: OrderItemImageDto;
 
   @ApiProperty({ type: [SelectedChoiceDto], description: 'List of item modifications' })
   selectedChoices: SelectedChoiceDto[];

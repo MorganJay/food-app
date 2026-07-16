@@ -23,11 +23,18 @@ export interface SelectedChoice {
   price: number;
 }
 
+export interface OrderItemImage {
+  url: string;
+  publicId?: string;
+}
+
 export interface OrderItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
+  subtotal: number; // Added: subtotal property per order item
+  image?: OrderItemImage; // Added: optional image property
   selectedChoices?: SelectedChoice[];
 }
 
@@ -46,6 +53,15 @@ export class Order extends BaseEntity {
         quantity: Number,
         price: Number,
         name: String,
+        subtotal: { type: Number, default: 0 }, // Added schema field
+        image: {
+          type: {
+            url: String,
+            publicId: String,
+          },
+          _id: false,
+          required: false,
+        }, // Added schema field
         selectedChoices: {
           type: [
             {
@@ -54,7 +70,7 @@ export class Order extends BaseEntity {
               price: { type: Number, default: 0 }
             }
           ],
-          _id: false, // Stops Mongoose from inserting auto _ids into customer options arrays
+          _id: false,
           default: [],
         }
       },
