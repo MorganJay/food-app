@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { UpdateAvatarDto, UpdateUserProfileDto } from './dto/users.dto';
 import { UsersService } from './users.service';
+import { Roles } from 'src/auth/roles.decorator';
+import { UserRole } from 'src/schemas/User.schema';
+import { RolesGuard } from 'src/auth/roles.guard';
 
 @Controller('users')
 export class UsersController {
@@ -39,5 +42,14 @@ export class UsersController {
     @Body() dto: UpdateAvatarDto,
   ) {
     return this.usersService.uploadAvatar(req.user.sub, dto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR, UserRole.RIDER)
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Get a specific user profile by their user ID' })
+  async getUserById(@Param('id') id: string) {
+    return this.usersService.getUserProfileById(id);
   }
 }

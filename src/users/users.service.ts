@@ -223,6 +223,16 @@ export class UsersService {
     };
   }
 
+  async getUserProfileById(userId: string): Promise<UserResponseDto> {
+    const user = await this.userModel.findById(userId).exec();
+    
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    
+    return this.mapUserResponse(user);
+  }
+
   private mapUserResponse(user: UserDocument): UserResponseDto {
     return {
       id: user._id.toString(),
