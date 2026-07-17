@@ -16,6 +16,7 @@ import {
 import { UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
+import { Vendor, VendorDocument } from '../schemas/Vendor.schema'; // Added Vendor import
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -28,6 +29,7 @@ export class OrdersService {
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
     @InjectModel(DeliveryAddress.name)
     private addressModel: Model<DeliveryAddressDocument>,
+    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>, // Injected Vendor Model
   ) {}
 
   private async calculatePricing(input: { subtotal: number; restaurantId: string }) {
@@ -189,8 +191,15 @@ export class OrdersService {
   }
 
   private async getRestaurantIdForUser(userId: string) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new ForbiddenException('No active vendor profile associated with this account.');
+    }
+
+    const vendorId = vendor.id || vendor._id.toString();
+
     const restaurant = await this.restaurantModel
-      .findOne({ vendorId: userId, isActive: true })
+      .findOne({ vendorId: vendorId.toString(), isActive: true })
       .exec();
     if (!restaurant) {
       throw new NotFoundException('Restaurant not found');
