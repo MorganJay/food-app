@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
-import { PaymentMethod, PaymentGateway } from '../schemas/Payment.schema';
+import { PaymentGateway } from '../schemas/Payment.schema';
 import { PaymentsService } from './payments.service';
 import { InitializePaymentDto, PaymentResponseDto, VerifyPaymentDto } from './dto/payments.dto';
 
@@ -37,20 +37,14 @@ export class PaymentsController {
     type: PaymentResponseDto,
   })
   async initialize(
-    @Body()
-    body: {
-      orderId: string;
-      amount: number;
-      paymentMethod: PaymentMethod;
-      currency?: string;
-    },
+    @Body() dto: InitializePaymentDto, // Fixed: Swapped custom type object out for the real validated DTO
     @Req() req,
   ) {
     return this.paymentsService.initialize(
-      body.orderId,
+      dto.orderId,
       req.user.sub,
-      body.paymentMethod,
-      PaymentGateway.PAYSTACK,
+      dto.paymentMethod,
+      dto.gateway || PaymentGateway.PAYSTACK,
     );
   }
 

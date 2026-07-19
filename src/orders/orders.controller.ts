@@ -22,7 +22,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { OrdersService } from './orders.service';
 import { OrdersGateway } from './orders.gateway';
-import { CreateOrderDto } from './dto/order.dto';
+import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { OrderStatus } from '../schemas/Order.schema';
 import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 
@@ -39,7 +39,7 @@ export class OrdersController {
   @Roles(UserRole.CONSUMER)
   @Post()
   @ApiOperation({ summary: 'Create order from cart' })
-  @ApiResponse({ status: 201, description: 'Order created' })
+  @ApiResponse({ status: 201, description: 'Order created', type: OrderResponseDto })
   async create(@Body() createDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(req.user.sub, createDto);
   }

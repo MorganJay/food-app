@@ -36,7 +36,7 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.userId !== consumerId) { 
+    if (!order.user || order.user.id !== consumerId) { 
       throw new ForbiddenException('You can only pay for your own orders'); 
     }
 
@@ -63,12 +63,11 @@ export class PaymentsService {
       throw new BadRequestException('Invalid order amount');
     }
 
-    // Clean transaction ref incorporating order data for tracking
     const transactionRef = `PAY-${Date.now()}-${order.serialNumber}`;
 
     const payment = new this.paymentModel({
       orderId,
-      consumerId: order.userId,
+      consumerId: order.user.id,
       amount,
       currency: 'NGN',
       paymentMethod,
@@ -96,7 +95,6 @@ export class PaymentsService {
       throw new BadRequestException('Payment already completed');
     }
 
-    // update payment and mark corresponding order as paid
     const updated = await this.paymentModel
       .findByIdAndUpdate(
         id,
@@ -162,7 +160,6 @@ export class PaymentsService {
       .findByIdAndUpdate(id, { status: PaymentStatus.REFUNDED }, { new: true })
       .exec();
 
-    // Reflect refund back to order details
     if (updated) {
       await this.orderModel.findOneAndUpdate(
         { _id: updated.orderId },

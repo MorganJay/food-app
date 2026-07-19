@@ -38,13 +38,24 @@ export interface OrderItem {
   selectedChoices?: SelectedChoice[];
 }
 
+export class OrderUser {
+  @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
+  username: string;
+
+  @Prop({ required: true })
+  phoneNumber: string;
+}
+
 @Schema({ timestamps: true })
 export class Order extends BaseEntity {
   @Prop({ required: true })
-  userId: string;
-
-  @Prop({ required: true })
   restaurantId: string;
+
+  @Prop({ type: OrderUser, required: true })
+  user: OrderUser;
 
   @Prop({
     type: [

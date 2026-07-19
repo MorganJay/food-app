@@ -13,10 +13,10 @@ import {
   DeliveryAddress,
   DeliveryAddressDocument,
 } from '../schemas/DeliveryAddress.schema';
-import { UserRole } from '../schemas/User.schema';
+import { User, UserDocument, UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
-import { Vendor, VendorDocument } from '../schemas/Vendor.schema'; // Added Vendor import
+import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -27,9 +27,9 @@ export class OrdersService {
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
-    @InjectModel(DeliveryAddress.name)
-    private addressModel: Model<DeliveryAddressDocument>,
-    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>, // Injected Vendor Model
+    @InjectModel(DeliveryAddress.name) private addressModel: Model<DeliveryAddressDocument>,
+    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
   private async calculatePricing(input: { subtotal: number; restaurantId: string }) {
@@ -48,7 +48,6 @@ export class OrdersService {
     return 4000;
   }
 
-  // Helper method to compute single item subtotal (base price + modifications) * quantity
   private calculateItemSubtotal(item: any): number {
     const choicesCost = Array.isArray(item.selectedChoices)
       ? item.selectedChoices.reduce((sum, choice) => sum + (Number(choice.price) || 0), 0)
@@ -63,10 +62,13 @@ export class OrdersService {
       );
     }
 
-    // Retrieve active cart to copy over pre-saved image parameters cleanly
+    const userProfile = await this.userModel.findOne({ _id: userId, isActive: true }).exec();
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found or account is deactivated');
+    }
+
     const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
 
-    // Map the incoming order items and append computed item subtotals and image URLs
     const orderItems = createDto.items.map((item) => {
       const cartItem = cart?.items.find((cItem) => cItem.productId.toString() === item.productId);
       
@@ -77,7 +79,6 @@ export class OrdersService {
         name: item.name,
         selectedChoices: item.selectedChoices || [],
         subtotal: this.calculateItemSubtotal(item),
-        // Persist the image directly from the active cart item, or leave undefined
         image: cartItem?.image ? { url: cartItem.image.url, publicId: cartItem.image.publicId } : undefined,
       };
     });
@@ -90,8 +91,12 @@ export class OrdersService {
     });
 
     const orderData: Partial<Order> = {
-      userId,
       restaurantId: createDto.restaurantId,
+      user: {
+        id: userId,
+        username: userProfile.username,
+        phoneNumber: userProfile.phoneNumber,
+      },
       items: orderItems,
       deliveryAddress: createDto.deliveryAddress,
       notes: createDto.notes,
@@ -105,7 +110,6 @@ export class OrdersService {
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
 
-    // Clear cart after successful order
     await this.cartModel.findOneAndUpdate(
       { userId, isDeleted: false },
       {
@@ -115,7 +119,6 @@ export class OrdersService {
       },
     ).exec();
 
-    // Address logic
     try {
       const addr = createDto.deliveryAddress;
       if (addr && typeof addr === 'object') {
@@ -172,8 +175,6 @@ export class OrdersService {
       serviceFee: pricing.serviceFee,
       deliveryFee: pricing.deliveryFee,
       total: pricing.total,
-
-      // Maps both item subtotal and product image fields cleanly to the frontend checkout view
       items: cart.items.map((item) => ({
         productId: item.productId.toString(),
         name: item.name,
@@ -225,7 +226,7 @@ export class OrdersService {
       return true;
     }
     if (requester.role === UserRole.CONSUMER) {
-      return order.userId === requester.sub;
+      return order.user?.id === requester.sub;
     }
     if (requester.role === UserRole.VENDOR) {
       const restaurantId = await this.getRestaurantIdForUser(requester.sub);
@@ -264,7 +265,7 @@ export class OrdersService {
 
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
     const orders = await this.orderModel
-      .find({ userId, isDeleted: false })
+      .find({ 'user.id': userId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -462,16 +463,19 @@ export class OrdersService {
     return {
       _id: order._id.toString(),
       serialNumber: order.serialNumber,
-      userId: order.userId,
       restaurantId: order.restaurantId,
       orderReference: order.orderReference,
-
+      user: {
+        id: order.user?.id || '',
+        username: order.user?.username || '',
+        phoneNumber: order.user?.phoneNumber || '',
+      },
       items: order.items.map((item) => ({
         productId: item.productId.toString(),
         quantity: item.quantity,
         price: item.price,
         name: item.name,
-        subtotal: item.subtotal || this.calculateItemSubtotal(item), // Graceful fallback calculations
+        subtotal: item.subtotal || this.calculateItemSubtotal(item),
         image: item.image?.url ? { url: item.image.url, publicId: item.image.publicId } : undefined,
         selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
           groupName: choice.groupName || 'Options',
@@ -479,18 +483,15 @@ export class OrdersService {
           price: choice.price,
         })),
       })),
-
       subtotal: order.subtotal,
       serviceFee: order.serviceFee,
       deliveryFee: order.deliveryFee,
       total: order.total,
       deliveryAddress: order.deliveryAddress,
       status: order.status,
-
       notes: order.notes,
       riderId: order.riderId,
       paymentStatus: order.paymentStatus,
-
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };

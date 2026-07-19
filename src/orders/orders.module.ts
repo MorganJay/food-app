@@ -14,6 +14,7 @@ import {
   DeliveryAddressSchema,
 } from '../schemas/DeliveryAddress.schema';
 import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
+import { User, UserSchema } from 'src/schemas/User.schema';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
       { name: Restaurant.name, schema: RestaurantSchema },
       { name: Rider.name, schema: RiderSchema },
       { name: DeliveryAddress.name, schema: DeliveryAddressSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

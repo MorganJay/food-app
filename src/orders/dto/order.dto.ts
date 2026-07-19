@@ -60,7 +60,7 @@ export class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty()
+  @ApiProperty({ example: '669a3aef8d2f5a11b8c9e002' })
   @IsString()
   restaurantId: string;
 
@@ -82,7 +82,6 @@ export class CreateOrderDto {
   notes?: string;
 }
 
-// Add the image DTO representation inside order.dto.ts
 export class OrderItemImageDto {
   @ApiProperty({ example: 'https://cloudinary.com/image.png' })
   url: string;
@@ -92,13 +91,13 @@ export class OrderItemImageDto {
 }
 
 export class OrderItemResponseDto {
-  @ApiProperty()
+  @ApiProperty({ example: '669a3b308d2f5a11b8c9e008' })
   productId: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 2 })
   quantity: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 2200 })
   price: number;
 
   @ApiProperty({ example: 'pap' })
@@ -114,55 +113,70 @@ export class OrderItemResponseDto {
   selectedChoices: SelectedChoiceDto[];
 }
 
+export class OrderUserDto {
+  @ApiProperty({ example: '66a123abc...', description: 'The customer user ID' })
+  id: string;
+
+  @ApiProperty({ example: 'johndoe', description: 'The customer username' })
+  username: string;
+
+  @ApiProperty({ example: '+2348012345678', description: 'The customer contact phone number' })
+  phoneNumber: string;
+}
+
 export class OrderResponseDto {
-  @ApiProperty()
+  @ApiProperty({ example: '669a3b608d2f5a11b8c9e010' })
   _id: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 10024 })
   serialNumber: number;
 
-  @ApiProperty()
-  userId: string;
-
-  @ApiProperty()
+  @ApiProperty({ example: '669a3aef8d2f5a11b8c9e002' })
   restaurantId: string;
 
-  @ApiProperty()
-  orderReference: string;
+  @ApiProperty({ type: OrderUserDto, description: 'Snapshot details of the ordering customer' })
+  user: OrderUserDto;
 
   @ApiProperty({ type: [OrderItemResponseDto] })
   items: OrderItemResponseDto[];
 
-  @ApiProperty()
+  @ApiProperty({ example: 'ORD-1721382412-10024' })
+  orderReference: string;
+
+  @ApiProperty({ example: 4400 })
   subtotal: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 440 })
   serviceFee: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 4000 })
   deliveryFee: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 8840 })
   total: number;
 
   @ApiProperty({ type: CreateDeliveryAddressDto })
   deliveryAddress: CreateDeliveryAddressDto;
 
-  @ApiProperty({ enum: OrderStatus })
+  @ApiProperty({ 
+    enum: OrderStatus,
+    example: 'pending [Options: pending, accepted, preparing, ready, picked_up, delivered, cancelled]', 
+    description: 'Current status of the order. Valid options: pending, accepted, preparing, ready, picked_up, delivered, cancelled'
+  })
   status: OrderStatus;
 
   @ApiProperty({ example: 'Please deliver at the gate' })
   notes?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '669a3b508d2f5a11b8c9e009' })
   riderId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'pending' })
   paymentStatus: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2026-07-19T09:40:12.123Z' })
   createdAt: Date;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2026-07-19T10:39:15.456Z' })
   updatedAt: Date;
 }

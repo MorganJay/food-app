@@ -43,13 +43,4 @@ export class UsersController {
   ) {
     return this.usersService.uploadAvatar(req.user.sub, dto);
   }
-
-  @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.VENDOR, UserRole.RIDER)
-  @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Get a specific user profile by their user ID' })
-  async getUserById(@Param('id') id: string) {
-    return this.usersService.getUserProfileById(id);
-  }
 }
