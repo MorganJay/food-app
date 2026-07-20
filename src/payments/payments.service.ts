@@ -36,7 +36,10 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (!order.user || order.user.id !== consumerId) { 
+    // Updated to reference userId (with legacy fallback for existing DB records)
+    const orderConsumerId = order.user?.userId || (order.user as any)?.id;
+
+    if (!orderConsumerId || orderConsumerId !== consumerId) { 
       throw new ForbiddenException('You can only pay for your own orders'); 
     }
 
@@ -67,7 +70,7 @@ export class PaymentsService {
 
     const payment = new this.paymentModel({
       orderId,
-      consumerId: order.user.id,
+      consumerId: orderConsumerId,
       amount,
       currency: 'NGN',
       paymentMethod,

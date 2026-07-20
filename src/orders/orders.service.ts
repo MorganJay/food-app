@@ -93,9 +93,10 @@ export class OrdersService {
     const orderData: Partial<Order> = {
       restaurantId: createDto.restaurantId,
       user: {
-        id: userId,
-        username: userProfile.username,
-        phoneNumber: userProfile.phoneNumber,
+        userId: userId,
+        lastName: userProfile.lastName || '',
+        firstName: userProfile.firstName || '',
+        phoneNumber: userProfile.phoneNumber || '',
       },
       items: orderItems,
       deliveryAddress: createDto.deliveryAddress,
@@ -226,7 +227,9 @@ export class OrdersService {
       return true;
     }
     if (requester.role === UserRole.CONSUMER) {
-      return order.user?.id === requester.sub;
+      // Supports both new 'userId' and legacy 'id' DB property formats for access checks
+      const orderConsumerId = order.user?.userId || (order.user as any)?.id;
+      return orderConsumerId === requester.sub;
     }
     if (requester.role === UserRole.VENDOR) {
       const restaurantId = await this.getRestaurantIdForUser(requester.sub);
@@ -264,8 +267,12 @@ export class OrdersService {
   }
 
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
+    // Queries matching both 'user.userId' and legacy 'user.id' fields in MongoDB
     const orders = await this.orderModel
-      .find({ 'user.id': userId, isDeleted: false })
+      .find({
+        $or: [{ 'user.userId': userId }, { 'user.id': userId }],
+        isDeleted: false,
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -466,8 +473,8 @@ export class OrdersService {
       restaurantId: order.restaurantId,
       orderReference: order.orderReference,
       user: {
-        id: order.user?.id || '',
-        username: order.user?.username || '',
+        firstName: order.user?.firstName || '',
+        lastName: order.user?.lastName || '',
         phoneNumber: order.user?.phoneNumber || '',
       },
       items: order.items.map((item) => ({

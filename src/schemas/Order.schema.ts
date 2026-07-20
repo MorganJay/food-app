@@ -33,17 +33,20 @@ export interface OrderItem {
   quantity: number;
   price: number;
   name: string;
-  subtotal: number; // Added: subtotal property per order item
-  image?: OrderItemImage; // Added: optional image property
+  subtotal: number;
+  image?: OrderItemImage;
   selectedChoices?: SelectedChoice[];
 }
 
 export class OrderUser {
   @Prop({ required: true })
-  id: string;
+  userId: string;
 
   @Prop({ required: true })
-  username: string;
+  lastName: string;
+
+  @Prop({ required: true })
+  firstName: string;
 
   @Prop({ required: true })
   phoneNumber: string;
@@ -64,7 +67,7 @@ export class Order extends BaseEntity {
         quantity: Number,
         price: Number,
         name: String,
-        subtotal: { type: Number, default: 0 }, // Added schema field
+        subtotal: { type: Number, default: 0 },
         image: {
           type: {
             url: String,
@@ -72,18 +75,18 @@ export class Order extends BaseEntity {
           },
           _id: false,
           required: false,
-        }, // Added schema field
+        },
         selectedChoices: {
           type: [
             {
               groupName: { type: String, trim: true },
               name: { type: String, trim: true },
-              price: { type: Number, default: 0 }
-            }
+              price: { type: Number, default: 0 },
+            },
           ],
           _id: false,
           default: [],
-        }
+        },
       },
     ],
     required: true,
@@ -127,6 +130,7 @@ export class Order extends BaseEntity {
 export const OrderSchema = SchemaFactory.createForClass(Order);
 OrderSchema.index({ restaurantId: 1 });
 OrderSchema.index({ status: 1 });
+OrderSchema.index({ 'user.userId': 1 });
 
 OrderSchema.pre('save', async function (next) {
   if (this.isNew && !this.serialNumber) {

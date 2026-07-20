@@ -114,11 +114,11 @@ export class OrderItemResponseDto {
 }
 
 export class OrderUserDto {
-  @ApiProperty({ example: '66a123abc...', description: 'The customer user ID' })
-  id: string;
+  @ApiProperty({ example: 'John', description: 'The customer first name' })
+  firstName: string;
 
-  @ApiProperty({ example: 'johndoe', description: 'The customer username' })
-  username: string;
+  @ApiProperty({ example: 'Doe', description: 'The customer last name' })
+  lastName: string;
 
   @ApiProperty({ example: '+2348012345678', description: 'The customer contact phone number' })
   phoneNumber: string;
@@ -160,8 +160,8 @@ export class OrderResponseDto {
 
   @ApiProperty({ 
     enum: OrderStatus,
-    example: 'pending [Options: pending, accepted, preparing, ready, picked_up, delivered, cancelled]', 
-    description: 'Current status of the order. Valid options: pending, accepted, preparing, ready, picked_up, delivered, cancelled'
+    example: 'pending [Options: pending, accepted, preparing, ready_for_pickup, out_for_delivery, delivered, cancelled_by_consumer, cancelled_by_vendor]', 
+    description: 'Current status of the order.'
   })
   status: OrderStatus;
 
