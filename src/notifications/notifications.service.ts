@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InfobipSmsProvider } from '../auth/sms/infobip.provider';
+import { InfobipProvider } from '../auth/sms/infobip.provider';
 
 export interface SmsNotification {
   to: string;
@@ -13,6 +13,11 @@ export interface EmailNotification {
   body: string;
 }
 
+export interface WhatsAppNotification {
+  to: string;
+  message: string;
+}
+
 export interface PushNotification {
   token: string;
   title: string;
@@ -23,25 +28,32 @@ export interface PushNotification {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly smsProvider: InfobipSmsProvider;
+  private readonly infobipProvider: InfobipProvider;
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {
-    this.smsProvider = new InfobipSmsProvider(configService);
+    this.infobipProvider = new InfobipProvider(configService);
   }
 
   async sendSms(notification: SmsNotification) {
     this.logger.log(`Sending SMS to ${notification.to}`);
-    return this.smsProvider.sendSms(notification.to, notification.message);
+    return this.infobipProvider.sendSms(notification.to, notification.message);
   }
 
   async sendEmail(notification: EmailNotification) {
     this.logger.log(`Sending email to ${notification.to}`);
-    // TODO: Integrate real email provider (SendGrid, Mailgun, Resend etc.)
-    console.log(
-      `[Email to ${notification.to}] Subject: ${notification.subject}`,
+    return this.infobipProvider.sendEmail(
+      notification.to,
+      notification.subject,
+      notification.body,
     );
-    console.log(`[Email body]: ${notification.body}`);
-    return { success: true, messageId: `email-${Date.now()}` };
+  }
+
+  async sendWhatsApp(notification: WhatsAppNotification) {
+    this.logger.log(`Sending WhatsApp to ${notification.to}`);
+    return this.infobipProvider.sendMessage(
+      notification.to,
+      notification.message,
+    );
   }
 
   async sendPush(notification: PushNotification) {

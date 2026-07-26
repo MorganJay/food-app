@@ -1,11 +1,10 @@
-export interface EmailProvider {
+export interface WhatsAppProvider {
   sendOtp(
-    email: string,
+    phoneNumber: string,
     code: string,
   ): Promise<{ success: boolean; messageId?: string; reason?: string }>;
-  sendEmail(
-    email: string,
-    subject: string,
-    body: string,
+  sendMessage(
+    phoneNumber: string,
+    message: string,
   ): Promise<{ success: boolean; messageId?: string; reason?: string }>;
 }

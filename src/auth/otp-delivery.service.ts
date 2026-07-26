@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InfobipSmsProvider } from './sms/infobip.provider';
+import { InfobipProvider } from './sms/infobip.provider';
 import { DummyEmailProvider } from './email/dummy-email.provider';
 import { DummyPushProvider } from './push/dummy-push.provider';
 
@@ -14,7 +14,7 @@ export interface OtpRecipient {
 export class OtpDeliveryService {
   private readonly logger = new Logger(OtpDeliveryService.name);
   private readonly channels: string[];
-  private readonly smsProvider: InfobipSmsProvider;
+  private readonly infobipProvider: InfobipProvider;
   private readonly emailProvider = new DummyEmailProvider();
   private readonly pushProvider = new DummyPushProvider();
 
@@ -24,7 +24,7 @@ export class OtpDeliveryService {
       .map((item) => item.trim().toUpperCase())
       .filter(Boolean);
 
-    this.smsProvider = new InfobipSmsProvider(this.configService);
+    this.infobipProvider = new InfobipProvider(this.configService);
   }
 
   async sendOtp(recipient: OtpRecipient, code: string) {
@@ -33,20 +33,36 @@ export class OtpDeliveryService {
     if (this.channels.includes('SMS') && recipient.phoneNumber) {
       this.logger.log(`Sending OTP via SMS to ${recipient.phoneNumber}`);
       senders.push(
-        this.smsProvider.sendOtp(recipient.phoneNumber, code).catch((err) => {
-          this.logger.error(`SMS failed: ${err.message}`);
-          return { success: false, channel: 'sms', error: err.message };
-        }),
+        this.infobipProvider
+          .sendOtp(recipient.phoneNumber, code)
+          .catch((err) => {
+            this.logger.error(`SMS failed: ${err.message}`);
+            return { success: false, channel: 'sms', error: err.message };
+          }),
       );
     }
 
     if (this.channels.includes('EMAIL') && recipient.email) {
       this.logger.log(`Sending OTP via email to ${recipient.email}`);
       senders.push(
-        this.emailProvider.sendOtp(recipient.email, code).catch((err) => {
-          this.logger.error(`Email failed: ${err.message}`);
-          return { success: false, channel: 'email', error: err.message };
-        }),
+        this.infobipProvider
+          .sendEmailOtp(recipient.email, code)
+          .catch((err) => {
+            this.logger.error(`Email failed: ${err.message}`);
+            return { success: false, channel: 'email', error: err.message };
+          }),
+      );
+    }
+
+    if (this.channels.includes('WHATSAPP') && recipient.phoneNumber) {
+      this.logger.log(`Sending OTP via WhatsApp to ${recipient.phoneNumber}`);
+      senders.push(
+        this.infobipProvider
+          .sendWhatsAppOtp(recipient.phoneNumber, code)
+          .catch((err) => {
+            this.logger.error(`WhatsApp failed: ${err.message}`);
+            return { success: false, channel: 'whatsapp', error: err.message };
+          }),
       );
     }
 
