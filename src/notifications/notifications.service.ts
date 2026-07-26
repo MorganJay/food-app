@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TermiiSmsProvider } from '../auth/sms/termii.provider';
+import { InfobipSmsProvider } from '../auth/sms/infobip.provider';
 
 export interface SmsNotification {
   to: string;
@@ -23,10 +23,10 @@ export interface PushNotification {
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly smsProvider: TermiiSmsProvider;
+  private readonly smsProvider: InfobipSmsProvider;
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {
-    this.smsProvider = new TermiiSmsProvider(configService);
+    this.smsProvider = new InfobipSmsProvider(configService);
   }
 
   async sendSms(notification: SmsNotification) {
