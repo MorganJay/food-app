@@ -72,10 +72,9 @@ export class InfobipProvider
         body: JSON.stringify({
           messages: [
             {
-              from: this.smsSenderId,
-              destinations: [{ to: normalizedPhone }],
               sender: this.smsSenderId,
-              context: {
+              destinations: [{ to: normalizedPhone }],
+              content: {
                 text: message,
               },
             },

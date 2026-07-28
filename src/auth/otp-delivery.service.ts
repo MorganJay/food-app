@@ -1,4 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InfobipProvider } from './sms/infobip.provider';
 import { DummyEmailProvider } from './email/dummy-email.provider';
@@ -29,12 +34,15 @@ export class OtpDeliveryService {
 
   async sendOtp(recipient: OtpRecipient, code: string) {
     const senders = [] as Promise<any>[];
+    const smsRequired =
+      this.channels.includes('SMS') && Boolean(recipient.phoneNumber);
 
     if (this.channels.includes('SMS') && recipient.phoneNumber) {
       this.logger.log(`Sending OTP via SMS to ${recipient.phoneNumber}`);
       senders.push(
         this.infobipProvider
           .sendOtp(recipient.phoneNumber, code)
+          .then((result) => ({ ...result, channel: 'sms' }))
           .catch((err) => {
             this.logger.error(`SMS failed: ${err.message}`);
             return { success: false, channel: 'sms', error: err.message };
@@ -47,6 +55,7 @@ export class OtpDeliveryService {
       senders.push(
         this.infobipProvider
           .sendEmailOtp(recipient.email, code)
+          .then((result) => ({ ...result, channel: 'email' }))
           .catch((err) => {
             this.logger.error(`Email failed: ${err.message}`);
             return { success: false, channel: 'email', error: err.message };
@@ -59,6 +68,7 @@ export class OtpDeliveryService {
       senders.push(
         this.infobipProvider
           .sendWhatsAppOtp(recipient.phoneNumber, code)
+          .then((result) => ({ ...result, channel: 'whatsapp' }))
           .catch((err) => {
             this.logger.error(`WhatsApp failed: ${err.message}`);
             return { success: false, channel: 'whatsapp', error: err.message };
@@ -69,10 +79,13 @@ export class OtpDeliveryService {
     if (this.channels.includes('PUSH') && recipient.pushToken) {
       this.logger.log(`Sending OTP via push to ${recipient.pushToken}`);
       senders.push(
-        this.pushProvider.sendOtp(recipient.pushToken, code).catch((err) => {
-          this.logger.error(`Push failed: ${err.message}`);
-          return { success: false, channel: 'push', error: err.message };
-        }),
+        this.pushProvider
+          .sendOtp(recipient.pushToken, code)
+          .then(() => ({ channel: 'push', success: true }))
+          .catch((err) => {
+            this.logger.error(`Push failed: ${err.message}`);
+            return { success: false, channel: 'push', error: err.message };
+          }),
       );
     }
 
@@ -80,13 +93,28 @@ export class OtpDeliveryService {
       this.logger.warn(
         'No OTP delivery channels configured or recipient information missing',
       );
+      if (this.channels.includes('SMS')) {
+        throw new InternalServerErrorException(
+          'Unable to send OTP via SMS: phone number or SMS channel unavailable',
+        );
+      }
       return;
     }
 
-    // await Promise.all(senders);
     const results = await Promise.all(senders);
 
     this.logger.log('OTP delivery results:', results);
+
+    if (smsRequired) {
+      const smsResult = results.find((result) => result?.channel === 'sms');
+      if (!smsResult?.success) {
+        const reason =
+          smsResult?.error || smsResult?.reason || 'SMS delivery failed';
+        throw new InternalServerErrorException(
+          `Unable to send OTP via SMS: ${reason}`,
+        );
+      }
+    }
 
     return results;
   }

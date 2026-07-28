@@ -67,7 +67,7 @@ Content-Type: application/json
 
 ###
 
-# Verify OTP (use the code from registration response)
+# Verify OTP (use the code received via SMS)
 POST {{baseURL}}/auth/verify-otp
 Content-Type: application/json
 
