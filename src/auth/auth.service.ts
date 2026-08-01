@@ -93,15 +93,16 @@ export class AuthService {
       dto,
     );
 
-    // Run createVendor service if role is vendor ---
-    const shortPhone = dto.phoneNumber.slice(-4);
-    const uniquePlaceholderName = `${dto.username}'s Kitchen (${shortPhone})`;
+    if (dto.role === 'vendor') {
+      const shortPhone = dto.phoneNumber.slice(-4);
+      const uniquePlaceholderName = `${dto.username}'s Kitchen (${shortPhone})`;
 
-    await this.vendorsService.createVendor(newUser.id, {
-      businessName: uniquePlaceholderName,
-      description: 'Welcome to my store!',
-      location: undefined,
-    });
+      await this.vendorsService.createVendor(newUser.id, {
+        businessName: uniquePlaceholderName,
+        description: 'Welcome to my store!',
+        location: undefined,
+      });
+    }
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)
