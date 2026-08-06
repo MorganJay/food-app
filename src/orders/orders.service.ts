@@ -17,6 +17,8 @@ import { User, UserDocument, UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
+import { OrderEventsService } from './order-events.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -25,14 +27,21 @@ export class OrdersService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
-    @InjectModel(DeliveryAddress.name) private addressModel: Model<DeliveryAddressDocument>,
+    @InjectModel(DeliveryAddress.name)
+    private addressModel: Model<DeliveryAddressDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly orderEvents: OrderEventsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async calculatePricing(input: { subtotal: number; restaurantId: string }) {
+  private async calculatePricing(input: {
+    subtotal: number;
+    restaurantId: string;
+  }) {
     const serviceFee = Math.round(input.subtotal * 0.1);
     const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
     const total = input.subtotal + serviceFee + deliveryFee;
@@ -50,7 +59,10 @@ export class OrdersService {
 
   private calculateItemSubtotal(item: any): number {
     const choicesCost = Array.isArray(item.selectedChoices)
-      ? item.selectedChoices.reduce((sum, choice) => sum + (Number(choice.price) || 0), 0)
+      ? item.selectedChoices.reduce(
+          (sum, choice) => sum + (Number(choice.price) || 0),
+          0,
+        )
       : 0;
     return (item.price + choicesCost) * item.quantity;
   }
@@ -62,16 +74,24 @@ export class OrdersService {
       );
     }
 
-    const userProfile = await this.userModel.findOne({ _id: userId, isActive: true }).exec();
+    const userProfile = await this.userModel
+      .findOne({ _id: userId, isActive: true })
+      .exec();
     if (!userProfile) {
-      throw new NotFoundException('User profile not found or account is deactivated');
+      throw new NotFoundException(
+        'User profile not found or account is deactivated',
+      );
     }
 
-    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
+    const cart = await this.cartModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
 
     const orderItems = createDto.items.map((item) => {
-      const cartItem = cart?.items.find((cItem) => cItem.productId.toString() === item.productId);
-      
+      const cartItem = cart?.items.find(
+        (cItem) => cItem.productId.toString() === item.productId,
+      );
+
       return {
         productId: item.productId,
         quantity: item.quantity,
@@ -79,7 +99,9 @@ export class OrdersService {
         name: item.name,
         selectedChoices: item.selectedChoices || [],
         subtotal: this.calculateItemSubtotal(item),
-        image: cartItem?.image ? { url: cartItem.image.url, publicId: cartItem.image.publicId } : undefined,
+        image: cartItem?.image
+          ? { url: cartItem.image.url, publicId: cartItem.image.publicId }
+          : undefined,
       };
     });
 
@@ -111,14 +133,22 @@ export class OrdersService {
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
 
-    await this.cartModel.findOneAndUpdate(
-      { userId, isDeleted: false },
-      {
-        items: [],
-        total: 0,
-        restaurantId: null,
-      },
-    ).exec();
+    await this.orderEvents.publish({
+      type: 'OrderPlacedEvent',
+      orderId: savedOrder._id.toString(),
+      order: this.mapOrderResponse(savedOrder),
+    });
+
+    await this.cartModel
+      .findOneAndUpdate(
+        { userId, isDeleted: false },
+        {
+          items: [],
+          total: 0,
+          restaurantId: null,
+        },
+      )
+      .exec();
 
     try {
       const addr = createDto.deliveryAddress;
@@ -165,9 +195,9 @@ export class OrdersService {
       return sum + (item.subtotal || this.calculateItemSubtotal(item));
     }, 0);
 
-    const pricing = await this.calculatePricing({ 
-      subtotal: calculatedSubtotal, 
-      restaurantId: cart.restaurantId 
+    const pricing = await this.calculatePricing({
+      subtotal: calculatedSubtotal,
+      restaurantId: cart.restaurantId,
     });
 
     return {
@@ -182,12 +212,16 @@ export class OrdersService {
         quantity: item.quantity,
         price: item.price,
         subtotal: item.subtotal || this.calculateItemSubtotal(item),
-        image: item.image?.url ? { url: item.image.url, publicId: item.image.publicId } : undefined,
-        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
-          groupName: choice.groupName || 'Options',
-          name: choice.name,
-          price: choice.price,
-        })),
+        image: item.image?.url
+          ? { url: item.image.url, publicId: item.image.publicId }
+          : undefined,
+        selectedChoices: ((item as any).selectedChoices || []).map(
+          (choice: any) => ({
+            groupName: choice.groupName || 'Options',
+            name: choice.name,
+            price: choice.price,
+          }),
+        ),
       })),
     };
   }
@@ -195,7 +229,9 @@ export class OrdersService {
   private async getRestaurantIdForUser(userId: string) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
-      throw new ForbiddenException('No active vendor profile associated with this account.');
+      throw new ForbiddenException(
+        'No active vendor profile associated with this account.',
+      );
     }
 
     const vendorId = vendor.id || vendor._id.toString();
@@ -281,7 +317,11 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
-  async findByRestaurant(restaurantId: string, skip: number = 0, limit: number = 20) {
+  async findByRestaurant(
+    restaurantId: string,
+    skip: number = 0,
+    limit: number = 20,
+  ) {
     const orders = await this.orderModel
       .find({ restaurantId, isDeleted: false })
       .sort({ createdAt: -1 })
@@ -292,7 +332,11 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
-  async findByRestaurantUser(userId: string, skip: number = 0, limit: number = 20) {
+  async findByRestaurantUser(
+    userId: string,
+    skip: number = 0,
+    limit: number = 20,
+  ) {
     const restaurantId = await this.getRestaurantIdForUser(userId);
     return this.findByRestaurant(restaurantId, skip, limit);
   }
@@ -349,7 +393,80 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
-    return this.mapOrderResponse(order);
+
+    const mappedOrder = this.mapOrderResponse(order);
+    const eventType = this.getEventTypeForStatus(status);
+    await this.orderEvents.publish({
+      type: eventType,
+      orderId: id,
+      order: mappedOrder,
+    });
+
+    await this.handleOrderEvent({
+      type: eventType,
+      orderId: id,
+      order: mappedOrder,
+    });
+
+    return mappedOrder;
+  }
+
+  private getEventTypeForStatus(status: OrderStatus) {
+    switch (status) {
+      case OrderStatus.ACCEPTED:
+        return 'OrderAcceptedEvent';
+      case OrderStatus.DECLINED:
+        return 'OrderRejectedEvent';
+      case OrderStatus.PREPARING:
+        return 'OrderPreparingEvent';
+      case OrderStatus.READY_FOR_PICKUP:
+        return 'OrderReadyEvent';
+      case OrderStatus.DELIVERED:
+        return 'OrderDeliveredEvent';
+      case OrderStatus.CANCELLED_BY_CONSUMER:
+      case OrderStatus.CANCELLED_BY_VENDOR:
+        return 'OrderCancelledEvent';
+      default:
+        return 'OrderStatusUpdatedEvent';
+    }
+  }
+
+  async acceptOrder(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.ACCEPTED, requester);
+  }
+
+  async rejectOrder(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.DECLINED, requester);
+  }
+
+  async cancelOrder(id: string, requester: OrderRequester) {
+    const status =
+      requester.role === UserRole.VENDOR
+        ? OrderStatus.CANCELLED_BY_VENDOR
+        : OrderStatus.CANCELLED_BY_CONSUMER;
+    return this.updateStatus(id, status, requester);
+  }
+
+  private async handleOrderEvent(event: {
+    type: string;
+    orderId: string;
+    order: OrderResponseDto;
+  }) {
+    if (
+      event.type === 'OrderAcceptedEvent' ||
+      event.type === 'OrderRejectedEvent' ||
+      event.type === 'OrderCancelledEvent'
+    ) {
+      try {
+        await this.notificationsService.sendEmail({
+          to: 'support@chopbaze.com',
+          subject: `Order ${event.order.orderReference || event.order._id} update`,
+          body: `Order ${event.order.orderReference || event.order._id} has moved to ${event.order.status}.`,
+        });
+      } catch (error) {
+        console.error('Failed to notify order status update', error);
+      }
+    }
   }
 
   async updateStatus(
@@ -383,16 +500,34 @@ export class OrdersService {
     }
 
     if (requester.role === UserRole.VENDOR) {
-      const vendorAllowed = new Set<OrderStatus>([
-        OrderStatus.ACCEPTED,
-        OrderStatus.DECLINED,
-        OrderStatus.PREPARING,
-        OrderStatus.READY_FOR_PICKUP,
-        OrderStatus.CANCELLED_BY_VENDOR,
-      ]);
-      if (!vendorAllowed.has(status)) {
-        throw new ForbiddenException('Invalid status update for vendor');
+      const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+        [OrderStatus.PENDING]: [
+          OrderStatus.ACCEPTED,
+          OrderStatus.DECLINED,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.ACCEPTED]: [
+          OrderStatus.PREPARING,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.DECLINED]: [],
+        [OrderStatus.PREPARING]: [
+          OrderStatus.READY_FOR_PICKUP,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.DELIVERED],
+        [OrderStatus.OUT_FOR_DELIVERY]: [OrderStatus.DELIVERED],
+        [OrderStatus.DELIVERED]: [],
+        [OrderStatus.CANCELLED_BY_CONSUMER]: [],
+        [OrderStatus.CANCELLED_BY_VENDOR]: [],
+      };
+
+      if (!allowedTransitions[order.status]?.includes(status)) {
+        throw new BadRequestException(
+          `Invalid transition from ${order.status} to ${status}`,
+        );
       }
+
       return this.applyStatusUpdate(id, status);
     }
 
@@ -483,12 +618,16 @@ export class OrdersService {
         price: item.price,
         name: item.name,
         subtotal: item.subtotal || this.calculateItemSubtotal(item),
-        image: item.image?.url ? { url: item.image.url, publicId: item.image.publicId } : undefined,
-        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
-          groupName: choice.groupName || 'Options',
-          name: choice.name,
-          price: choice.price,
-        })),
+        image: item.image?.url
+          ? { url: item.image.url, publicId: item.image.publicId }
+          : undefined,
+        selectedChoices: ((item as any).selectedChoices || []).map(
+          (choice: any) => ({
+            groupName: choice.groupName || 'Options',
+            name: choice.name,
+            price: choice.price,
+          }),
+        ),
       })),
       subtotal: order.subtotal,
       serviceFee: order.serviceFee,

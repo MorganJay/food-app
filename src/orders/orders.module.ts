@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrdersGateway } from './orders.gateway';
+import { OrderEventsService } from './order-events.service';
 import { Order, OrderSchema } from '../schemas/Order.schema';
 import { Cart, CartSchema } from '../schemas/Cart.schema';
 import { Vendor, VendorSchema } from '../schemas/Vendor.schema';
@@ -15,6 +16,7 @@ import {
 } from '../schemas/DeliveryAddress.schema';
 import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
 import { User, UserSchema } from 'src/schemas/User.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { User, UserSchema } from 'src/schemas/User.schema';
       { name: DeliveryAddress.name, schema: DeliveryAddressSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    NotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -36,7 +39,7 @@ import { User, UserSchema } from 'src/schemas/User.schema';
       }),
     }),
   ],
-  providers: [OrdersService, OrdersGateway],
+  providers: [OrdersService, OrdersGateway, OrderEventsService],
   controllers: [OrdersController],
   exports: [OrdersService],
 })

@@ -23,6 +23,10 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
   const ordersService = {
     create: jest.fn(),
     findByUser: jest.fn(),
+    acceptOrder: jest.fn(),
+    rejectOrder: jest.fn(),
+    cancelOrder: jest.fn(),
+    assignRider: jest.fn(),
   };
   const ordersGateway = {
     emitOrderStatus: jest.fn(),
@@ -140,10 +144,10 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
 
   it('creates an order via POST /orders', async () => {
     const orderPayload = {
-      vendorId: 'vendor1',
+      restaurantId: 'restaurant1',
       items: [{ productId: 'prod1', quantity: 1, price: 1200, name: 'Burger' }],
-      total: 1200,
       deliveryAddress: { label: 'Home', addressLine: '123 Ring Road, Ibadan' },
+      notes: 'Leave at the gate',
     };
     ordersService.create.mockResolvedValue({
       id: 'order1',
@@ -164,7 +168,79 @@ describe('Consumer Delivery Addresses API (e2e)', () => {
     expect(response.body).toMatchObject({
       id: 'order1',
       userId: 'consumer-test',
-      total: 1200,
+      status: 'pending',
     });
+  });
+
+  it('accepts an order via POST /orders/:id/accept', async () => {
+    ordersService.acceptOrder.mockResolvedValue({
+      id: 'order1',
+      status: 'accepted',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/orders/order1/accept')
+      .expect(201);
+
+    expect(ordersService.acceptOrder).toHaveBeenCalledWith('order1', {
+      sub: 'consumer-test',
+      role: UserRole.CONSUMER,
+    });
+    expect(response.body).toMatchObject({ id: 'order1', status: 'accepted' });
+  });
+
+  it('rejects an order via POST /orders/:id/reject', async () => {
+    ordersService.rejectOrder.mockResolvedValue({
+      id: 'order1',
+      status: 'declined',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/orders/order1/reject')
+      .expect(201);
+
+    expect(ordersService.rejectOrder).toHaveBeenCalledWith('order1', {
+      sub: 'consumer-test',
+      role: UserRole.CONSUMER,
+    });
+    expect(response.body).toMatchObject({ id: 'order1', status: 'declined' });
+  });
+
+  it('cancels an order via POST /orders/:id/cancel', async () => {
+    ordersService.cancelOrder.mockResolvedValue({
+      id: 'order1',
+      status: 'cancelled_by_consumer',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/orders/order1/cancel')
+      .expect(201);
+
+    expect(ordersService.cancelOrder).toHaveBeenCalledWith('order1', {
+      sub: 'consumer-test',
+      role: UserRole.CONSUMER,
+    });
+    expect(response.body).toMatchObject({
+      id: 'order1',
+      status: 'cancelled_by_consumer',
+    });
+  });
+
+  it('assigns a rider via POST /orders/:id/rider', async () => {
+    ordersService.assignRider.mockResolvedValue({
+      id: 'order1',
+      riderId: 'rider1',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/orders/order1/rider')
+      .send({ riderId: 'rider1' })
+      .expect(201);
+
+    expect(ordersService.assignRider).toHaveBeenCalledWith('order1', 'rider1', {
+      sub: 'consumer-test',
+      role: UserRole.CONSUMER,
+    });
+    expect(response.body).toMatchObject({ id: 'order1', riderId: 'rider1' });
   });
 });

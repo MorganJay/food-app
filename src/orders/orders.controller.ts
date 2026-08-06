@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
   Param,
   Query,
@@ -39,7 +38,11 @@ export class OrdersController {
   @Roles(UserRole.CONSUMER)
   @Post()
   @ApiOperation({ summary: 'Create order from cart' })
-  @ApiResponse({ status: 201, description: 'Order created', type: OrderResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Order created',
+    type: OrderResponseDto,
+  })
   async create(@Body() createDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(req.user.sub, createDto);
   }
@@ -53,9 +56,7 @@ export class OrdersController {
     type: CheckoutSummaryResponseDto,
   })
   async getCheckoutSummary(@Req() req) {
-    return this.ordersService.getCheckoutSummary(
-      req.user.sub,
-    );
+    return this.ordersService.getCheckoutSummary(req.user.sub);
   }
 
   @Get()
@@ -152,14 +153,32 @@ export class OrdersController {
     });
   }
 
-  @Roles(UserRole.CONSUMER, UserRole.VENDOR, UserRole.ADMIN, UserRole.RIDER)
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: OrderStatus,
-    @Req() req,
-  ) {
-    const updated = await this.ordersService.updateStatus(id, status, {
+  @Roles(UserRole.VENDOR)
+  @Post(':id/accept')
+  async acceptOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.acceptOrder(id, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitOrderStatus(updated);
+    return updated;
+  }
+
+  @Roles(UserRole.VENDOR)
+  @Post(':id/reject')
+  async rejectOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.rejectOrder(id, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitOrderStatus(updated);
+    return updated;
+  }
+
+  @Roles(UserRole.CONSUMER, UserRole.VENDOR)
+  @Post(':id/cancel')
+  async cancelOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.cancelOrder(id, {
       sub: req.user.sub,
       role: req.user.role,
     });
@@ -168,7 +187,7 @@ export class OrdersController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
-  @Patch(':id/rider')
+  @Post(':id/rider')
   async assignRider(
     @Param('id') id: string,
     @Body('riderId') riderId: string,
