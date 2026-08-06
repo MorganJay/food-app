@@ -473,10 +473,15 @@ export class OrdersService {
             : null;
           const vendorEmail = vendorUser?.email;
           if (vendorEmail) {
+            const orderRef = event.order.orderReference || event.order._id;
+            const customerName = event.order.user?.firstName
+              ? `${event.order.user.firstName} ${event.order.user.lastName || ''}`.trim()
+              : 'A customer';
+            const itemCount = event.order.items?.length || 0;
             await this.notificationsService.sendEmail({
               to: vendorEmail,
-              subject: `New order received for ${event.order.orderReference || event.order._id}`,
-              body: `A new order has been placed for your restaurant. Please review and accept or decline it promptly.`,
+              subject: `New order received for ${orderRef}`,
+              body: `Hello,\n\nA new order has been placed for your restaurant.\n\nOrder reference: ${orderRef}\nCustomer: ${customerName}\nItems: ${itemCount}\n\nPlease review and accept or decline it promptly.`,
             });
           }
         }
