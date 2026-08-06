@@ -86,14 +86,12 @@ describe('OrdersService', () => {
 
     orderSave.mockResolvedValue(savedOrder);
     userModel.findOne.mockReturnValueOnce({
-      exec: jest
-        .fn()
-        .mockResolvedValue({
-          _id: 'consumer1',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          phoneNumber: '+2348012345678',
-        }),
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phoneNumber: '+2348012345678',
+      }),
     });
     cartModel.findOne.mockReturnValueOnce({
       exec: jest.fn().mockResolvedValue({ items: [] }),
@@ -134,6 +132,71 @@ describe('OrdersService', () => {
       label: 'Home',
       addressLine: '123 Ring Road',
     });
+  });
+
+  it('sends a vendor email when a customer places an order', async () => {
+    const savedOrder = {
+      _id: 'order1',
+      serialNumber: 1,
+      user: {
+        userId: 'consumer1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phoneNumber: '+2348012345678',
+      },
+      items: [{ productId: 'prod1', quantity: 1, price: 100, name: 'Test' }],
+      total: 100,
+      deliveryAddress: { label: 'Home', addressLine: '123 Ring Road' },
+      status: 'pending',
+      notes: null,
+      riderId: null,
+      paymentStatus: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    orderSave.mockResolvedValue(savedOrder);
+    userModel.findOne
+      .mockReturnValueOnce({
+        exec: jest
+          .fn()
+          .mockResolvedValue({
+            _id: 'consumer1',
+            firstName: 'Jane',
+            lastName: 'Doe',
+            phoneNumber: '+2348012345678',
+          }),
+      })
+      .mockReturnValueOnce({
+        exec: jest
+          .fn()
+          .mockResolvedValue({ _id: 'vendor1', email: 'vendor@example.com' }),
+      });
+    cartModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ items: [] }),
+    });
+    restaurantModel.findById.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ vendorId: 'vendor1' }),
+    });
+    vendorModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ userId: 'vendor1' }),
+    });
+    addressModel.countDocuments.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue(1),
+    });
+
+    await service.create('consumer1', {
+      restaurantId: 'restaurant1',
+      items: [{ productId: 'prod1', quantity: 1, price: 100, name: 'Test' }],
+      deliveryAddress: { label: 'Home', addressLine: '123 Ring Road' },
+    } as any);
+
+    expect(notificationsService.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'vendor@example.com',
+        subject: expect.stringContaining('New order'),
+      }),
+    );
   });
 
   it('allows a vendor to accept a pending order', async () => {

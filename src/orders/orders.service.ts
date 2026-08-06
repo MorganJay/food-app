@@ -132,11 +132,18 @@ export class OrdersService {
 
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
+    const mappedOrder = this.mapOrderResponse(savedOrder);
 
     await this.orderEvents.publish({
       type: 'OrderPlacedEvent',
       orderId: savedOrder._id.toString(),
-      order: this.mapOrderResponse(savedOrder),
+      order: mappedOrder,
+    });
+
+    await this.handleOrderEvent({
+      type: 'OrderPlacedEvent',
+      orderId: savedOrder._id.toString(),
+      order: mappedOrder,
     });
 
     await this.cartModel
@@ -452,20 +459,42 @@ export class OrdersService {
     orderId: string;
     order: OrderResponseDto;
   }) {
-    if (
-      event.type === 'OrderAcceptedEvent' ||
-      event.type === 'OrderRejectedEvent' ||
-      event.type === 'OrderCancelledEvent'
-    ) {
-      try {
+    try {
+      if (event.type === 'OrderPlacedEvent') {
+        const restaurant = await this.restaurantModel
+          .findById(event.order.restaurantId)
+          .exec();
+        if (restaurant?.vendorId) {
+          const vendor = await this.vendorModel
+            .findOne({ userId: restaurant.vendorId })
+            .exec();
+          const vendorUser = vendor
+            ? await this.userModel.findOne({ _id: vendor.userId }).exec()
+            : null;
+          const vendorEmail = vendorUser?.email;
+          if (vendorEmail) {
+            await this.notificationsService.sendEmail({
+              to: vendorEmail,
+              subject: `New order received for ${event.order.orderReference || event.order._id}`,
+              body: `A new order has been placed for your restaurant. Please review and accept or decline it promptly.`,
+            });
+          }
+        }
+      }
+
+      if (
+        event.type === 'OrderAcceptedEvent' ||
+        event.type === 'OrderRejectedEvent' ||
+        event.type === 'OrderCancelledEvent'
+      ) {
         await this.notificationsService.sendEmail({
           to: 'support@chopbaze.com',
           subject: `Order ${event.order.orderReference || event.order._id} update`,
           body: `Order ${event.order.orderReference || event.order._id} has moved to ${event.order.status}.`,
         });
-      } catch (error) {
-        console.error('Failed to notify order status update', error);
       }
+    } catch (error) {
+      console.error('Failed to notify order event', error);
     }
   }
 
