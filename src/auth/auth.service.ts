@@ -111,13 +111,18 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(dto.phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: dto.phoneNumber,
         email: dto.email,
       },
       code,
     );
+
+    // If the delivery service indicates RESPONSE mode, include the OTP
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'OTP sent', otp: code };
+    }
 
     return { message: 'OTP sent' };
   }

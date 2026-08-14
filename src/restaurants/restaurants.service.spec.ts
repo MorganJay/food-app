@@ -50,6 +50,8 @@ describe('RestaurantsService', () => {
   });
 
   it('should reject creation when no image or imageUrl is provided', async () => {
+    // ensure vendor exists so the service can reach the image validation branch
+    vendorModel.findOne.mockResolvedValue({ id: 'vendor-1', _id: 'vendor-1' });
     await expect(
       service.create(
         {
@@ -96,7 +98,8 @@ describe('RestaurantsService', () => {
       'user-1',
     );
 
-    expect(result.bannerImage).toBe('https://example.com/banner.jpg');
+    // response bannerImage is an object with url/publicId
+    expect(result.bannerImage).toMatchObject({ url: 'https://example.com/banner.jpg' });
     expect(restaurantModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
         bannerImage: {

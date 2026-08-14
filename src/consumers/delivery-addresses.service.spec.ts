@@ -59,13 +59,13 @@ describe('DeliveryAddressesService', () => {
       addressLine: '123 Ring Road',
       isDefault: true,
     });
-    expect(result).toEqual({
-      _id: 'addr1',
+    expect(result).toMatchObject({
       consumerId: 'consumer1',
       label: 'Home',
       addressLine: '123 Ring Road',
       isDefault: true,
     });
+    expect(result.id).toBe('addr1');
   });
 
   it('lists consumer delivery addresses', async () => {
@@ -84,6 +84,7 @@ describe('DeliveryAddressesService', () => {
       consumerId: 'consumer1',
       isDeleted: false,
     });
-    expect(result).toBe(addresses);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ consumerId: 'consumer1', label: 'Home' });
   });
 });

@@ -49,6 +49,11 @@ export class RestaurantsService {
       );
     }
 
+    // Accept an `imageUrl` fallback for legacy clients: convert to bannerImage
+    if ((!createDto.bannerImage || !createDto.bannerImage.url) && (createDto as any).imageUrl) {
+      createDto.bannerImage = { url: (createDto as any).imageUrl, publicId: (createDto as any).imageUrl } as any;
+    }
+
     if (!createDto.bannerImage || !createDto.bannerImage.url) {
       throw new BadRequestException(
         'A pre-uploaded banner image payload (url & publicId) is required.',

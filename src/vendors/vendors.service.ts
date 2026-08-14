@@ -68,9 +68,9 @@ export class VendorsService {
   // }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {
-    const existing = await this.vendorModel.findOne({
-      businessName: createVendor.businessName,
-    });
+    const existing = await this.vendorModel
+      .findOne({ businessName: createVendor.businessName })
+      .exec();
 
     if (existing) {
       throw new BadRequestException('Vendor name already exists');
