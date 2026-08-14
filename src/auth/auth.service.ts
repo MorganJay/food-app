@@ -138,13 +138,18 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: user.phoneNumber,
         email: user.email,
       },
       code,
     );
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'OTP resent', otp: code };
+    }
+
     return { message: 'OTP resent' };
   }
 
@@ -159,13 +164,18 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: user.phoneNumber,
         email: user.email,
       },
       code,
     );
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'Verification code sent', otp: code };
+    }
+
     return { message: 'Verification code sent' };
   }
 
@@ -196,10 +206,15 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       { phoneNumber: user.phoneNumber, email: user.email },
       code,
     );
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'Password reset code sent', otp: code };
+    }
+
     return { message: 'Password reset code sent' };
   }
 
