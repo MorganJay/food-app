@@ -8,6 +8,9 @@ import {
   Query,
   UseGuards,
   Req,
+  HttpCode,
+  Headers,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
@@ -48,17 +51,12 @@ export class PaymentsController {
     );
   }
 
-  @Post(':id/verify')
+  @Get('verify/:reference')
   @Roles(UserRole.CONSUMER)
   @ApiOperation({ summary: 'Verify payment transaction' })
-  @ApiBody({ type: VerifyPaymentDto })
   @ApiResponse({ status: 200, type: PaymentResponseDto })
-  async verify(
-    @Param('id') id: string,
-    @Body() body: VerifyPaymentDto,
-    @Req() req,
-  ) {
-    return this.paymentsService.verify(id, body.transactionRef, req.user.sub);
+  async verify(@Param('reference') reference: string) {
+    return this.paymentsService.verify(reference);
   }
 
   @Get('history')
@@ -100,5 +98,14 @@ export class PaymentsController {
   @ApiResponse({ status: 200, type: PaymentResponseDto })
   async refund(@Param('id') id: string) {
     return this.paymentsService.refund(id);
+  }
+
+  @Post('webhook')
+  @HttpCode(HttpStatus.OK) // Paystack requires a 200 OK response
+  async handlePaystackWebhook(
+    @Body() body: any,
+    @Headers('x-paystack-signature') signature: string,
+  ) {
+    return this.paymentsService.handleWebhook(body, signature);
   }
 }

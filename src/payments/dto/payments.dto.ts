@@ -35,7 +35,7 @@ export class PaymentResponseDto {
   orderId: string;
 
   @ApiProperty()
-  consumerId: string;
+  userId: string;
 
   @ApiProperty()
   amount: number;

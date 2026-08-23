@@ -487,6 +487,57 @@ export class OrdersService {
         }
       }
 
+      // NOTIFY CONSUMER FOR ALL STATUS UPDATES
+      const orderDb = await this.orderModel.findById(event.order._id).exec();
+      const customerUserId = orderDb?.user?.userId;
+
+      const customerUser = customerUserId
+             ? await this.userModel.findOne({ _id: customerUserId }).exec()
+              : null;
+      const customerEmail = customerUser?.email;
+
+      if (customerEmail) {
+        const orderRef = event.order.orderReference || event.order._id;
+        const customerFirstName = customerUser.firstName || 'Customer';
+
+        // Custom email text based on exact status transition
+        let emailSubject = `Update on your order ${orderRef}`;
+        let emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} status is now: ${event.order.status}.`;
+
+        switch (event.type) {
+          case 'OrderAcceptedEvent':
+            emailSubject = `Order Accepted - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nThe restaurant has accepted your order! They will begin preparing your food shortly.`;
+            break;
+          case 'OrderPreparingEvent':
+            emailSubject = `Food is Being Prepared - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order is currently being prepared in the kitchen.`;
+            break;
+          case 'OrderReadyEvent':
+            emailSubject = `Order Ready for Pickup - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order is ready! A rider will pick it up soon.`;
+            break;
+          case 'OrderDeliveredEvent':
+            emailSubject = `Order Delivered - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order has been delivered! Enjoy your meal.`;
+            break;
+          case 'OrderRejectedEvent':
+            emailSubject = `Order Declined - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nUnfortunately, the restaurant declined your order. If you were charged, a refund will be processed.`;
+            break;
+          case 'OrderCancelledEvent':
+            emailSubject = `Order Cancelled - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} has been cancelled.`;
+            break;
+        }
+
+        await this.notificationsService.sendEmail({
+          to: customerEmail,
+          subject: emailSubject,
+          body: emailBody,
+        });
+      }
+
       if (
         event.type === 'OrderAcceptedEvent' ||
         event.type === 'OrderRejectedEvent' ||
