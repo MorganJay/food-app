@@ -11,8 +11,7 @@ import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
 import { UpdateAvatarDto, UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
-import { v2 as cloudinary } from "cloudinary";
-import { deleteFromCloudinary, uploadToCloudinary } from 'src/common/utils/cloudinary.util';
+import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 
 @Injectable()
 export class UsersService {
