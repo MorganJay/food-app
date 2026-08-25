@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 import { OrdersModule } from '../orders/orders.module';
-import { NotificationsModule } from '../notifications/notifications.module';
 import { Payment, PaymentSchema } from 'src/schemas/Payment.schema';
 import { Order, OrderSchema } from 'src/schemas/Order.schema';
 import { User, UserSchema } from 'src/schemas/User.schema';
@@ -11,7 +10,7 @@ import { User, UserSchema } from 'src/schemas/User.schema';
 @Module({
   imports: [
     OrdersModule,
-    NotificationsModule,
+    // NotificationsModule,
     MongooseModule.forFeature([
       { name: Payment.name, schema: PaymentSchema },
       { name: Order.name, schema: OrderSchema },

@@ -46,7 +46,7 @@ export class Payment extends BaseEntity {
   })
   gateway: PaymentGateway;
 
-  @Prop()
+  @Prop({ required: true, unique: true, index: true })
   transactionRef: string;
 
   @Prop({ enum: PaymentStatus, default: PaymentStatus.PENDING })

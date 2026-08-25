@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNumber, IsPositive, IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsMongoId, IsNumber, IsOptional, IsString, IsNotEmpty } from 'class-validator';
 import { PaymentMethod, PaymentGateway, PaymentStatus } from '../../schemas/Payment.schema';
 
 export class InitializePaymentDto {
@@ -25,6 +25,18 @@ export class VerifyPaymentDto {
   @IsString()
   @IsNotEmpty()
   transactionRef: string;
+}
+
+export class RefundPaymentDto {
+  @ApiPropertyOptional({ description: 'Partial refund amount in Naira' })
+  @IsOptional()
+  @IsNumber()
+  amount?: number;
+
+  @ApiPropertyOptional({ description: 'Note explaining reason for refund' })
+  @IsOptional()
+  @IsString()
+  merchantNote?: string;
 }
 
 export class PaymentResponseDto {
