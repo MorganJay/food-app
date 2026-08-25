@@ -120,6 +120,23 @@ export class PaymentsController {
     return this.paymentsService.refund(id, dto?.amount, dto?.merchantNote);
   }
 
+  @Patch('cancel/:reference')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CONSUMER)
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Cancel an ongoing or abandoned payment' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment marked as failed and order cancelled successfully',
+    type: PaymentResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Payment is not in pending state' })
+  @ApiResponse({ status: 403, description: 'Forbidden action' })
+  @ApiResponse({ status: 404, description: 'Payment record not found' })
+  async cancelByReference(@Param('reference') reference: string, @Req() req) {
+    return this.paymentsService.cancelByReference(reference, req.user.sub);
+  }
+
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Paystack webhook receiver' })

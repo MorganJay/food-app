@@ -442,6 +442,48 @@ export class PaymentsService {
     return this.mapPaymentResponse(payment);
   }
 
+  async cancelByReference(reference: string, userId: string) {
+    const payment = await this.paymentModel
+      .findOne({ transactionRef: reference, isDeleted: false })
+      .exec();
+
+    if (!payment) {
+      throw new NotFoundException(
+        `Payment record with reference ${reference} not found`,
+      );
+    }
+
+    if (payment.userId !== userId) {
+      throw new ForbiddenException('You can only cancel your own payments');
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot cancel payment with current status: ${payment.status}`,
+      );
+    }
+
+    payment.status = PaymentStatus.FAILED;
+    const updatedPayment = await payment.save();
+
+    const updatedOrder = await this.orderModel
+      .findOneAndUpdate(
+        { _id: payment.orderId },
+        {
+          paymentStatus: 'failed',
+          status: OrderStatus.CANCELLED_BY_CONSUMER,
+        },
+        { new: true },
+      )
+      .exec();
+
+    if (updatedOrder) {
+      this.ordersGateway.emitOrderStatus(updatedOrder);
+    }
+
+    return this.mapPaymentResponse(updatedPayment);
+  }
+
   async handleWebhook(body: any, signature: string, rawBody?: Buffer) {
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
