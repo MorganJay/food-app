@@ -127,6 +127,7 @@ export class PaymentsController {
     @Req() req: any,
     @Headers('x-paystack-signature') signature: string,
   ) {
+    console.log('=== WEBHOOK HIT SUCCESSFULLY ===');
     return this.paymentsService.handleWebhook(req.body, signature, req.rawBody);
   }
 }

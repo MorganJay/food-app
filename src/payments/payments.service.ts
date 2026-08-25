@@ -449,8 +449,10 @@ export class PaymentsService {
       throw new BadRequestException('Paystack secret key is not configured');
     }
 
-    // Use rawBody buffer if available; fallback to JSON.stringify
-    const payloadToHash = rawBody ? rawBody : JSON.stringify(body);
+    // Convert rawBody Buffer to UTF-8 String explicitly
+    const payloadToHash = rawBody 
+    ? rawBody.toString('utf-8') 
+    : JSON.stringify(body);
 
     // Verify HMAC SHA512 Signature
     const hash = crypto

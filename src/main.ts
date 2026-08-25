@@ -4,19 +4,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './http-exception.filter';
 import { cloudinaryConfig } from './common/config/cloudinary.config';
-import * as express from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.use(
-    express.json({
-      verify: (req: any, _res, buf) => {
-        if (req.originalUrl && req.originalUrl.includes('/payments/webhook')) {
-          req.rawBody = buf;
-        }
-      },
-    }),
-  );
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.setGlobalPrefix('api/v1');
