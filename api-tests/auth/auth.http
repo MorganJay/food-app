@@ -8,11 +8,11 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348170680750",
+  "phoneNumber": "+2348170680752",
   "username": "TosinghhgA",
   "firstName": "Tosin6",
   "lastName": "OMO",
-  "email": "zosin@example.com",
+  "email": "0bosin@example.com",
   "password": "password123",
   "role": "consumer"
 }

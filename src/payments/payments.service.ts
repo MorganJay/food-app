@@ -39,8 +39,8 @@ export class PaymentsService {
     // Updated to reference userId (with legacy fallback for existing DB records)
     const orderConsumerId = order.user?.userId || (order.user as any)?.id;
 
-    if (!orderConsumerId || orderConsumerId !== consumerId) { 
-      throw new ForbiddenException('You can only pay for your own orders'); 
+    if (!orderConsumerId || orderConsumerId !== consumerId) {
+      throw new ForbiddenException('You can only pay for your own orders');
     }
 
     if (order.paymentStatus === 'paid') {
@@ -55,9 +55,7 @@ export class PaymentsService {
     });
 
     if (existingPayment) {
-      throw new BadRequestException(
-        'A payment already exists for this order',
-      );
+      throw new BadRequestException('A payment already exists for this order');
     }
 
     const amount = order.total;
@@ -99,17 +97,12 @@ export class PaymentsService {
     }
 
     const updated = await this.paymentModel
-      .findByIdAndUpdate(
-        id,
-        { status: PaymentStatus.COMPLETED },
-        { new: true },
-      )
+      .findByIdAndUpdate(id, { status: PaymentStatus.COMPLETED }, { new: true })
       .exec();
 
-    await this.orderModel.findOneAndUpdate(
-      { _id: payment.orderId },
-      { paymentStatus: 'paid' }
-    ).exec();
+    await this.orderModel
+      .findOneAndUpdate({ _id: payment.orderId }, { paymentStatus: 'paid' })
+      .exec();
 
     return this.mapPaymentResponse(updated);
   }
@@ -164,10 +157,12 @@ export class PaymentsService {
       .exec();
 
     if (updated) {
-      await this.orderModel.findOneAndUpdate(
-        { _id: updated.orderId },
-        { paymentStatus: 'refunded' }
-      ).exec();
+      await this.orderModel
+        .findOneAndUpdate(
+          { _id: updated.orderId },
+          { paymentStatus: 'refunded' },
+        )
+        .exec();
     }
 
     return this.mapPaymentResponse(updated);
