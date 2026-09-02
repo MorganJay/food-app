@@ -128,16 +128,28 @@ export class InfobipProvider
   }
 
   async sendEmail(to: string, subject: string, body: string) {
+    if (!this.apiKey) {
+      console.log(`[Infobip Mock] Email to ${to}: ${subject}`);
+      return { success: false, reason: 'No API key configured' };
+    }
+
     try {
-      // Build multipart/form-data
       const formData = new FormData();
-      formData.append('from', this.configService.get<string>('INFOBIP_EMAIL_FROM') || 'noreply@yourdomain.com');
+
+      // Format sender as: "Chopbaze <noreply@chopbaze.com>" or fallback to email address
+      const formattedFrom = this.emailFromName
+        ? `${this.emailFromName} <${this.emailFromAddress}>`
+        : this.emailFromAddress;
+
+      formData.append('from', formattedFrom);
       formData.append('to', to);
       formData.append('subject', subject);
-      formData.append('text', body); // or 'html' if sending HTML content
+      
+      // Convert newlines (\n) to HTML line breaks (<br/>) if html wrapper is missing
+      const htmlContent = body.includes('<') ? body : body.replace(/\n/g, '<br/>');
+      formData.append('html', htmlContent);
+      formData.append('text', body.replace(/<[^>]*>/g, '')); // Plain text strip
 
-      // Fetch without explicit Content-Type header 
-      // (fetch automatically sets multipart/form-data with boundary)
       const response = await fetch(`${this.baseUrl}/email/3/send`, {
         method: 'POST',
         headers: {
@@ -146,22 +158,70 @@ export class InfobipProvider
         body: formData,
       });
 
-      const data = await response.json();
+      const result = await response.json();
+      console.log(`[Infobip Email API Response] Sent to ${to}:`, result);
 
       if (!response.ok) {
-        console.error('[Infobip Email] Sent error response:', data);
-        throw new BadRequestException(
-          `Infobip email error: ${data?.requestError?.serviceException?.text || 'Failed to send email'}`,
-        );
+        const errorMsg =
+          result?.requestError?.serviceException?.text ||
+          result?.message ||
+          'Failed to send email via Infobip';
+        
+        console.error(`[Infobip Email Error Response]:`, result);
+        throw new BadRequestException(`Infobip email error: ${errorMsg}`);
       }
 
-      return data;
+      const messageId =
+        result?.messages?.[0]?.messageId || result?.bulkId || 'SUCCESS';
+
+      return {
+        success: true,
+        messageId,
+        details: result,
+      };
     } catch (error) {
+      console.error('[Infobip Email] Send failed:', error);
       if (error instanceof BadRequestException) throw error;
       const err = error as Error;
       throw new BadRequestException(`Failed to send email: ${err.message}`);
     }
   }
+
+  // async sendEmail(to: string, subject: string, body: string) {
+  //   try {
+  //     // Build multipart/form-data
+  //     const formData = new FormData();
+  //     formData.append('from', this.emailFromAddress);
+  //     formData.append('to', to);
+  //     formData.append('subject', subject);
+  //     formData.append('text', body); // or 'html' if sending HTML content
+
+  //     // Fetch without explicit Content-Type header 
+  //     // (fetch automatically sets multipart/form-data with boundary)
+  //     const response = await fetch(`${this.baseUrl}/email/3/send`, {
+  //       method: 'POST',
+  //       headers: {
+  //         Authorization: `App ${this.apiKey}`,
+  //       },
+  //       body: formData,
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (!response.ok) {
+  //       console.error('[Infobip Email] Sent error response:', data);
+  //       throw new BadRequestException(
+  //         `Infobip email error: ${data?.requestError?.serviceException?.text || 'Failed to send email'}`,
+  //       );
+  //     }
+
+  //     return data;
+  //   } catch (error) {
+  //     if (error instanceof BadRequestException) throw error;
+  //     const err = error as Error;
+  //     throw new BadRequestException(`Failed to send email: ${err.message}`);
+  //   }
+  // }
 
   // async sendEmail(email: string, subject: string, body: string) {
   //   if (!this.apiKey) {

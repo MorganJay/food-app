@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -17,13 +18,13 @@ import { User, UserDocument, UserRole } from '../schemas/User.schema';
 import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
-import { OrderEventsService } from './order-events.service';
+import { OrderEventPayload, OrderEventsService } from './order-events.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
@@ -38,6 +39,13 @@ export class OrdersService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  // Subscribe to internal order event bus upon module initialization
+  onModuleInit() {
+    this.orderEvents.subscribe((event) => this.handleOrderEvent(event));
+    console.log('[OrdersService] Subscribed to OrderEventsService');
+  }
+
+  // Calculate pricing breakdown including platform service fees and delivery costs
   private async calculatePricing(input: {
     subtotal: number;
     restaurantId: string;
@@ -46,17 +54,15 @@ export class OrdersService {
     const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
     const total = input.subtotal + serviceFee + deliveryFee;
 
-    return {
-      serviceFee,
-      deliveryFee,
-      total,
-    };
+    return { serviceFee, deliveryFee, total };
   }
 
+  // Determine delivery fee for the specified restaurant
   private async calculateDeliveryFee(restaurantId: string) {
     return 4000;
   }
 
+  // Calculate total line item price including optional choice add-ons
   private calculateItemSubtotal(item: any): number {
     const choicesCost = Array.isArray(item.selectedChoices)
       ? item.selectedChoices.reduce(
@@ -67,6 +73,7 @@ export class OrdersService {
     return (item.price + choicesCost) * item.quantity;
   }
 
+  // Create a new order document and clear active consumer cart items
   async create(userId: string, createDto: CreateOrderDto) {
     if (!createDto.items?.length || !createDto.restaurantId) {
       throw new BadRequestException(
@@ -74,12 +81,14 @@ export class OrdersService {
       );
     }
 
+    // Query identity user record directly from UserModel for names and contact details
     const userProfile = await this.userModel
       .findOne({ _id: userId, isActive: true })
       .exec();
+
     if (!userProfile) {
       throw new NotFoundException(
-        'User profile not found or account is deactivated',
+        'User account not found or is currently deactivated',
       );
     }
 
@@ -87,6 +96,7 @@ export class OrdersService {
       .findOne({ userId, isDeleted: false })
       .exec();
 
+    // Map order items and attach product image references if available from cart
     const orderItems = createDto.items.map((item) => {
       const cartItem = cart?.items.find(
         (cItem) => cItem.productId.toString() === item.productId,
@@ -108,14 +118,16 @@ export class OrdersService {
     const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
     const pricing = await this.calculatePricing({
-      subtotal: subtotal,
+      subtotal,
       restaurantId: createDto.restaurantId,
     });
 
+    // Populate order user payload directly from UserModel document fields, preserving snapshot email
     const orderData: Partial<Order> = {
       restaurantId: createDto.restaurantId,
       user: {
-        userId: userId,
+        userId: userProfile._id.toString(),
+        email: userProfile.email || '',
         lastName: userProfile.lastName || '',
         firstName: userProfile.firstName || '',
         phoneNumber: userProfile.phoneNumber || '',
@@ -132,31 +144,16 @@ export class OrdersService {
 
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
-    const mappedOrder = this.mapOrderResponse(savedOrder);
 
-    await this.orderEvents.publish({
-      type: 'OrderPlacedEvent',
-      orderId: savedOrder._id.toString(),
-      order: mappedOrder,
-    });
-
-    await this.handleOrderEvent({
-      type: 'OrderPlacedEvent',
-      orderId: savedOrder._id.toString(),
-      order: mappedOrder,
-    });
-
+    // Reset active cart items after successfully creating the order
     await this.cartModel
       .findOneAndUpdate(
         { userId, isDeleted: false },
-        {
-          items: [],
-          total: 0,
-          restaurantId: null,
-        },
+        { items: [], total: 0, restaurantId: null },
       )
       .exec();
 
+    // Auto-save delivery address to consumer profile if no previous address exists
     try {
       const addr = createDto.deliveryAddress;
       if (addr && typeof addr === 'object') {
@@ -186,6 +183,7 @@ export class OrdersService {
     return this.mapOrderResponse(savedOrder);
   }
 
+  // Retrieve pricing and line-item breakdown for cart checkout verification
   async getCheckoutSummary(userId: string) {
     const cart = await this.cartModel.findOne({ userId, isDeleted: false });
 
@@ -233,6 +231,7 @@ export class OrdersService {
     };
   }
 
+  // Resolve restaurant ID linked to a vendor user account
   private async getRestaurantIdForUser(userId: string) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
@@ -252,6 +251,7 @@ export class OrdersService {
     return restaurant._id.toString();
   }
 
+  // Resolve rider ID linked to a rider user account
   private async getRiderIdForUser(userId: string) {
     const rider = await this.riderModel
       .findOne({ userId, isDeleted: false })
@@ -262,6 +262,7 @@ export class OrdersService {
     return rider._id.toString();
   }
 
+  // Enforce role-based permission checks for reading order documents
   private async canAccessOrder(
     order: OrderDocument,
     requester: OrderRequester,
@@ -270,7 +271,6 @@ export class OrdersService {
       return true;
     }
     if (requester.role === UserRole.CONSUMER) {
-      // Supports both new 'userId' and legacy 'id' DB property formats for access checks
       const orderConsumerId = order.user?.userId || (order.user as any)?.id;
       return orderConsumerId === requester.sub;
     }
@@ -288,6 +288,7 @@ export class OrdersService {
     return false;
   }
 
+  // Validate order existence and user access control
   async assertOrderAccessible(
     orderId: string,
     requester: OrderRequester,
@@ -304,13 +305,14 @@ export class OrdersService {
     return order;
   }
 
+  // Fetch a single order by ID with access verification
   async findById(id: string, requester: OrderRequester) {
     const order = await this.assertOrderAccessible(id, requester);
     return this.mapOrderResponse(order);
   }
 
+  // Fetch paginated orders placed by a specific consumer
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
-    // Queries matching both 'user.userId' and legacy 'user.id' fields in MongoDB
     const orders = await this.orderModel
       .find({
         $or: [{ 'user.userId': userId }, { 'user.id': userId }],
@@ -324,6 +326,7 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
+  // Fetch paginated orders assigned to a specific restaurant
   async findByRestaurant(
     restaurantId: string,
     skip: number = 0,
@@ -339,6 +342,7 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
+  // Fetch paginated orders for vendor management view
   async findByRestaurantUser(
     userId: string,
     skip: number = 0,
@@ -348,6 +352,7 @@ export class OrdersService {
     return this.findByRestaurant(restaurantId, skip, limit);
   }
 
+  // Fetch all orders for platform administration
   async findAll(skip: number = 0, limit: number = 20) {
     const orders = await this.orderModel
       .find({ isDeleted: false })
@@ -359,6 +364,7 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderResponse(order));
   }
 
+  // Aggregate global order status counts
   async analytics() {
     const totalOrders = await this.orderModel.countDocuments({
       isDeleted: false,
@@ -371,6 +377,7 @@ export class OrdersService {
     return { totalOrders, byStatus };
   }
 
+  // Aggregate order metrics for a single restaurant
   async restaurantAnalytics(restaurantId: string) {
     const totalOrders = await this.orderModel.countDocuments({
       restaurantId,
@@ -384,16 +391,22 @@ export class OrdersService {
     return { restaurantId, totalOrders, byStatus };
   }
 
+  // Fetch analytics metrics for a vendor user account
   async restaurantAnalyticsByUser(userId: string) {
     const restaurantId = await this.getRestaurantIdForUser(userId);
     return this.restaurantAnalytics(restaurantId);
   }
 
-  private async applyStatusUpdate(id: string, status: OrderStatus) {
+  // Update order status in database and emit state transition event
+  private async applyStatusUpdate(
+    id: string,
+    status: OrderStatus,
+    additionalFields: Partial<Order> = {},
+  ) {
     const order = await this.orderModel
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
-        { status },
+        { status, ...additionalFields },
         { new: true },
       )
       .exec();
@@ -401,23 +414,19 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
-    const mappedOrder = this.mapOrderResponse(order);
     const eventType = this.getEventTypeForStatus(status);
+    
+    // Publish event to trigger automated notification handler
     await this.orderEvents.publish({
       type: eventType,
       orderId: id,
-      order: mappedOrder,
+      order: order.toObject(),
     });
-
-    await this.handleOrderEvent({
-      type: eventType,
-      orderId: id,
-      order: mappedOrder,
-    });
-
-    return mappedOrder;
+    
+    return this.mapOrderResponse(order);
   }
 
+  // Map database order status enum to event topics
   private getEventTypeForStatus(status: OrderStatus) {
     switch (status) {
       case OrderStatus.ACCEPTED:
@@ -428,6 +437,8 @@ export class OrdersService {
         return 'OrderPreparingEvent';
       case OrderStatus.READY_FOR_PICKUP:
         return 'OrderReadyEvent';
+      case OrderStatus.OUT_FOR_DELIVERY:
+        return 'OrderOutForDeliveryEvent';
       case OrderStatus.DELIVERED:
         return 'OrderDeliveredEvent';
       case OrderStatus.CANCELLED_BY_CONSUMER:
@@ -438,14 +449,17 @@ export class OrdersService {
     }
   }
 
+  // Convenience wrapper for vendor order acceptance
   async acceptOrder(id: string, requester: OrderRequester) {
     return this.updateStatus(id, OrderStatus.ACCEPTED, requester);
   }
 
+  // Convenience wrapper for vendor order rejection
   async rejectOrder(id: string, requester: OrderRequester) {
     return this.updateStatus(id, OrderStatus.DECLINED, requester);
   }
 
+  // Convenience wrapper for cancellation requests
   async cancelOrder(id: string, requester: OrderRequester) {
     const status =
       requester.role === UserRole.VENDOR
@@ -454,106 +468,194 @@ export class OrdersService {
     return this.updateStatus(id, status, requester);
   }
 
-  private async handleOrderEvent(event: {
-    type: string;
-    orderId: string;
-    order: OrderResponseDto;
-  }) {
+  // Handle incoming system events to send email notifications
+  private async handleOrderEvent(event: OrderEventPayload) {
     try {
+      console.log(
+        `[EVENT RECEIVED IN ORDERS SERVICE]: ${event.type} for Order: ${event.orderId}`,
+      );
+
+      const order = event.order;
+      if (!order) {
+        console.warn(
+          `[Order Event Warning] No order payload passed for ID: ${event.orderId}`,
+        );
+        return;
+      }
+
+      // Vendor Email Logic
       if (event.type === 'OrderPlacedEvent') {
         const restaurant = await this.restaurantModel
-          .findById(event.order.restaurantId)
+          .findById(order.restaurantId)
           .exec();
+
         if (restaurant?.vendorId) {
-          const vendor = await this.vendorModel
-            .findOne({ userId: restaurant.vendorId })
-            .exec();
+          const vendor =
+            (await this.vendorModel
+              .findOne({ _id: restaurant.vendorId })
+              .exec()) ||
+            (await this.vendorModel
+              .findOne({ userId: restaurant.vendorId })
+              .exec());
+
+          // Query vendor user account directly from UserModel for email credential
           const vendorUser = vendor
             ? await this.userModel.findOne({ _id: vendor.userId }).exec()
             : null;
+
           const vendorEmail = vendorUser?.email;
+
           if (vendorEmail) {
-            const orderRef = event.order.orderReference || event.order._id;
-            const customerName = event.order.user?.firstName
-              ? `${event.order.user.firstName} ${event.order.user.lastName || ''}`.trim()
-              : 'A customer';
-            const itemCount = event.order.items?.length || 0;
-            await this.notificationsService.sendEmail({
-              to: vendorEmail,
-              subject: `New order received for ${orderRef}`,
-              body: `Hello,\n\nA new order has been placed for your restaurant.\n\nOrder reference: ${orderRef}\nCustomer: ${customerName}\nItems: ${itemCount}\n\nPlease review and accept or decline it promptly.`,
-            });
+            try {
+              const orderRef = order.orderReference || order._id || event.orderId;
+              const customerName = order.user?.firstName
+                ? `${order.user.firstName} ${order.user.lastName || ''}`.trim()
+                : 'A customer';
+              const itemCount = order.items?.length || 0;
+
+              console.log(
+                `[Vendor Email] Notifying vendor at: ${vendorEmail} for Order Ref: ${orderRef}`,
+              );
+
+              await this.notificationsService.sendEmail({
+                to: vendorEmail,
+                subject: `New order received - Ref: ${orderRef}`,
+                body: `Hello,\n\nA new order has been paid and placed for your restaurant.\n\nOrder reference: ${orderRef}\nCustomer: ${customerName}\nItems: ${itemCount}\n\nPlease review and accept or decline it promptly.`,
+              });
+
+              console.log(`[Vendor Email] Sent successfully to: ${vendorEmail}`);
+            } catch (rawError) {
+               console.error(
+                `[Vendor Email Error] Email sending failed during execution for Order Ref: ${order.orderReference}\n` +
+                `  - Target Email: ${vendorEmail}\n` +
+                `  - Raw Error:`, rawError
+              );
+            }
+          } else {
+            console.warn(
+              `[Vendor Email Warning] No email found for vendor on restaurant: ${order.restaurantId}`,
+            );
           }
         }
       }
 
-      // NOTIFY CONSUMER FOR ALL STATUS UPDATES
-      const orderDb = await this.orderModel.findById(event.order._id).exec();
-      const customerUserId = orderDb?.user?.userId;
+      // Consumer Email Logic
+      const orderUser = order.user as any;
+      const userEmail = orderUser?.email;
+      const customerUserId = orderUser?.userId || orderUser?.id || orderUser?._id;
 
-      const customerUser = customerUserId
-             ? await this.userModel.findOne({ _id: customerUserId }).exec()
-              : null;
-      const customerEmail = customerUser?.email;
+      let customerEmail = userEmail;
+      let customerFirstName = order.user?.firstName;
+
+      if (!customerEmail && customerUserId) {
+        const customerUser = await this.userModel
+          .findOne({ _id: customerUserId }, { email: 1, firstName: 1 })
+          .exec();
+
+        customerEmail = customerUser?.email;
+        customerFirstName = customerFirstName || customerUser?.firstName;
+      }
 
       if (customerEmail) {
-        const orderRef = event.order.orderReference || event.order._id;
-        const customerFirstName = customerUser.firstName || 'Customer';
+        const orderRef = order.orderReference || order._id || event.orderId;
+        const greetingName = customerFirstName || 'Customer';
 
-        // Custom email text based on exact status transition
         let emailSubject = `Update on your order ${orderRef}`;
-        let emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} status is now: ${event.order.status}.`;
+        let emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} status is now: ${order.status}.`;
 
         switch (event.type) {
+          case 'OrderPlacedEvent':
+            emailSubject = `Order Placed Successfully - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} has been placed and payment confirmed. The restaurant will review it shortly!`;
+            break;
           case 'OrderAcceptedEvent':
             emailSubject = `Order Accepted - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nThe restaurant has accepted your order! They will begin preparing your food shortly.`;
+            emailBody = `Hello ${greetingName},\n\nThe restaurant accepted your order and will start preparing it soon.`;
             break;
           case 'OrderPreparingEvent':
             emailSubject = `Food is Being Prepared - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nYour order is currently being prepared in the kitchen.`;
+            emailBody = `Hello ${greetingName},\n\nYour order is currently being prepared in the kitchen.`;
             break;
           case 'OrderReadyEvent':
             emailSubject = `Order Ready for Pickup - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nYour order is ready! A rider will pick it up soon.`;
+            emailBody = `Hello ${greetingName},\n\nYour order is ready! A rider will pick it up soon.`;
+            break;
+          case 'OrderOutForDeliveryEvent':
+            emailSubject = `Order Out for Delivery - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order is on its way! A rider has picked up your food.`;
             break;
           case 'OrderDeliveredEvent':
             emailSubject = `Order Delivered - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nYour order has been delivered! Enjoy your meal.`;
+            emailBody = `Hello ${greetingName},\n\nYour order has been delivered! Enjoy your meal.`;
             break;
           case 'OrderRejectedEvent':
             emailSubject = `Order Declined - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nUnfortunately, the restaurant declined your order. If you were charged, a refund will be processed.`;
+            emailBody = `Hello ${greetingName},\n\nUnfortunately, the restaurant declined your order. Your payment will be refunded.`;
             break;
           case 'OrderCancelledEvent':
             emailSubject = `Order Cancelled - ${orderRef}`;
-            emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} has been cancelled.`;
+            emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} has been cancelled.`;
             break;
         }
 
-        await this.notificationsService.sendEmail({
-          to: customerEmail,
-          subject: emailSubject,
-          body: emailBody,
-        });
+        try {
+          console.log(
+            `[Consumer Email] Notifying consumer at: ${customerEmail} (Event: ${event.type})`,
+          );
+
+          await this.notificationsService.sendEmail({
+            to: customerEmail,
+            subject: emailSubject,
+            body: emailBody,
+          });
+
+          console.log(`[Consumer Email] Sent successfully to: ${customerEmail}`);
+        } catch (rawError) {
+          // Captures runtime/network/service errors from the email service provider
+          console.error(
+            `[Consumer Email Error] Email sending failed during execution for Event: ${event.type}\n` +
+            `  - Target User ID: ${customerUserId}\n` +
+            `  - Target Email: ${customerEmail}\n` +
+            `  - Raw Error:`, rawError
+          );
+        }
+      } else {
+        // Captures missing/invalid email payload data before sending
+        console.warn(
+          `[Consumer Email Warning] Failed to send email for Event: ${event.type}\n` +
+          `  - Target User ID: ${customerUserId}\n` +
+          `  - Received Email Value: ${JSON.stringify(customerEmail)}\n` +
+          `  - Raw Order User Payload: ${JSON.stringify(event.order?.user || order?.user)}`
+        );
       }
 
+      // 3. Platform Admin Alerts
       if (
         event.type === 'OrderAcceptedEvent' ||
         event.type === 'OrderRejectedEvent' ||
         event.type === 'OrderCancelledEvent'
       ) {
-        await this.notificationsService.sendEmail({
-          to: 'support@chopbaze.com',
-          subject: `Order ${event.order.orderReference || event.order._id} update`,
-          body: `Order ${event.order.orderReference || event.order._id} has moved to ${event.order.status}.`,
-        });
+        try {
+          const orderRef = order.orderReference || order._id || event.orderId;
+          await this.notificationsService.sendEmail({
+            to: 'support@chopbaze.com',
+            subject: `Order ${orderRef} update`,
+            body: `Order ${orderRef} moved to state: ${order.status}.`,
+          });
+        } catch (rawError) {
+           console.error(`[Admin Email Error] Failed to send admin alert for Order ${order._id}:`, rawError);
+        }
       }
     } catch (error) {
-      console.error('Failed to notify order event', error);
+      // Catch-all for outer logic errors (database queries, etc.)
+      console.error(
+        '[Event Handling Error] Failed to process order event notification',
+        error,
+      );
     }
   }
 
+  // Validate state transitions based on requester user roles
   async updateStatus(
     id: string,
     status: OrderStatus,
@@ -561,10 +663,12 @@ export class OrdersService {
   ) {
     const order = await this.assertOrderAccessible(id, requester);
 
+    // Administrative override permission
     if (requester.role === UserRole.ADMIN) {
       return this.applyStatusUpdate(id, status);
     }
 
+    // Consumer cancellation policy enforcement
     if (requester.role === UserRole.CONSUMER) {
       if (status !== OrderStatus.CANCELLED_BY_CONSUMER) {
         throw new ForbiddenException(
@@ -584,6 +688,7 @@ export class OrdersService {
       return this.applyStatusUpdate(id, status);
     }
 
+    // Vendor workflow transition validations
     if (requester.role === UserRole.VENDOR) {
       const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
         [OrderStatus.PENDING]: [
@@ -616,6 +721,7 @@ export class OrdersService {
       return this.applyStatusUpdate(id, status);
     }
 
+    // Rider fulfillment transition checks
     if (requester.role === UserRole.RIDER) {
       if (status !== OrderStatus.DELIVERED) {
         throw new ForbiddenException(
@@ -637,6 +743,7 @@ export class OrdersService {
     throw new ForbiddenException();
   }
 
+  // Assign delivery rider and transition order state to out for delivery
   async assignRider(
     orderId: string,
     riderId: string,
@@ -673,19 +780,12 @@ export class OrdersService {
       throw new BadRequestException('Rider not found');
     }
 
-    const updated = await this.orderModel
-      .findOneAndUpdate(
-        { _id: orderId, isDeleted: false },
-        { riderId, status: OrderStatus.OUT_FOR_DELIVERY },
-        { new: true },
-      )
-      .exec();
-    if (!updated) {
-      throw new NotFoundException(`Order with ID ${orderId} not found`);
-    }
-    return this.mapOrderResponse(updated);
+    return this.applyStatusUpdate(orderId, OrderStatus.OUT_FOR_DELIVERY, {
+      riderId,
+    });
   }
 
+  // Sanitize database document into client response DTO omitting sensitive fields
   private mapOrderResponse(order: OrderDocument): OrderResponseDto {
     return {
       _id: order._id.toString(),
