@@ -15,7 +15,6 @@ import {
   PaymentGateway,
 } from '../schemas/Payment.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
-import { OrdersGateway } from '../orders/orders.gateway';
 import { OrderEventsService } from '../orders/order-events.service';
 import * as crypto from 'crypto';
 import { User, UserDocument } from '../schemas/User.schema';
@@ -28,7 +27,6 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly ordersGateway: OrdersGateway,
     private readonly orderEvents: OrderEventsService,
     private readonly configService: ConfigService,
   ) {
@@ -214,8 +212,6 @@ export class PaymentsService {
         );
 
         if (updatedOrder) {
-          this.ordersGateway.emitOrderStatus(updatedOrder);
-
           await this.orderEvents.publish({
             type: 'OrderPlacedEvent',
             orderId: updatedOrder._id.toString(),
@@ -249,7 +245,11 @@ export class PaymentsService {
     );
 
     if (updatedOrder) {
-      this.ordersGateway.emitOrderStatus(updatedOrder);
+      await this.orderEvents.publish({
+        type: 'OrderCancelledEvent',
+        orderId: updatedOrder._id.toString(),
+        order: updatedOrder.toObject(),
+      });
     }
   }
 
@@ -352,7 +352,11 @@ export class PaymentsService {
         .exec();
 
       if (updatedOrder) {
-        this.ordersGateway.emitOrderStatus(updatedOrder);
+        await this.orderEvents.publish({
+          type: 'OrderRefundedEvent',
+          orderId: updatedOrder._id.toString(),
+          order: updatedOrder.toObject(),
+        });
       }
 
       return this.mapPaymentResponse(updatedPayment);
@@ -409,7 +413,11 @@ export class PaymentsService {
       .exec();
 
     if (updatedOrder) {
-      this.ordersGateway.emitOrderStatus(updatedOrder);
+      await this.orderEvents.publish({
+        type: 'OrderCancelledEvent',
+        orderId: updatedOrder._id.toString(),
+        order: updatedOrder.toObject(),
+      });
     }
 
     return this.mapPaymentResponse(updatedPayment);
@@ -482,7 +490,11 @@ export class PaymentsService {
           ).exec();
 
           if (updatedOrder) {
-            this.ordersGateway.emitOrderStatus(updatedOrder);
+            await this.orderEvents.publish({
+              type: 'OrderRefundedEvent',
+              orderId: updatedOrder._id.toString(),
+              order: updatedOrder.toObject(),
+            });
           }
         }
       }
