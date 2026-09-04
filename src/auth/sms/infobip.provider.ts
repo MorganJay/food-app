@@ -146,8 +146,8 @@ export class InfobipProvider
       formData.append('subject', subject);
       
       // Convert newlines (\n) to HTML line breaks (<br/>) if html wrapper is missing
-      const htmlContent = body.includes('<') ? body : body.replace(/\n/g, '<br/>');
-      formData.append('html', htmlContent);
+      // const htmlContent = body.includes('<') ? body : body.replace(/\n/g, '<br/>');
+      // formData.append('html', htmlContent);
       formData.append('text', body.replace(/<[^>]*>/g, '')); // Plain text strip
 
       const response = await fetch(`${this.baseUrl}/email/3/send`, {
@@ -186,42 +186,6 @@ export class InfobipProvider
       throw new BadRequestException(`Failed to send email: ${err.message}`);
     }
   }
-
-  // async sendEmail(to: string, subject: string, body: string) {
-  //   try {
-  //     // Build multipart/form-data
-  //     const formData = new FormData();
-  //     formData.append('from', this.emailFromAddress);
-  //     formData.append('to', to);
-  //     formData.append('subject', subject);
-  //     formData.append('text', body); // or 'html' if sending HTML content
-
-  //     // Fetch without explicit Content-Type header 
-  //     // (fetch automatically sets multipart/form-data with boundary)
-  //     const response = await fetch(`${this.baseUrl}/email/3/send`, {
-  //       method: 'POST',
-  //       headers: {
-  //         Authorization: `App ${this.apiKey}`,
-  //       },
-  //       body: formData,
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (!response.ok) {
-  //       console.error('[Infobip Email] Sent error response:', data);
-  //       throw new BadRequestException(
-  //         `Infobip email error: ${data?.requestError?.serviceException?.text || 'Failed to send email'}`,
-  //       );
-  //     }
-
-  //     return data;
-  //   } catch (error) {
-  //     if (error instanceof BadRequestException) throw error;
-  //     const err = error as Error;
-  //     throw new BadRequestException(`Failed to send email: ${err.message}`);
-  //   }
-  // }
 
   // async sendEmail(email: string, subject: string, body: string) {
   //   if (!this.apiKey) {
