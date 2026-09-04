@@ -5,11 +5,26 @@ import { BaseEntity } from './BaseEntity';
 
 export type CartDocument = HydratedDocument<Cart>;
 
+export interface SelectedChoice {
+  groupName: string;
+  name: string;
+  price: number;
+}
+
+// Added optional image structure for the frontend UI
+export interface CartItemImage {
+  url: string;
+  publicId?: string;
+}
+
 export interface CartItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
+  subtotal: number;
+  image?: CartItemImage;
+  selectedChoices?: SelectedChoice[];
 }
 
 @Schema({ timestamps: true })
@@ -20,10 +35,30 @@ export class Cart extends BaseEntity {
   @Prop({
     type: [
       {
-        productId: Types.ObjectId,
+        productId: { type: Types.ObjectId, ref: 'Product' },
         quantity: Number,
         price: Number,
         name: String,
+        subtotal: { type: Number, default: 0 },
+        image: {
+          type: {
+            url: String,
+            publicId: String,
+          },
+          _id: false,
+          required: false,
+        },
+        selectedChoices: {
+          type: [
+            {
+              groupName: String,
+              name: String,
+              price: Number,
+            },
+          ],
+          _id: false,
+          default: [],
+        },
       },
     ],
     default: [],
@@ -31,7 +66,7 @@ export class Cart extends BaseEntity {
   items: CartItem[];
 
   @Prop()
-  vendorId?: string;
+  restaurantId?: string;
 
   @Prop({ default: 0 })
   total: number;

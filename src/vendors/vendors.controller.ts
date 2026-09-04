@@ -15,18 +15,20 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { VendorsService } from './vendors.service';
-import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
+import { UpdateVendorDto } from './dto/create-vendor.dto';
+import { NinVerificationDto, VerifyNinDto } from './dto/nin-verification-vendor.dto';
 
 @ApiTags('Vendors')
 @Controller('vendors')
 export class VendorsController {
-  constructor(private vendorsService: VendorsService) {}
+  constructor(private readonly vendorsService: VendorsService) {}
 
   @Get()
   @ApiOperation({ summary: 'List all vendors (paginated)' })
@@ -39,25 +41,7 @@ export class VendorsController {
     @Query('limit') limit: string = '20',
     @Query('sortBy') sortBy: string = 'avgRating',
   ) {
-    return this.vendorsService.listAll(parseInt(skip), parseInt(limit), sortBy);
-  }
-
-  @Get('nearby')
-  @ApiOperation({ summary: 'Find nearby vendors by location' })
-  @ApiQuery({ name: 'latitude', required: true, type: Number })
-  @ApiQuery({ name: 'longitude', required: true, type: Number })
-  @ApiQuery({ name: 'radius', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Nearby vendors' })
-  async findNearby(
-    @Query('latitude') latitude: string,
-    @Query('longitude') longitude: string,
-    @Query('radius') radius: string = '5',
-  ) {
-    return this.vendorsService.findNearby(
-      parseFloat(latitude),
-      parseFloat(longitude),
-      parseInt(radius),
-    );
+    return this.vendorsService.listAll(parseInt(skip, 10), parseInt(limit, 10), sortBy);
   }
 
   @Get(':id')
@@ -68,26 +52,41 @@ export class VendorsController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Post()
-  @Roles(UserRole.VENDOR)
-  @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Create vendor profile' })
-  @ApiResponse({ status: 201, description: 'Vendor created' })
-  async create(@Body() vendorData: CreateVendorDto, @Req() req) {
-    return this.vendorsService.createVendor(req.user.sub, vendorData);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Patch(':id')
+  @Patch('profile')
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Update vendor profile' })
   @ApiResponse({ status: 200, description: 'Vendor updated' })
   async update(
-    @Param('id') id: string,
     @Body() updateData: UpdateVendorDto,
-    @Req() req,
+    @Req() req
   ) {
-    return this.vendorsService.updateProfile(id, req.user.sub, updateData);
+    return this.vendorsService.updateProfile(req.user.sub, updateData);
+  }
+
+  @Post('nin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.VENDOR)
+  @ApiBearerAuth('jwt')
+  @ApiBody({
+    description: 'Submit NIN parameters and pre-uploaded verification image JSON objects containing url and publicId',
+    type: NinVerificationDto,
+  })
+  @ApiOperation({ summary: 'Submit NIN verification data (pure JSON)' })
+  async submitNin(
+    @Req() req,
+    @Body() dto: NinVerificationDto,
+  ) {
+    return this.vendorsService.submitNin(req.user.sub, dto);
+  }
+
+  @Post('verify-nin')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Manually verify vendor NIN (Admin only)' })
+  @ApiResponse({ status: 200, description: 'NIN verified successfully' })
+  async verifyNin(@Body() dto: VerifyNinDto) {
+    return this.vendorsService.verifyNin(dto.vendorId);
   }
 }

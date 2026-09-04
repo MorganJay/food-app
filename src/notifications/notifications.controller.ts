@@ -3,6 +3,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiProperty,
 } from '@nestjs/swagger';
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 
@@ -11,31 +12,66 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { NotificationsService, SmsNotification } from './notifications.service';
+import { IsEmail, IsObject, IsOptional, IsString } from 'class-validator';
 
 class SendSmsDto {
+  @ApiProperty({
+    example: '2347012345678',
+    description: 'Recipient phone number',
+  })
+  @IsString()
   to: string;
+
+  @ApiProperty({
+    example: 'Hello from Chopbaze',
+    description: 'SMS message content',
+  })
+  @IsString()
   message: string;
 }
 
 class SendEmailDto {
+  @ApiProperty({ example: 'test@gmail.com' })
+  @IsEmail()
   to: string;
+
+  @ApiProperty({ example: 'Welcome Email' })
+  @IsString()
   subject: string;
+
+  @ApiProperty({ example: 'Welcome to Chopbaze' })
+  @IsString()
   body: string;
 }
 
 class SendPushDto {
+  @ApiProperty({ example: 'expo-token-123' })
+  @IsString()
   token: string;
+
+  @ApiProperty({ example: 'New Notification' })
+  @IsString()
   title: string;
+
+  @ApiProperty({ example: 'You have a new message' })
+  @IsString()
   body: string;
+
+  @ApiProperty({
+    example: { orderId: '123' },
+    required: false,
+  })
+  @IsOptional()
+  @IsObject()
   data?: Record<string, any>;
 }
 
 @ApiTags('Notifications')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   @Post('send-sms')
   @Roles(UserRole.ADMIN)

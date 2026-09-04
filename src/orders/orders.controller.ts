@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
   Param,
   Query,
@@ -14,6 +13,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
@@ -21,8 +21,9 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { OrdersService } from './orders.service';
 import { OrdersGateway } from './orders.gateway';
-import { CreateOrderDto } from './dto/order.dto';
+import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
 import { OrderStatus } from '../schemas/Order.schema';
+import { CheckoutSummaryResponseDto } from './dto/checkout-summary-response.dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth('jwt')
@@ -37,12 +38,40 @@ export class OrdersController {
   @Roles(UserRole.CONSUMER)
   @Post()
   @ApiOperation({ summary: 'Create order from cart' })
-  @ApiResponse({ status: 201, description: 'Order created' })
+  @ApiResponse({
+    status: 201,
+    description: 'Order created',
+    type: OrderResponseDto,
+  })
   async create(@Body() createDto: CreateOrderDto, @Req() req) {
     return this.ordersService.create(req.user.sub, createDto);
   }
 
+  @Roles(UserRole.CONSUMER)
+  @Get('checkout-summary')
+  @ApiOperation({ summary: 'Get checkout summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Checkout summary retrieved successfully',
+    type: CheckoutSummaryResponseDto,
+  })
+  async getCheckoutSummary(@Req() req) {
+    return this.ordersService.getCheckoutSummary(req.user.sub);
+  }
+
   @Get()
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
   @ApiOperation({ summary: 'Get user orders' })
   @ApiResponse({ status: 200, description: 'Orders list' })
   async findByUser(
@@ -58,13 +87,25 @@ export class OrdersController {
   }
 
   @Roles(UserRole.VENDOR)
-  @Get('vendor')
-  async findByVendor(
+  @Get('restaurant')
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
+  async findByRestaurant(
     @Req() req,
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
-    return this.ordersService.findByVendorUser(
+    return this.ordersService.findByRestaurantUser(
       req.user.sub,
       parseInt(skip, 10),
       parseInt(limit, 10),
@@ -72,13 +113,25 @@ export class OrdersController {
   }
 
   @Roles(UserRole.VENDOR)
-  @Get('vendor/analytics')
-  async vendorAnalytics(@Req() req) {
-    return this.ordersService.vendorAnalyticsByUser(req.user.sub);
+  @Get('restaurant/analytics')
+  async restaurantAnalytics(@Req() req) {
+    return this.ordersService.restaurantAnalyticsByUser(req.user.sub);
   }
 
   @Roles(UserRole.ADMIN)
   @Get('all')
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    description: 'Number of records to skip',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return',
+    example: 20,
+  })
   async findAll(
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
@@ -100,14 +153,32 @@ export class OrdersController {
     });
   }
 
-  @Roles(UserRole.CONSUMER, UserRole.VENDOR, UserRole.ADMIN, UserRole.RIDER)
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: OrderStatus,
-    @Req() req,
-  ) {
-    const updated = await this.ordersService.updateStatus(id, status, {
+  @Roles(UserRole.VENDOR)
+  @Post(':id/accept')
+  async acceptOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.acceptOrder(id, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitOrderStatus(updated);
+    return updated;
+  }
+
+  @Roles(UserRole.VENDOR)
+  @Post(':id/reject')
+  async rejectOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.rejectOrder(id, {
+      sub: req.user.sub,
+      role: req.user.role,
+    });
+    this.ordersGateway.emitOrderStatus(updated);
+    return updated;
+  }
+
+  @Roles(UserRole.CONSUMER, UserRole.VENDOR)
+  @Post(':id/cancel')
+  async cancelOrder(@Param('id') id: string, @Req() req) {
+    const updated = await this.ordersService.cancelOrder(id, {
       sub: req.user.sub,
       role: req.user.role,
     });
@@ -116,7 +187,7 @@ export class OrdersController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
-  @Patch(':id/rider')
+  @Post(':id/rider')
   async assignRider(
     @Param('id') id: string,
     @Body('riderId') riderId: string,

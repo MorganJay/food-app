@@ -17,28 +17,79 @@ export enum OrderStatus {
   CANCELLED_BY_VENDOR = 'cancelled_by_vendor',
 }
 
+export interface SelectedChoice {
+  groupName: string;
+  name: string;
+  price: number;
+}
+
+export interface OrderItemImage {
+  url: string;
+  publicId?: string;
+}
+
 export interface OrderItem {
   productId: string;
   quantity: number;
   price: number;
   name: string;
+  subtotal: number;
+  image?: OrderItemImage;
+  selectedChoices?: SelectedChoice[];
+}
+
+export class OrderUser {
+  @Prop({ required: true })
+  userId: string;
+
+  @Prop({ required: true })
+  lastName: string;
+
+  @Prop({ required: true })
+  firstName: string;
+
+  @Prop({ required: true })
+  email: string;
+
+  @Prop({ required: true })
+  phoneNumber: string;
 }
 
 @Schema({ timestamps: true })
 export class Order extends BaseEntity {
   @Prop({ required: true })
-  userId: string;
+  restaurantId: string;
 
-  @Prop({ required: true })
-  vendorId: string;
+  @Prop({ type: OrderUser, required: true })
+  user: OrderUser;
 
   @Prop({
     type: [
       {
-        productId: Types.ObjectId,
+        productId: { type: Types.ObjectId, ref: 'Product' },
         quantity: Number,
         price: Number,
         name: String,
+        subtotal: { type: Number, default: 0 },
+        image: {
+          type: {
+            url: String,
+            publicId: String,
+          },
+          _id: false,
+          required: false,
+        },
+        selectedChoices: {
+          type: [
+            {
+              groupName: { type: String, trim: true },
+              name: { type: String, trim: true },
+              price: { type: Number, default: 0 },
+            },
+          ],
+          _id: false,
+          default: [],
+        },
       },
     ],
     required: true,
@@ -51,11 +102,20 @@ export class Order extends BaseEntity {
   })
   orderReference: string;
 
+  @Prop({ default: 0 })
+  serviceFee: number;
+
+  @Prop({ default: 0 })
+  deliveryFee: number;
+
+  @Prop({ required: true })
+  subtotal: number;
+
   @Prop({ required: true })
   total: number;
 
-  @Prop({ required: true })
-  deliveryAddress: string;
+  @Prop({ required: true, type: Object })
+  deliveryAddress: any;
 
   @Prop({ enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
@@ -71,8 +131,9 @@ export class Order extends BaseEntity {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
-OrderSchema.index({ vendorId: 1 });
+OrderSchema.index({ restaurantId: 1 });
 OrderSchema.index({ status: 1 });
+OrderSchema.index({ 'user.userId': 1 });
 
 OrderSchema.pre('save', async function (next) {
   if (this.isNew && !this.serialNumber) {

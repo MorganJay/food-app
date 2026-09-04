@@ -11,11 +11,13 @@ import { UsersService } from '../users/users.service';
 import { OtpDeliveryService } from './otp-delivery.service';
 import { UserRole } from '../schemas/User.schema';
 import { isBcryptHash, verifyPassword } from '../common/password.util';
+import { VendorsService } from 'src/vendors/vendors.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private vendorsService: VendorsService,
     private jwtService: JwtService,
     private otpService: OtpService,
     private otpDelivery: OtpDeliveryService,
@@ -54,6 +56,20 @@ export class AuthService {
   }
 
   async login(user: any) {
+    if (user.role === UserRole.VENDOR) {
+      const vendorProfile = await this.vendorsService
+        .findById(user._id.toString())
+        .catch(() => null);
+
+      if (!vendorProfile) {
+        // Auto-generate the missing merchant shell for this legacy user
+        await this.vendorsService.createVendor(user._id.toString(), {
+          businessName: `${user.username}'s Kitchen`,
+          description: 'Welcome to my store!',
+          location: undefined,
+        });
+      }
+    }
     const payload = {
       username: user.username,
       phoneNumber: user.phoneNumber,
@@ -72,7 +88,21 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    await this.usersService.createByPhoneNumber(dto.phoneNumber, dto);
+    const newUser = await this.usersService.createByPhoneNumber(
+      dto.phoneNumber,
+      dto,
+    );
+
+    if (dto.role === 'vendor') {
+      const shortPhone = dto.phoneNumber.slice(-4);
+      const uniquePlaceholderName = `${dto.username}'s Kitchen (${shortPhone})`;
+
+      await this.vendorsService.createVendor(newUser.id, {
+        businessName: uniquePlaceholderName,
+        description: 'Welcome to my store!',
+        location: undefined,
+      });
+    }
 
     const recently = await this.otpService.lastSentWithin(dto.phoneNumber, 60);
     if (recently)
@@ -81,7 +111,7 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(dto.phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: dto.phoneNumber,
         email: dto.email,
@@ -89,7 +119,12 @@ export class AuthService {
       code,
     );
 
-    return { message: 'OTP sent', otp: code };
+    // If the delivery service indicates RESPONSE mode, include the OTP
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'OTP sent', otp: code };
+    }
+
+    return { message: 'OTP sent' };
   }
 
   async resendOtp(phoneNumber: string) {
@@ -103,14 +138,19 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: user.phoneNumber,
         email: user.email,
       },
       code,
     );
-    return { message: 'OTP resent', otp: code };
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'OTP resent', otp: code };
+    }
+
+    return { message: 'OTP resent' };
   }
 
   async sendVerificationCode(phoneNumber: string) {
@@ -124,20 +164,26 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       {
         phoneNumber: user.phoneNumber,
         email: user.email,
       },
       code,
     );
-    return { message: 'Verification code sent', otp: code };
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'Verification code sent', otp: code };
+    }
+
+    return { message: 'Verification code sent' };
   }
 
   async verifyOtp(phoneNumber: string, code: string) {
     await this.otpService.verify(phoneNumber, code);
 
     const user = await this.usersService.verifyPhoneNumber(phoneNumber);
+
     const payload = {
       sub: user.id,
       role: user.role,
@@ -160,11 +206,16 @@ export class AuthService {
       );
 
     const code = await this.otpService.create(phoneNumber);
-    await this.otpDelivery.sendOtp(
+    const deliveryResult = await this.otpDelivery.sendOtp(
       { phoneNumber: user.phoneNumber, email: user.email },
       code,
     );
-    return { message: 'Password reset code sent', otp: code };
+
+    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+      return { message: 'Password reset code sent', otp: code };
+    }
+
+    return { message: 'Password reset code sent' };
   }
 
   async resetPassword(phoneNumber: string, code: string, newPassword: string) {

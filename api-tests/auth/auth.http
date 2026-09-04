@@ -8,11 +8,11 @@ POST {{baseURL}}/auth/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2348140680757",
-  "username": "TosinA",
-  "firstName": "Tosin",
-  "lastName": "Adefope",
-  "email": "tosin@example.com",
+  "phoneNumber": "+2348170680750",
+  "username": "TosinghhgA",
+  "firstName": "Tosin6",
+  "lastName": "OMO",
+  "email": "zosin@example.com",
   "password": "password123",
   "role": "consumer"
 }
@@ -67,7 +67,7 @@ Content-Type: application/json
 
 ###
 
-# Verify OTP (use the code from registration response)
+# Verify OTP (use the code received via SMS)
 POST {{baseURL}}/auth/verify-otp
 Content-Type: application/json
 

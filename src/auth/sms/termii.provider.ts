@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SmsProvider } from '../interfaces/sms-provider.interface';
 
@@ -38,10 +38,22 @@ export class TermiiSmsProvider implements SmsProvider {
 
       const result = await response.json();
       console.log(`[Termii] SMS sent to ${phone}:`, result);
+
+      if (!response.ok) {
+        throw new BadRequestException(result.message || 'Failed to send SMS');
+      }
+
+      if (!result.message_id) {
+        throw new BadRequestException('SMS failed: No message ID returned');
+      }
+
       return { success: true, messageId: result.message_id };
     } catch (error) {
       console.error('[Termii] Failed to send SMS:', error);
-      return { success: false, reason: error.message };
+
+      throw new InternalServerErrorException(error.message || 'SMS delivery failed');
+
+      // return { success: false, reason: error.message };
     }
   }
 }

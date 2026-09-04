@@ -12,11 +12,22 @@ export class Vendor extends BaseEntity {
   @Prop({ required: true, unique: true })
   businessName: string;
 
-  @Prop({ required: true })
+  @Prop()
   description: string;
 
   @Prop()
   address: string;
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  image: {
+    secure_url: string;
+    public_id: string;
+  };
 
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
@@ -27,17 +38,39 @@ export class Vendor extends BaseEntity {
     coordinates: number[];
   };
 
-  @Prop({ required: true })
-  openHours: string;
-
-  @Prop({ required: true })
-  closeHours: string;
-
   @Prop({ default: 0 })
   avgRating: number;
 
   @Prop({ default: 0 })
   reviewsCount: number;
+
+  @Prop()
+  nin: string;
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  ninDocument: {
+    secure_url: string;
+    public_id: string;
+  };
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+  })
+  selfie: {
+    secure_url: string;
+    public_id: string;
+  };
+
+  @Prop({ default: false })
+  isNinVerified: boolean;
 
   @Prop({ default: false })
   isVerified: boolean;

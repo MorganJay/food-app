@@ -6,14 +6,26 @@ export type RestaurantDocument = HydratedDocument<Restaurant>;
 
 @Schema({ timestamps: true })
 export class Restaurant extends BaseEntity {
-  @Prop({ required: true, unique: true })
+  @Prop({ unique: true })
   name: string;
 
-  @Prop({ required: true })
+  @Prop()
   description: string;
 
   @Prop({ required: true })
   vendorId: string;
+
+  @Prop({
+    type: {
+      secure_url: { type: String, required: true },
+      public_id: { type: String, required: true },
+    },
+    required: true,
+  })
+  bannerImage: {
+    secure_url: string;
+    public_id: string;
+  };
 
   @Prop({
     type: { type: String, enum: ['Point'], default: 'Point' },
@@ -24,8 +36,23 @@ export class Restaurant extends BaseEntity {
     coordinates: number[];
   };
 
-  @Prop({ required: true })
+  @Prop()
   address: string;
+
+  @Prop({ type: [String], default: [] })
+  workingDays: string[];
+
+  @Prop()
+  orderType: string;
+
+  @Prop()
+  openHours: string;
+
+  @Prop()
+  closeHours: string;
+
+  @Prop({ type: [String], default: [] })
+  categories: string[];
 
   @Prop({ default: true })
   isActive: boolean;
