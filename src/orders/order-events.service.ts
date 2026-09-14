@@ -17,6 +17,17 @@ export class OrderEventsService {
   }
 
   async publish(event: OrderEventPayload) {
-    await Promise.all(this.handlers.map((handler) => handler(event)));
+    console.log(`[EVENT FIRED]: "${event.type}" | Order ID: ${event.orderId}`);
+
+    await Promise.all(
+      this.handlers.map(async (handler) => {
+        try {
+          await handler(event);
+        } catch (error) {
+          const err = error as Error;
+          console.error(`Error running event handler for "${event.type}": ${err.message}`);
+        }
+      }),
+    );
   }
 }

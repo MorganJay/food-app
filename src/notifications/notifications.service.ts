@@ -35,11 +35,14 @@ export class NotificationsService {
   }
 
   async sendSms(notification: SmsNotification) {
+    console.log(`[SMS OUTGOING] To: ${notification.to} | Message: ${notification.message}`);
     this.logger.log(`Sending SMS to ${notification.to}`);
     return this.infobipProvider.sendSms(notification.to, notification.message);
   }
 
   async sendEmail(notification: EmailNotification) {
+    console.log(`[EMAIL OUTGOING] To: ${notification.to} | Subject: "${notification.subject}"`);
+    console.log(`[EMAIL BODY]: ${notification.body}`);
     this.logger.log(`Sending email to ${notification.to}`);
     return this.infobipProvider.sendEmail(
       notification.to,
@@ -57,10 +60,10 @@ export class NotificationsService {
   }
 
   async sendPush(notification: PushNotification) {
+    console.log(`[PUSH OUTGOING] Token: ${notification.token} | Title: ${notification.title}`);
+    console.log(`[PUSH BODY]: ${notification.body}`);
     this.logger.log(`Sending push to ${notification.token}`);
     // TODO: Integrate real push provider (Firebase FCM, etc.)
-    console.log(`[Push to ${notification.token}] Title: ${notification.title}`);
-    console.log(`[Push body]: ${notification.body}`);
     return { success: true, messageId: `push-${Date.now()}` };
   }
 

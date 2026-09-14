@@ -43,6 +43,6 @@ import { DeliveryOrdersModule } from '../delivery-orders/delivery-orders.module'
   ],
   providers: [OrdersService, OrdersGateway, OrderEventsService],
   controllers: [OrdersController],
-  exports: [OrdersService, OrdersGateway],
+  exports: [OrdersService, OrdersGateway, OrderEventsService],
 })
 export class OrdersModule {}
