@@ -9,15 +9,18 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '../../schemas/Order.schema';
-import { CreateDeliveryAddressDto } from 'src/consumers/dto/delivery-address.dto';
+import { CreateDeliveryAddressDto } from '../../consumers/dto/delivery-address.dto';
 import { Type } from 'class-transformer';
 
 export class SelectedChoiceDto {
-  @ApiProperty({ example: 'Protein', description: 'The heading/group name for the customization' })
+  @ApiProperty({
+    example: 'Protein',
+    description: 'The heading/group name for the customization',
+  })
   @IsNotEmpty()
   @IsString()
   groupName: string;
-  
+
   @ApiProperty({ example: 'Beef', description: 'Name of the selected option' })
   @IsNotEmpty()
   @IsString()
@@ -64,7 +67,10 @@ export class CreateOrderDto {
   @IsString()
   restaurantId: string;
 
-  @ApiProperty({ type: [OrderItemDto], description: 'List of items in the order' })
+  @ApiProperty({
+    type: [OrderItemDto],
+    description: 'List of items in the order',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
@@ -109,7 +115,10 @@ export class OrderItemResponseDto {
   @ApiPropertyOptional({ type: OrderItemImageDto })
   image?: OrderItemImageDto;
 
-  @ApiProperty({ type: [SelectedChoiceDto], description: 'List of item modifications' })
+  @ApiProperty({
+    type: [SelectedChoiceDto],
+    description: 'List of item modifications',
+  })
   selectedChoices: SelectedChoiceDto[];
 }
 
@@ -120,7 +129,10 @@ export class OrderUserDto {
   @ApiProperty({ example: 'Doe', description: 'The customer last name' })
   lastName: string;
 
-  @ApiProperty({ example: '+2348012345678', description: 'The customer contact phone number' })
+  @ApiProperty({
+    example: '+2348012345678',
+    description: 'The customer contact phone number',
+  })
   phoneNumber: string;
 }
 
@@ -134,7 +146,10 @@ export class OrderResponseDto {
   @ApiProperty({ example: '669a3aef8d2f5a11b8c9e002' })
   restaurantId: string;
 
-  @ApiProperty({ type: OrderUserDto, description: 'Snapshot details of the ordering customer' })
+  @ApiProperty({
+    type: OrderUserDto,
+    description: 'Snapshot details of the ordering customer',
+  })
   user: OrderUserDto;
 
   @ApiProperty({ type: [OrderItemResponseDto] })
@@ -158,10 +173,11 @@ export class OrderResponseDto {
   @ApiProperty({ type: CreateDeliveryAddressDto })
   deliveryAddress: CreateDeliveryAddressDto;
 
-  @ApiProperty({ 
+  @ApiProperty({
     enum: OrderStatus,
-    example: 'pending [Options: pending, accepted, preparing, ready_for_pickup, out_for_delivery, delivered, cancelled_by_consumer, cancelled_by_vendor]', 
-    description: 'Current status of the order.'
+    example:
+      'pending [Options: pending, accepted, preparing, ready_for_pickup, out_for_delivery, delivered, cancelled_by_consumer, cancelled_by_vendor]',
+    description: 'Current status of the order.',
   })
   status: OrderStatus;
 

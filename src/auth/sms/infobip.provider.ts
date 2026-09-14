@@ -127,72 +127,109 @@ export class InfobipProvider
     );
   }
 
-  async sendEmail(email: string, subject: string, body: string) {
-    if (!this.apiKey) {
-      console.log(`[Infobip Mock] Email to ${email}: ${subject}`);
-      return { success: false, reason: 'No API key configured' };
-    }
-
+  async sendEmail(to: string, subject: string, body: string) {
     try {
+      // Build multipart/form-data
+      const formData = new FormData();
+      formData.append('from', this.configService.get<string>('INFOBIP_EMAIL_FROM') || 'noreply@yourdomain.com');
+      formData.append('to', to);
+      formData.append('subject', subject);
+      formData.append('text', body); // or 'html' if sending HTML content
+
+      // Fetch without explicit Content-Type header 
+      // (fetch automatically sets multipart/form-data with boundary)
       const response = await fetch(`${this.baseUrl}/email/3/send`, {
         method: 'POST',
         headers: {
           Authorization: `App ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
-        body: JSON.stringify({
-          from: {
-            email: this.emailFromAddress,
-            name: this.emailFromName,
-          },
-          to: [
-            {
-              email: email,
-            },
-          ],
-          subject: subject,
-          html: body,
-        }),
+        body: formData,
       });
 
-      const result = await response.json();
-      console.log(`[Infobip Email] Sent to ${email}:`, result);
+      const data = await response.json();
 
       if (!response.ok) {
+        console.error('[Infobip Email] Sent error response:', data);
         throw new BadRequestException(
-          result?.requestError?.message ||
-            result?.message ||
-            'Failed to send email',
+          `Infobip email error: ${data?.requestError?.serviceException?.text || 'Failed to send email'}`,
         );
       }
 
-      const messageId = result?.messageId || result?.messages?.[0]?.messageId;
-      if (!messageId) {
-        throw new BadRequestException('Email failed: No message ID returned');
-      }
-
-      return {
-        success: true,
-        messageId: messageId,
-      };
+      return data;
     } catch (error) {
-      console.error('[Infobip Email] Failed:', error);
-
-      if (
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        error instanceof Error ? error.message : 'Email delivery failed',
-      );
+      if (error instanceof BadRequestException) throw error;
+      const err = error as Error;
+      throw new BadRequestException(`Failed to send email: ${err.message}`);
     }
   }
 
+  // async sendEmail(email: string, subject: string, body: string) {
+  //   if (!this.apiKey) {
+  //     console.log(`[Infobip Mock] Email to ${email}: ${subject}`);
+  //     return { success: false, reason: 'No API key configured' };
+  //   }
+
+  //   try {
+  //     const response = await fetch(`${this.baseUrl}/email/3/send`, {
+  //       method: 'POST',
+  //       headers: {
+  //         Authorization: `App ${this.apiKey}`,
+  //         'Content-Type': 'application/json',
+  //         Accept: 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         from: {
+  //           email: this.emailFromAddress,
+  //           name: this.emailFromName,
+  //         },
+  //         to: [
+  //           {
+  //             email: email,
+  //           },
+  //         ],
+  //         subject: subject,
+  //         html: body,
+  //       }),
+  //     });
+
+  //     const result = await response.json();
+  //     console.log(`[Infobip Email] Sent to ${email}:`, result);
+
+  //     if (!response.ok) {
+  //       throw new BadRequestException(
+  //         result?.requestError?.message ||
+  //           result?.message ||
+  //           'Failed to send email',
+  //       );
+  //     }
+
+  //     const messageId = result?.messageId || result?.messages?.[0]?.messageId;
+  //     if (!messageId) {
+  //       throw new BadRequestException('Email failed: No message ID returned');
+  //     }
+
+  //     return {
+  //       success: true,
+  //       messageId: messageId,
+  //     };
+  //   } catch (error) {
+  //     console.error('[Infobip Email] Failed:', error);
+
+  //     if (
+  //       error instanceof BadRequestException ||
+  //       error instanceof InternalServerErrorException
+  //     ) {
+  //       throw error;
+  //     }
+
+  //     throw new InternalServerErrorException(
+  //       error instanceof Error ? error.message : 'Email delivery failed',
+  //     );
+  //   }
+  // }
+
   // ======================== WhatsApp Methods ========================
+  
   async sendWhatsAppOtp(phoneNumber: string, code: string) {
     return this.sendMessage(phoneNumber, `Your verification code is: ${code}`);
   }

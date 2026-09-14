@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule, seconds } from '@nestjs/throttler';
 
@@ -24,10 +25,12 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { CategoriesModule } from './categories/categories.module';
 import { BanksModule } from './banks/banks.module';
 import { UtilitiesModule } from './utilities/utilities.module';
+import { DeliveryOrdersModule } from './delivery-orders/delivery-orders.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: seconds(60), limit: 10 }]), // generic rate limit
     MongooseModule.forRoot(process.env.MONGO_URI),
     UsersModule,
@@ -39,6 +42,7 @@ import { UtilitiesModule } from './utilities/utilities.module';
     CategoriesModule,
     BanksModule,
     UtilitiesModule,
+    DeliveryOrdersModule,
     OrdersModule,
     DeliveriesModule,
     ConsumersModule,

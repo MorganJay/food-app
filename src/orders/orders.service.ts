@@ -19,6 +19,7 @@ import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { OrderEventsService } from './order-events.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DbglService } from '../dbgl/dbgl.service';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
@@ -36,6 +37,7 @@ export class OrdersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly orderEvents: OrderEventsService,
     private readonly notificationsService: NotificationsService,
+    private readonly dbglService: DbglService,
   ) {}
 
   private async calculatePricing(input: {
@@ -134,6 +136,59 @@ export class OrdersService {
     const savedOrder = await order.save();
     const mappedOrder = this.mapOrderResponse(savedOrder);
 
+    try {
+      const restaurant = await this.restaurantModel
+        .findById(createDto.restaurantId)
+        .exec();
+      const payload = {
+        partner_order_ref: savedOrder.orderReference,
+        vendor_name: restaurant?.name || 'Food App Vendor',
+        vendor_phone: userProfile.phoneNumber || '08000000000',
+        vendor_address: restaurant?.address || 'Lagos, Nigeria',
+        vendor_city: this.extractCityFromAddress(
+          restaurant?.address || 'Lagos',
+        ),
+        vendor_state: this.extractStateFromAddress(
+          restaurant?.address || 'Lagos',
+        ),
+        customer_name:
+          `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() ||
+          'Customer',
+        customer_phone: userProfile.phoneNumber || '08000000000',
+        delivery_address:
+          createDto.deliveryAddress.addressLine || 'Lagos, Nigeria',
+        delivery_city:
+          createDto.deliveryAddress.city ||
+          this.extractCityFromAddress(
+            createDto.deliveryAddress.addressLine || 'Lagos',
+          ),
+        delivery_state:
+          createDto.deliveryAddress.state ||
+          this.extractStateFromAddress(
+            createDto.deliveryAddress.addressLine || 'Lagos',
+          ),
+        package_description: `Food order ${savedOrder.orderReference}`,
+        weight_kg: 1,
+        service_type: 'standard',
+        pickup_latitude: this.toLatitude(
+          restaurant?.location?.coordinates?.[1],
+        ),
+        pickup_longitude: this.toLongitude(
+          restaurant?.location?.coordinates?.[0],
+        ),
+        delivery_latitude: this.toLatitude(
+          createDto.deliveryAddress.location?.lat,
+        ),
+        delivery_longitude: this.toLongitude(
+          createDto.deliveryAddress.location?.lng,
+        ),
+      };
+
+      await this.dbglService.createOrder(payload);
+    } catch (error) {
+      console.error('DBGL order creation failed:', error);
+    }
+
     await this.orderEvents.publish({
       type: 'OrderPlacedEvent',
       orderId: savedOrder._id.toString(),
@@ -184,6 +239,100 @@ export class OrdersService {
     }
 
     return this.mapOrderResponse(savedOrder);
+  }
+
+  private extractCityFromAddress(address: string): string {
+    if (!address) return 'Lagos';
+    const parts = address
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[parts.length - 2] || parts[parts.length - 1] || 'Lagos';
+  }
+
+  private extractStateFromAddress(address: string): string {
+    if (!address) return 'Lagos';
+    const parts = address
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[parts.length - 1] || 'Lagos';
+  }
+
+  private toLatitude(value?: number): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  private toLongitude(value?: number): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  async getDeliveryFeeQuote(
+    userId: string,
+    dto: {
+      restaurantId: string;
+      deliveryAddress: {
+        addressLine?: string;
+        city?: string;
+        state?: string;
+        location?: { lat?: number; lng?: number };
+      };
+      items?: Array<{ name?: string; quantity?: number; price?: number }>;
+    },
+  ) {
+    const userProfile = await this.userModel.findById(userId).exec();
+    if (!userProfile) {
+      throw new NotFoundException('User not found');
+    }
+
+    const restaurant = await this.restaurantModel
+      .findById(dto.restaurantId)
+      .exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    const payload = {
+      vendor_name: restaurant.name || 'Food App Vendor',
+      vendor_phone: '08000000000',
+      vendor_address: restaurant.address || 'Lagos, Nigeria',
+      vendor_city: this.extractCityFromAddress(
+        restaurant.address || 'Lagos, Nigeria',
+      ),
+      vendor_state: this.extractStateFromAddress(
+        restaurant.address || 'Lagos, Nigeria',
+      ),
+      customer_name:
+        `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() ||
+        'Customer',
+      customer_phone: userProfile.phoneNumber || '08000000000',
+      delivery_address: dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
+      delivery_city:
+        dto.deliveryAddress.city ||
+        this.extractCityFromAddress(
+          dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
+        ),
+      delivery_state:
+        dto.deliveryAddress.state ||
+        this.extractStateFromAddress(
+          dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
+        ),
+      package_description: dto.items?.[0]?.name || 'Food order',
+      weight_kg:
+        dto.items?.reduce((sum, item) => sum + (item.quantity || 1) * 0.5, 0) ||
+        1,
+      service_type: 'standard',
+      pickup_latitude: this.toLatitude(restaurant.location?.coordinates?.[1]),
+      pickup_longitude: this.toLongitude(restaurant.location?.coordinates?.[0]),
+      delivery_latitude: this.toLatitude(dto.deliveryAddress.location?.lat),
+      delivery_longitude: this.toLongitude(dto.deliveryAddress.location?.lng),
+    };
+
+    return this.dbglService.quote(payload);
   }
 
   async getCheckoutSummary(userId: string) {
@@ -485,6 +634,57 @@ export class OrdersService {
             });
           }
         }
+      }
+
+      // NOTIFY CONSUMER FOR ALL STATUS UPDATES
+      const orderDb = await this.orderModel.findById(event.order._id).exec();
+      const customerUserId = orderDb?.user?.userId;
+
+      const customerUser = customerUserId
+        ? await this.userModel.findOne({ _id: customerUserId }).exec()
+        : null;
+      const customerEmail = customerUser?.email;
+
+      if (customerEmail) {
+        const orderRef = event.order.orderReference || event.order._id;
+        const customerFirstName = customerUser.firstName || 'Customer';
+
+        // Custom email text based on exact status transition
+        let emailSubject = `Update on your order ${orderRef}`;
+        let emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} status is now: ${event.order.status}.`;
+
+        switch (event.type) {
+          case 'OrderAcceptedEvent':
+            emailSubject = `Order Accepted - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nThe restaurant has accepted your order! They will begin preparing your food shortly.`;
+            break;
+          case 'OrderPreparingEvent':
+            emailSubject = `Food is Being Prepared - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order is currently being prepared in the kitchen.`;
+            break;
+          case 'OrderReadyEvent':
+            emailSubject = `Order Ready for Pickup - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order is ready! A rider will pick it up soon.`;
+            break;
+          case 'OrderDeliveredEvent':
+            emailSubject = `Order Delivered - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order has been delivered! Enjoy your meal.`;
+            break;
+          case 'OrderRejectedEvent':
+            emailSubject = `Order Declined - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nUnfortunately, the restaurant declined your order. If you were charged, a refund will be processed.`;
+            break;
+          case 'OrderCancelledEvent':
+            emailSubject = `Order Cancelled - ${orderRef}`;
+            emailBody = `Hello ${customerFirstName},\n\nYour order ${orderRef} has been cancelled.`;
+            break;
+        }
+
+        await this.notificationsService.sendEmail({
+          to: customerEmail,
+          subject: emailSubject,
+          body: emailBody,
+        });
       }
 
       if (

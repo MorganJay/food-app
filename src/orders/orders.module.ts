@@ -17,6 +17,7 @@ import {
 import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
 import { User, UserSchema } from 'src/schemas/User.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { DeliveryOrdersModule } from '../delivery-orders/delivery-orders.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: User.name, schema: UserSchema },
     ]),
     NotificationsModule,
+    DeliveryOrdersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -41,6 +43,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   providers: [OrdersService, OrdersGateway, OrderEventsService],
   controllers: [OrdersController],
-  exports: [OrdersService],
+  exports: [OrdersService, OrdersGateway],
 })
 export class OrdersModule {}
