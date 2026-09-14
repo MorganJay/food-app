@@ -67,13 +67,15 @@ export class PaymentsService {
       throw new BadRequestException('Order has already been paid');
     }
 
-    const existingPayment = await this.paymentModel.findOne({
-      orderId,
-      status: {
-        $in: [PaymentStatus.PENDING, PaymentStatus.COMPLETED],
-      },
-      isDeleted: false,
-    }).exec();
+    const existingPayment = await this.paymentModel
+      .findOne({
+        orderId,
+        status: {
+          $in: [PaymentStatus.PENDING, PaymentStatus.COMPLETED],
+        },
+        isDeleted: false,
+      })
+      .exec();
 
     if (existingPayment) {
       throw new BadRequestException('A payment already exists for this order');
@@ -87,7 +89,7 @@ export class PaymentsService {
 
     // Convert Naira to Kobo (Paystack expects whole integer kobo)
     const amountInKobo = Math.round(order.total * 100);
-  if (existingPayment) {
+    if (existingPayment) {
       throw new BadRequestException(
         'A payment is already pending for this order. Please complete or cancel it first.',
       );
@@ -174,7 +176,10 @@ export class PaymentsService {
     }
 
     // Immediate return if already processed
-    if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.FAILED) {
+    if (
+      payment.status === PaymentStatus.COMPLETED ||
+      payment.status === PaymentStatus.FAILED
+    ) {
       return this.mapPaymentResponse(payment);
     }
 

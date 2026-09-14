@@ -253,7 +253,7 @@ export class InfobipProvider
   // }
 
   // ======================== WhatsApp Methods ========================
-  
+
   async sendWhatsAppOtp(phoneNumber: string, code: string) {
     return this.sendMessage(phoneNumber, `Your verification code is: ${code}`);
   }

@@ -669,7 +669,8 @@ export class OrdersService implements OnModuleInit {
 
           if (vendorEmail) {
             try {
-              const orderRef = order.orderReference || order._id || event.orderId;
+              const orderRef =
+                order.orderReference || order._id || event.orderId;
               const customerName = order.user?.firstName
                 ? `${order.user.firstName} ${order.user.lastName || ''}`.trim()
                 : 'A customer';
@@ -685,12 +686,15 @@ export class OrdersService implements OnModuleInit {
                 body: `Hello,\n\nA new order has been paid and placed for your restaurant.\n\nOrder reference: ${orderRef}\nCustomer: ${customerName}\nItems: ${itemCount}\n\nPlease review and accept or decline it promptly.`,
               });
 
-              console.log(`[Vendor Email] Sent successfully to: ${vendorEmail}`);
+              console.log(
+                `[Vendor Email] Sent successfully to: ${vendorEmail}`,
+              );
             } catch (rawError) {
-               console.error(
+              console.error(
                 `[Vendor Email Error] Email sending failed during execution for Order Ref: ${order.orderReference}\n` +
-                `  - Target Email: ${vendorEmail}\n` +
-                `  - Raw Error:`, rawError
+                  `  - Target Email: ${vendorEmail}\n` +
+                  `  - Raw Error:`,
+                rawError,
               );
             }
           } else {
@@ -704,7 +708,8 @@ export class OrdersService implements OnModuleInit {
       // Consumer Email Logic
       const orderUser = order.user as any;
       const userEmail = orderUser?.email;
-      const customerUserId = orderUser?.userId || orderUser?.id || orderUser?._id;
+      const customerUserId =
+        orderUser?.userId || orderUser?.id || orderUser?._id;
 
       let customerEmail = userEmail;
       let customerFirstName = order.user?.firstName;
@@ -771,23 +776,26 @@ export class OrdersService implements OnModuleInit {
             body: emailBody,
           });
 
-          console.log(`[Consumer Email] Sent successfully to: ${customerEmail}`);
+          console.log(
+            `[Consumer Email] Sent successfully to: ${customerEmail}`,
+          );
         } catch (rawError) {
           // Captures runtime/network/service errors from the email service provider
           console.error(
             `[Consumer Email Error] Email sending failed during execution for Event: ${event.type}\n` +
-            `  - Target User ID: ${customerUserId}\n` +
-            `  - Target Email: ${customerEmail}\n` +
-            `  - Raw Error:`, rawError
+              `  - Target User ID: ${customerUserId}\n` +
+              `  - Target Email: ${customerEmail}\n` +
+              `  - Raw Error:`,
+            rawError,
           );
         }
       } else {
         // Captures missing/invalid email payload data before sending
         console.warn(
           `[Consumer Email Warning] Failed to send email for Event: ${event.type}\n` +
-          `  - Target User ID: ${customerUserId}\n` +
-          `  - Received Email Value: ${JSON.stringify(customerEmail)}\n` +
-          `  - Raw Order User Payload: ${JSON.stringify(event.order?.user || order?.user)}`
+            `  - Target User ID: ${customerUserId}\n` +
+            `  - Received Email Value: ${JSON.stringify(customerEmail)}\n` +
+            `  - Raw Order User Payload: ${JSON.stringify(event.order?.user || order?.user)}`,
         );
       }
 
@@ -805,7 +813,10 @@ export class OrdersService implements OnModuleInit {
             body: `Order ${orderRef} moved to state: ${order.status}.`,
           });
         } catch (rawError) {
-           console.error(`[Admin Email Error] Failed to send admin alert for Order ${order._id}:`, rawError);
+          console.error(
+            `[Admin Email Error] Failed to send admin alert for Order ${order._id}:`,
+            rawError,
+          );
         }
       }
     } catch (error) {
