@@ -42,6 +42,12 @@ export class Vendor extends BaseEntity {
   avgRating: number;
 
   @Prop({ default: 0 })
+  totalOrders: number;
+
+  @Prop({ default: 0 })
+  totalEarnings: number;
+
+  @Prop({ default: 0 })
   reviewsCount: number;
 
   @Prop()

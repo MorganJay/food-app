@@ -44,6 +44,16 @@ export class VendorsController {
     return this.vendorsService.listAll(parseInt(skip, 10), parseInt(limit, 10), sortBy);
   }
 
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.VENDOR)
+  @ApiBearerAuth('jwt')
+  @ApiOperation({ summary: 'Get logged-in vendor statistics and earnings' })
+  @ApiResponse({ status: 200, description: 'Vendor statistics retrieved' })
+  async getMyStats(@Req() req) {
+    return this.vendorsService.getVendorStats(req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get vendor by ID' })
   @ApiResponse({ status: 200, description: 'Vendor details' })

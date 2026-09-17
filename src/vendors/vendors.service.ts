@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
@@ -17,9 +18,11 @@ import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
 
 @Injectable()
 export class VendorsService {
+  private readonly logger = new Logger(VendorsService.name);
+
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) { }
+  ) {}
 
   async listAll(
     skip: number = 0,
@@ -47,25 +50,6 @@ export class VendorsService {
     }
     return this.mapVendorResponse(vendor);
   }
-
-  // async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-  //   const vendors = await this.vendorModel
-  //     .find({
-  //       isVerified: true,
-  //       location: {
-  //         $near: {
-  //           $geometry: {
-  //             type: 'Point',
-  //             coordinates: [longitude, latitude],
-  //           },
-  //           $maxDistance: radiusKm * 1000,
-  //         },
-  //       },
-  //     })
-  //     .exec();
-
-  //   return vendors.map((vendor) => this.mapVendorResponse(vendor));
-  // }
 
   async createVendor(userId: string, createVendor: CreateVendorDto) {
     const existing = await this.vendorModel
@@ -99,6 +83,19 @@ export class VendorsService {
       throw new NotFoundException('Vendor profile not found for this user account context.');
     }
 
+    // Check business name uniqueness if it's being updated
+    if (
+      updateData.businessName &&
+      updateData.businessName !== vendor.businessName
+    ) {
+      const existing = await this.vendorModel
+        .findOne({ businessName: updateData.businessName })
+        .exec();
+      if (existing) {
+        throw new BadRequestException('Vendor name already exists');
+      }
+    }
+
     const geo = updateData.location
       ? mapToGeoLocation(updateData.location.longitude, updateData.location.latitude)
       : undefined;
@@ -125,6 +122,10 @@ export class VendorsService {
       .findByIdAndUpdate(vendor._id, updatePayload, { new: true })
       .exec();
 
+    if (!updatedVendor) {
+      throw new NotFoundException('Failed to update vendor profile.');
+    }
+
     return this.mapVendorResponse(updatedVendor);
   }
 
@@ -143,15 +144,15 @@ export class VendorsService {
       throw new BadRequestException('A pre-uploaded face live selfie verification payload is required.');
     }
 
-    // Clean up older verification objects from Cloudinary if they already exist
+    // Clean up older verification artifacts from Cloudinary
     if (vendor.ninDocument?.public_id) {
       await deleteFromCloudinary(vendor.ninDocument.public_id).catch((err) =>
-        console.error('Failed to clear old verification image artifact:', err),
+        this.logger.error('Failed to clear old verification image artifact:', err),
       );
     }
     if (vendor.selfie?.public_id) {
       await deleteFromCloudinary(vendor.selfie.public_id).catch((err) =>
-        console.error('Failed to clear old selfie artifact:', err),
+        this.logger.error('Failed to clear old selfie artifact:', err),
       );
     }
 
@@ -168,24 +169,27 @@ export class VendorsService {
       },
     };
 
-    const updated = await this.vendorModel.findOneAndUpdate(
-      { userId },
-      updatePayload,
-      { new: true },
-    ).exec();
+    const updated = await this.vendorModel
+      .findOneAndUpdate({ userId }, updatePayload, { new: true })
+      .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Failed to process NIN submission.');
+    }
 
     return this.mapVendorResponse(updated);
   }
 
-  // manual verification by admin - in production this would be an automated process using a third-party service
   async verifyNin(vendorId: string) {
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      throw new BadRequestException(`Invalid vendor ID: ${vendorId}`);
+    }
+
     const vendor = await this.vendorModel.findById(vendorId).exec();
 
     if (!vendor) {
       throw new NotFoundException(`Vendor not found`);
     }
-
-    // todo: logic to verify NIN number and photo goes here - for now we just set it to verified
 
     vendor.isNinVerified = true;
     await vendor.save();
@@ -193,9 +197,27 @@ export class VendorsService {
     return this.mapVendorResponse(vendor);
   }
 
-  private mapVendorResponse(vendor: any): VendorResponseDto {
+  async getVendorStats(userId: string) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
     return {
-      id: vendor._id.toString(),
+      vendorId: vendor._id.toString(),
+      totalOrders: vendor.totalOrders || 0,
+      totalEarnings: vendor.totalEarnings || 0,
+      avgRating: vendor.avgRating || 0,
+    };
+  }
+
+  private mapVendorResponse(vendor: any): VendorResponseDto {
+    if (!vendor) {
+      return null;
+    }
+
+    return {
+      id: vendor._id?.toString(),
       businessName: vendor.businessName,
       description: vendor.description,
       isVerified: vendor.isVerified,
