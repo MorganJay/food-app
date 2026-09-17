@@ -58,6 +58,16 @@ $ yarn run test:e2e
 $ yarn run test:cov
 ```
 
+## OTP Delivery Configuration
+
+This application supports configuring how OTPs are delivered using the `OTP_DELIVERY_MODE` environment variable.
+
+- `SMS`: send OTPs via the configured SMS provider (production behaviour).
+- `RESPONSE`: do not send SMS; return the generated OTP in API responses (default when unset).
+
+Set `OTP_DELIVERY_MODE=SMS` in production and leave unset or set to `RESPONSE` for development/testing.
+
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

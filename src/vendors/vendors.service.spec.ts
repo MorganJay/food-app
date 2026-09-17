@@ -35,7 +35,7 @@ describe('VendorsService', () => {
       findById: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
       }),
-      findOne: jest.fn().mockResolvedValue(null),
+      findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }),
       create: jest.fn().mockResolvedValue(mockVendor),
       findByIdAndUpdate: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
@@ -69,7 +69,7 @@ describe('VendorsService', () => {
 
   describe('findById', () => {
     it('should return a vendor by id', async () => {
-      const result = await service.findById('vendor123');
+      const result = await service.findById('507f1f77bcf86cd799439011');
       expect(result).toMatchObject({
         id: 'vendor123',
         businessName: 'Test Restaurant',
@@ -94,7 +94,9 @@ describe('VendorsService', () => {
 
   describe('updateProfile', () => {
     it('should update vendor profile', async () => {
-      await service.updateProfile('vendor123', 'user123', {
+      // Ensure vendor exists for updateProfile
+      mockVendorModel.findOne.mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(mockVendor) });
+      await service.updateProfile('user123', {
         businessName: 'Updated',
       });
       expect(mockVendorModel.findByIdAndUpdate).toHaveBeenCalled();

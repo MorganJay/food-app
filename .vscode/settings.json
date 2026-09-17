@@ -5,6 +5,9 @@
       "token": "xxx",
       "adminToken": "xxx"
     },
+    "dev": {
+      "baseURL": "https://food-app-avjh.onrender.com/api/v1"
+    },
     "test": {
       "baseURL": "https://food-app-9lqz.onrender.com/api/v1"
     }

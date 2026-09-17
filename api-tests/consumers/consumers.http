@@ -41,3 +41,48 @@ Authorization: Bearer {{token}}
 # Get Consumer Favorites
 GET {{baseURL}}/consumers/favorites
 Authorization: Bearer {{token}}
+
+###
+
+# List Consumer Delivery Addresses
+GET {{baseURL}}/consumers/addresses
+Authorization: Bearer {{token}}
+
+###
+
+# Create Consumer Delivery Address
+POST {{baseURL}}/consumers/addresses
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "label": "Home",
+  "addressLine": "123 Ring Road, Ibadan",
+  "city": "Ibadan",
+  "state": "Oyo",
+  "postalCode": "200001",
+  "country": "NG",
+  "location": { "lat": 7.3775, "lng": 3.9470 },
+  "instructions": "Leave at the gate",
+  "isDefault": true
+}
+
+###
+
+@addressId =
+
+# Update Consumer Delivery Address
+PUT {{baseURL}}/consumers/addresses/{{addressId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "label": "Home",
+  "instructions": "Leave at the back gate"
+}
+
+###
+
+# Delete Consumer Delivery Address
+DELETE {{baseURL}}/consumers/addresses/{{addressId}}
+Authorization: Bearer {{token}}

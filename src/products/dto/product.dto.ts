@@ -5,9 +5,75 @@ import {
   IsOptional,
   IsBoolean,
   Min,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+
+export class SelectionOptionDto {
+  @ApiProperty({ 
+    example: 'Beef', 
+    description: 'Name of the option field input' 
+  })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ 
+    example: 1500, 
+    description: 'The extra price added to the base meal cost' 
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  price: number;
+}
+
+export class ChoiceGroupDto {
+  @ApiProperty({ 
+    example: 'Choose your protein', 
+    description: 'The customization header field input' 
+  })
+  @IsNotEmpty()
+  @IsString()
+  groupName: string;
+
+  @ApiProperty({ 
+    example: true, 
+    description: 'Toggle switch indicating if selection is mandatory' 
+  })
+  @IsNotEmpty()
+  @IsBoolean()
+  isRequired: boolean;
+
+  @ApiProperty({ 
+    type: () => [SelectionOptionDto], 
+    description: 'Array of the customizable sub-option list',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SelectionOptionDto)
+  options: SelectionOptionDto[];
+}
+
+export class ProductImageDto {
+  @ApiProperty({
+    description: 'Secure Cloudinary URL of the product photo',
+    example: 'https://res.cloudinary.com/demo/image/upload/v1234/products/burger.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  url: string;
+
+  @ApiProperty({
+    description: 'Cloudinary public identifier tracking ID',
+    example: 'products/burger_xyz123',
+  })
+  @IsString()
+  @IsOptional()
+  publicId?: string;
+}
 
 export class CreateProductDto {
   @ApiProperty({
@@ -29,14 +95,15 @@ export class CreateProductDto {
   @ApiProperty({
     example: 'A juicy beef burger topped with cheddar cheese and fresh lettuce',
     description: 'Detailed description of the food product',
+    required: false,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiProperty({
     example: 3500,
-    description: 'Price of the food product in local currency',
+    description: 'Price of the food product',
   })
   @Type(() => Number)
   @IsNotEmpty()
@@ -65,43 +132,53 @@ export class CreateProductDto {
   category?: string;
 
   @ApiPropertyOptional({
-    type: 'string',
-    format: 'binary',
-    description: 'Product image file',
+    example: true,
+    description: 'Availability status of the food product',
   })
-  image?: any;
+  @IsOptional()
+  @IsBoolean()
+  isAvailable?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Pre-uploaded product image details matching utility service layout',
+    type: ProductImageDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductImageDto)
+  image?: ProductImageDto;
+
+  @ApiPropertyOptional({
+    type: () => [ChoiceGroupDto],
+    description: 'Structured array list for configuring custom options.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ChoiceGroupDto)
+  choiceGroups?: ChoiceGroupDto[]; 
 }
 
 export class UpdateProductDto {
-  @ApiPropertyOptional({
-    example: 'Double Cheese Burger',
-    description: 'Updated name of the food product',
-  })
+  @ApiPropertyOptional({ example: 'Double Cheese Burger' })
   @IsOptional()
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({
-    example: 'A larger burger with double beef patties and extra cheese',
-    description: 'Updated description of the food product',
-  })
+  @ApiPropertyOptional({ example: 'A larger burger with double beef patties' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({
-    example: 4500,
-    description: 'Updated price of the food product',
-  })
-  @Type(() => Number)
+  @ApiPropertyOptional({ example: 4500 })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   price?: number;
 
   @ApiPropertyOptional({ example: 'plate' })
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   unit?: string;
 
   @ApiPropertyOptional({ example: 20 })
@@ -111,29 +188,31 @@ export class UpdateProductDto {
   @Min(0, { message: 'Prep time cannot be negative' })
   prepTime?: number;
 
-  @ApiPropertyOptional({
-    example: 'Grilled Specials',
-    description: 'Updated category of the food product',
-  })
+  @ApiPropertyOptional({ example: 'Grilled Specials' })
   @IsOptional()
   @IsString()
   category?: string;
 
   @ApiPropertyOptional({
-    example: 'https://example.com/double-cheese-burger.jpg',
-    description: 'Updated image URL',
+    type: ProductImageDto,
+    description: 'Updated product image pre-uploaded objects',
   })
   @IsOptional()
-  @IsString()
-  image?: string;
+  @ValidateNested()
+  @Type(() => ProductImageDto)
+  image?: ProductImageDto;
 
-  @ApiPropertyOptional({
-    example: true,
-    description: 'Availability status of the food product',
-  })
+  @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
+
+  @ApiPropertyOptional({ type: () => [ChoiceGroupDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ChoiceGroupDto)
+  choiceGroups?: ChoiceGroupDto[];
 }
 
 export class ProductResponseDto {
@@ -143,9 +222,7 @@ export class ProductResponseDto {
   @ApiProperty({ example: 'Cheese Burger' })
   name: string;
 
-  @ApiProperty({
-    example: 'A juicy beef burger topped with cheddar cheese and fresh lettuce',
-  })
+  @ApiProperty({ example: 'A juicy beef burger' })
   description: string;
 
   @ApiProperty({ example: 3500 })
@@ -160,10 +237,8 @@ export class ProductResponseDto {
   @ApiPropertyOptional({ example: 'Fast Food' })
   category?: string;
 
-  @ApiPropertyOptional({
-    example: 'https://your-cdn.com/uploads/burger.jpg',
-  })
-  image?: string;
+  @ApiPropertyOptional({ type: ProductImageDto })
+  image?: ProductImageDto;
 
   @ApiPropertyOptional({ example: true })
   isAvailable?: boolean;
@@ -179,4 +254,7 @@ export class ProductResponseDto {
 
   @ApiProperty({ example: 1 })
   serialNumber: number;
+
+  @ApiProperty({ type: [ChoiceGroupDto] })
+  choiceGroups: ChoiceGroupDto[];
 }

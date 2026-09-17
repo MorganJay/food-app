@@ -55,4 +55,4 @@ ReviewSchema.pre('save', async function (next) {
 });
 ReviewSchema.index({ consumerId: 1 });
 ReviewSchema.index({ vendorId: 1 });
-ReviewSchema.index({ foodId: 1 });
+ReviewSchema.index({ productId: 1 });

@@ -9,8 +9,9 @@ import { randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
-import { UserResponseDto } from './dto/users.dto';
+import { UpdateAvatarDto, UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
+import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 
 @Injectable()
 export class UsersService {
@@ -75,9 +76,6 @@ export class UsersService {
   async verifyPhoneNumber(phoneNumber: string) {
     const existing = await this.userModel.findOne({ phoneNumber }).exec();
     if (!existing) throw new NotFoundException('User not found');
-    if (existing.isPhoneVerified) {
-      throw new BadRequestException('Phone already verified');
-    }
     const savedUser = await this.userModel.findOneAndUpdate(
       { phoneNumber },
       { $set: { isPhoneVerified: true } },
@@ -125,10 +123,111 @@ export class UsersService {
     });
   }
 
+  async updateProfile(userId: string, dto: UpdateUserProfileDto) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existingEmail = await this.userModel.findOne({ email: dto.email });
+
+      if (existingEmail) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+    
+    // phone check
+    if (dto.phoneNumber && dto.phoneNumber !== user.phoneNumber) {
+      const existingPhone = await this.userModel.findOne({
+        phoneNumber: dto.phoneNumber,
+      });
+
+      if (existingPhone) {
+        throw new BadRequestException('Phone number already exists');
+      }
+    }
+
+
+    // username check
+    if (dto.username && dto.username !== user.username) {
+      const existingUsername = await this.userModel.findOne({
+        username: dto.username,
+      });
+
+      if (existingUsername) {
+        throw new BadRequestException('Username already exists');
+      }
+    }
+
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, dto,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    return this.mapUserResponse(updatedUser);
+  }
+
+  async uploadAvatar(userId: string, dto: UpdateAvatarDto) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    try {
+      // Clean up older verification/avatar resources inside Cloudinary storage
+      if (user.avatar?.public_id) {
+        await deleteFromCloudinary(user.avatar.public_id).catch((err) =>
+          console.error('Failed to clear old avatar asset:', err),
+        );
+      }
+
+      user.avatar = {
+        secure_url: dto.avatar.url.trim(),
+        public_id: dto.avatar.publicId.trim(),
+      };
+
+      await user.save();
+
+      return {
+        avatar: user.avatar.secure_url,
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to process user avatar update payload.');
+    }
+  }
+
+  async getMe(userId: string) {
+    const user = await this.userModel.findById(userId).lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user._id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      avatar: user.avatar?.secure_url,
+      isPhoneVerified: user.isPhoneVerified,
+      createdAt: user.createdAt,
+    };
+  }
+
   private mapUserResponse(user: UserDocument): UserResponseDto {
     return {
       id: user._id.toString(),
       username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,

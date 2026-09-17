@@ -2,9 +2,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import {
   CreateVendorDto,
@@ -12,9 +13,13 @@ import {
   VendorResponseDto,
 } from './dto/create-vendor.dto';
 import { mapToGeoLocation } from '../common/geojson';
+import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
+import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
 
 @Injectable()
 export class VendorsService {
+  private readonly logger = new Logger(VendorsService.name);
+
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
@@ -35,6 +40,10 @@ export class VendorsService {
   }
 
   async findById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid vendor ID: ${id}`);
+    }
+
     const vendor = await this.vendorModel.findById(id).exec();
     if (!vendor) {
       throw new NotFoundException(`Vendor with ID ${id} not found`);
@@ -42,70 +51,54 @@ export class VendorsService {
     return this.mapVendorResponse(vendor);
   }
 
-  async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-    const vendors = await this.vendorModel
-      .find({
-        isVerified: true,
-        location: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            $maxDistance: radiusKm * 1000,
-          },
-        },
-      })
-      .exec();
-
-    return vendors.map((vendor) => this.mapVendorResponse(vendor));
-  }
-
   async createVendor(userId: string, createVendor: CreateVendorDto) {
-    const location = createVendor.location;
-
-    const existing = await this.vendorModel.findOne({
-      businessName: createVendor.businessName,
-    });
+    const existing = await this.vendorModel
+      .findOne({ businessName: createVendor.businessName })
+      .exec();
 
     if (existing) {
       throw new BadRequestException('Vendor name already exists');
     }
 
+    const geo = createVendor.location
+      ? mapToGeoLocation(createVendor.location.longitude, createVendor.location.latitude)
+      : null;
+
     const vendorData: any = {
       userId,
       businessName: createVendor.businessName,
       description: createVendor.description,
-      openHours: createVendor.openHours,
-      closeHours: createVendor.closeHours,
+      address: createVendor.location?.address,
+      location: geo,
       isVerified: false,
     };
-
-    const latitude = location?.latitude;
-    const longitude = location?.longitude;
-
-    if (location?.address) {
-      vendorData.address = location.address;
-    }
-
-    if (latitude !== undefined && longitude !== undefined) {
-      vendorData.location = mapToGeoLocation(longitude, latitude);
-    }
 
     const vendor = await this.vendorModel.create(vendorData);
     return this.mapVendorResponse(vendor);
   }
 
-  async updateProfile(id: string, userId: string, updateData: UpdateVendorDto) {
-    const vendor = await this.vendorModel.findById(id).exec();
+  async updateProfile(userId: string, updateData: UpdateVendorDto) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
-      throw new NotFoundException(`Vendor with ID ${id} not found`);
+      throw new NotFoundException('Vendor profile not found for this user account context.');
     }
-    if (vendor.userId !== userId) {
-      throw new BadRequestException(
-        'You can only update your own vendor profile',
-      );
+
+    // Check business name uniqueness if it's being updated
+    if (
+      updateData.businessName &&
+      updateData.businessName !== vendor.businessName
+    ) {
+      const existing = await this.vendorModel
+        .findOne({ businessName: updateData.businessName })
+        .exec();
+      if (existing) {
+        throw new BadRequestException('Vendor name already exists');
+      }
     }
+
+    const geo = updateData.location
+      ? mapToGeoLocation(updateData.location.longitude, updateData.location.latitude)
+      : undefined;
 
     const updatePayload: any = {};
 
@@ -117,47 +110,130 @@ export class VendorsService {
       updatePayload.description = updateData.description;
     }
 
-    if (updateData.openHours) {
-      updatePayload.openHours = updateData.openHours;
+    if (updateData.location?.address !== undefined) {
+      updatePayload.address = updateData.location.address;
     }
 
-    if (updateData.closeHours) {
-      updatePayload.closeHours = updateData.closeHours;
-    }
-
-    // handle location mapping
-    if (updateData.location) {
-      const { address, latitude, longitude } = updateData.location;
-
-      if (address) {
-        updatePayload.address = address;
-      }
-
-      if (latitude !== undefined && longitude !== undefined) {
-        updatePayload.location = mapToGeoLocation(longitude, latitude);
-      }
+    if (geo) {
+      updatePayload.location = geo;
     }
 
     const updatedVendor = await this.vendorModel
-      .findByIdAndUpdate(id, updatePayload, { new: true })
+      .findByIdAndUpdate(vendor._id, updatePayload, { new: true })
       .exec();
+
+    if (!updatedVendor) {
+      throw new NotFoundException('Failed to update vendor profile.');
+    }
 
     return this.mapVendorResponse(updatedVendor);
   }
 
-  private mapVendorResponse(vendor: any): VendorResponseDto {
+  async submitNin(userId: string, dto: NinVerificationDto) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor profile tracking context not found for user ID ${userId}`);
+    }
+
+    if (!dto.ninDocument || !dto.ninDocument.url) {
+      throw new BadRequestException('A pre-uploaded NIN document verification payload is required.');
+    }
+
+    if (!dto.selfie || !dto.selfie.url) {
+      throw new BadRequestException('A pre-uploaded face live selfie verification payload is required.');
+    }
+
+    // Clean up older verification artifacts from Cloudinary
+    if (vendor.ninDocument?.public_id) {
+      await deleteFromCloudinary(vendor.ninDocument.public_id).catch((err) =>
+        this.logger.error('Failed to clear old verification image artifact:', err),
+      );
+    }
+    if (vendor.selfie?.public_id) {
+      await deleteFromCloudinary(vendor.selfie.public_id).catch((err) =>
+        this.logger.error('Failed to clear old selfie artifact:', err),
+      );
+    }
+
+    const updatePayload: any = {
+      nin: dto.nin.trim(),
+      isNinVerified: false,
+      ninDocument: {
+        secure_url: dto.ninDocument.url.trim(),
+        public_id: dto.ninDocument.publicId.trim(),
+      },
+      selfie: {
+        secure_url: dto.selfie.url.trim(),
+        public_id: dto.selfie.publicId.trim(),
+      },
+    };
+
+    const updated = await this.vendorModel
+      .findOneAndUpdate({ userId }, updatePayload, { new: true })
+      .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Failed to process NIN submission.');
+    }
+
+    return this.mapVendorResponse(updated);
+  }
+
+  async verifyNin(vendorId: string) {
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      throw new BadRequestException(`Invalid vendor ID: ${vendorId}`);
+    }
+
+    const vendor = await this.vendorModel.findById(vendorId).exec();
+
+    if (!vendor) {
+      throw new NotFoundException(`Vendor not found`);
+    }
+
+    vendor.isNinVerified = true;
+    await vendor.save();
+
+    return this.mapVendorResponse(vendor);
+  }
+
+  async getVendorStats(userId: string) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new NotFoundException('Vendor profile not found');
+    }
+
     return {
-      id: vendor._id.toString(),
+      vendorId: vendor._id.toString(),
+      totalOrders: vendor.totalOrders || 0,
+      totalEarnings: vendor.totalEarnings || 0,
+      avgRating: vendor.avgRating || 0,
+    };
+  }
+
+  private mapVendorResponse(vendor: any): VendorResponseDto {
+    if (!vendor) {
+      return null;
+    }
+
+    return {
+      id: vendor._id?.toString(),
       businessName: vendor.businessName,
       description: vendor.description,
-      openHours: vendor.openHours,
-      closeHours: vendor.closeHours,
       isVerified: vendor.isVerified,
       location: {
         address: vendor.address,
         latitude: vendor.location?.coordinates?.[1],
         longitude: vendor.location?.coordinates?.[0],
       },
+      image: vendor.image?.secure_url,
+      workingDays: vendor.workingDays,
+      orderType: vendor.orderType,
+      nin: vendor.nin,
+      ninDocument: vendor.ninDocument?.secure_url,
+      selfie: vendor.selfie?.secure_url,
+      isNinVerified: vendor.isNinVerified,
+
       createdAt: vendor.createdAt,
       updatedAt: vendor.updatedAt,
       serialNumber: vendor.serialNumber,

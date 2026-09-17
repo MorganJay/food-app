@@ -51,6 +51,19 @@ export class User extends BaseEntity {
 
   @Prop()
   password?: string;
+
+  @Prop({
+    type: {
+      secure_url: { type: String },
+      public_id: { type: String },
+    },
+    default: null,
+  })
+  avatar?: {
+    secure_url: string;
+    public_id: string;
+  };
+  
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

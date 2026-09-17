@@ -1,0 +1,6 @@
+# OTP delivery configuration
+# Controls how OTPs are delivered. Supported values:
+# - SMS: send OTPs via SMS using the configured provider
+# - RESPONSE: return the OTP in the API response (useful for development/testing)
+# When unset, the system treats the mode as RESPONSE.
+OTP_DELIVERY_MODE: RESPONSE
