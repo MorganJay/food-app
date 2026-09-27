@@ -19,14 +19,14 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../schemas/User.schema';
 import { ConsumersService } from './consumers.service';
-import { ToggleFavoriteDto } from './dto/consumers.dto';
+import { ToggleFavoriteDto, UpdateConsumerDto } from './dto/consumers.dto';
 
 @ApiTags('Consumers')
 @ApiBearerAuth('jwt')
 @Controller('consumers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConsumersController {
-  constructor(private consumersService: ConsumersService) {}
+  constructor(private consumersService: ConsumersService) { }
 
   @Get('profile')
   @Roles(UserRole.CONSUMER)
@@ -40,16 +40,16 @@ export class ConsumersController {
   @Roles(UserRole.CONSUMER)
   @ApiOperation({ summary: 'Update consumer profile' })
   @ApiResponse({ status: 200, description: 'Profile updated' })
-  async updateProfile(@Req() req, @Body() updateData: any) {
+  async updateProfile(@Req() req, @Body() updateData: UpdateConsumerDto) {
     return this.consumersService.updateProfile(req.user.sub, updateData);
   }
 
   @Post('toggleFavorites')
   @Roles(UserRole.CONSUMER)
-  @ApiOperation({ summary: 'Toggle favorite vendor' })
-  @ApiResponse({ status: 200, description: 'Favorite toggled' })
+  @ApiOperation({ summary: 'Toggle favorite restaurant' })
+  @ApiResponse({ status: 200, description: 'Restaurant toggled' })
   async toggleFavorite(@Req() req, @Body() dto: ToggleFavoriteDto) {
-    return this.consumersService.toggleFavorite(req.user.sub, dto.vendorId);
+    return this.consumersService.toggleFavorite(req.user.sub, dto.restaurantId);
   }
 
   @Get('orders')

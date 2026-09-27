@@ -6,31 +6,29 @@ import {
   IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 class LocationDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Physical address of the restaurant',
-    example: 'ikeja, Lagos State',
-    required: false,
+    example: 'Ikeja, Lagos State',
   })
+  @IsOptional()
   @IsString()
   address?: string;
 
-  @ApiProperty({
-    description: 'Latitude coordinate of the restaurant location',
-    example: '7.3775',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Latitude coordinate',
+    example: 7.3775,
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   latitude?: number;
 
-  @ApiProperty({
-    description: 'Longitude coordinate of the restaurant location',
-    example: '3.947',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Longitude coordinate',
+    example: 3.947,
   })
   @IsOptional()
   @Type(() => Number)
@@ -40,7 +38,7 @@ class LocationDto {
 
 export class CreateVendorDto {
   @ApiProperty({
-    description: 'Business name of the vendor',
+    description: 'Name of the vendor business',
     example: 'Mama Put Kitchen',
   })
   @IsNotEmpty()
@@ -48,65 +46,33 @@ export class CreateVendorDto {
   businessName: string;
 
   @ApiProperty({
-    description: 'Description of the vendor business',
-    example: 'Local food vendor serving delicious Nigerian dishes',
+    description: 'Short description of the vendor and what they offer',
+    example: 'Local food vendor serving delicious Nigerian dishes and soups',
   })
-  @IsNotEmpty()
   @IsString()
-  description: string;
+  description?: string;
 
-  @ApiProperty({
-    description: 'Vendor location details',
+  @ApiPropertyOptional({
+    description: 'Vendor location details including address and coordinates',
     type: LocationDto,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => LocationDto)
   location?: LocationDto;
-
-  @ApiProperty({
-    description: 'Opening time',
-    example: '08:00',
-  })
-  @IsNotEmpty()
-  @IsString()
-  openHours: string;
-
-  @ApiProperty({
-    description: 'Closing time',
-    example: '22:00',
-  })
-  @IsNotEmpty()
-  @IsString()
-  closeHours: string;
 }
 
-export class UpdateVendorDto {
-  @ApiProperty({ required: false })
-  @IsOptional()
-  businessName?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  description?: string;
-
-  @ApiPropertyOptional({ type: LocationDto })
-  location?: LocationDto;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  openHours?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  closeHours?: string;
-}
+export class UpdateVendorDto extends PartialType(CreateVendorDto) { }
 
 export class VendorResponseDto {
-  @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
+  @ApiProperty({
+    example: '67ab12cd34ef56gh78ij90kl',
+  })
   id: string;
 
-  @ApiProperty({ example: 'Mama Put Kitchen' })
+  @ApiProperty({
+    example: 'Mama Put Kitchen',
+  })
   businessName: string;
 
   @ApiProperty({
@@ -114,17 +80,54 @@ export class VendorResponseDto {
   })
   description: string;
 
-  @ApiProperty({ example: '08:00' })
-  openHours: string;
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/.../banner.jpg',
+    description: 'Store banner image URL',
+  })
+  image?: string;
 
-  @ApiProperty({ example: '22:00' })
-  closeHours: string;
+  @ApiProperty({
+    example: ['Monday', 'Tuesday', 'Wednesday'],
+    description: 'Days of the week the vendor operates',
+  })
+  workingDays: string[];
 
-  @ApiProperty({ example: false })
+  @ApiPropertyOptional({
+    example: 'delivery',
+    description: 'how the vendor accepts orders',
+  })
+  orderType?: string;
+
+  @ApiProperty({
+    example: false,
+  })
   isVerified: boolean;
 
-  @ApiProperty({ type: LocationDto })
+  @ApiProperty({
+    type: LocationDto,
+  })
   location: LocationDto;
+
+  @ApiPropertyOptional({
+    example: '12345678901',
+    description: 'User NIN',
+  })
+  nin?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+  })
+  isNinVerified?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/.../nin.jpg',
+  })
+  ninDocument?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/.../selfie.jpg',
+  })
+  selfie?: string;
 
   @ApiProperty()
   createdAt: Date;
@@ -132,6 +135,8 @@ export class VendorResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ example: 1 })
+  @ApiProperty({
+    example: 1,
+  })
   serialNumber: number;
 }

@@ -28,7 +28,7 @@ export class Payment extends BaseEntity {
   orderId: string;
 
   @Prop({ required: true })
-  consumerId: string;
+  userId: string;
 
   @Prop({ required: true })
   amount: number;
@@ -46,7 +46,7 @@ export class Payment extends BaseEntity {
   })
   gateway: PaymentGateway;
 
-  @Prop()
+  @Prop({ required: true, unique: true, index: true })
   transactionRef: string;
 
   @Prop({ enum: PaymentStatus, default: PaymentStatus.PENDING })
@@ -73,4 +73,4 @@ PaymentSchema.pre('save', async function (next) {
   next();
 });
 PaymentSchema.index({ orderId: 1 });
-PaymentSchema.index({ consumerId: 1 });
+PaymentSchema.index({ userId: 1 });

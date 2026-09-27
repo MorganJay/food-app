@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:3000
+      MONGO_URI: mongodb://127.0.0.1:27017/food-app-test
+      JWT_SECRET: test-secret
+      JWT_EXPIRES_IN: 7d
+      INFOBIP_API_KEY: test-key
+      INFOBIP_BASE_URL: https://api.infobip.com
+      INFOBIP_SMS_SENDER_ID: Chopbaze
+      CLOUDINARY_CLOUD_NAME: demo
+      CLOUDINARY_API_KEY: demo
+      CLOUDINARY_API_SECRET: demo
+      PAYSTACK_SECRET_KEY: test-paystack-key
+      PAYSTACK_BASE_URL: https://api.paystack.co
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build app
+        run: yarn build
+
+      - name: Run tests
+        run: yarn test --runInBand --watch=false
+
+  deploy:
+    name: Deploy to Render
+    needs: test
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not configured. Skipping deploy."
+            exit 0
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK_URL"
