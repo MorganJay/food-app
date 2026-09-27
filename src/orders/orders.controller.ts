@@ -55,8 +55,14 @@ export class OrdersController {
     description: 'Checkout summary retrieved successfully',
     type: CheckoutSummaryResponseDto,
   })
-  async getCheckoutSummary(@Req() req) {
-    return this.ordersService.getCheckoutSummary(req.user.sub);
+  async getCheckoutSummary(
+    @Req() req,
+    @Query('deliveryAddressId') deliveryAddressId?: string,
+  ) {
+    return this.ordersService.getCheckoutSummary(
+      req.user.sub,
+      deliveryAddressId,
+    );
   }
 
   @Get()

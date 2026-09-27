@@ -2,8 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
 import { BaseEntity } from './BaseEntity';
 
-export type VendorBankAccountDocument =
-  HydratedDocument<VendorBankAccount>;
+export type VendorBankAccountDocument = HydratedDocument<VendorBankAccount>;
 
 @Schema({
   timestamps: true,
@@ -29,9 +28,9 @@ export class VendorBankAccount extends BaseEntity {
   isDefault: boolean;
 }
 
-export const VendorBankAccountSchema = SchemaFactory.createForClass(VendorBankAccount);
+export const VendorBankAccountSchema =
+  SchemaFactory.createForClass(VendorBankAccount);
 
-VendorBankAccountSchema.index({ vendorId: 1 });
 VendorBankAccountSchema.index({ vendorId: 1, isDefault: 1 });
 
 VendorBankAccountSchema.pre('save', async function (next) {
@@ -50,4 +49,4 @@ VendorBankAccountSchema.pre('save', async function (next) {
     }
   }
   next();
-})
+});

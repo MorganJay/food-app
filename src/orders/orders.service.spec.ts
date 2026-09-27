@@ -12,6 +12,7 @@ import { OrderEventsService } from './order-events.service';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DbglService } from '../dbgl/dbgl.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -25,13 +26,19 @@ describe('OrdersService', () => {
     findOne: jest.fn(() => chainedExec()),
     findOneAndUpdate: jest.fn(() => chainedExec()),
   };
-  const vendorModel = { findOne: jest.fn(() => chainedExec()) };
+  const vendorModel = {
+    findOne: jest.fn(() => chainedExec()),
+    findById: jest.fn(() => chainedExec()),
+  };
   const riderModel = { findOne: jest.fn(() => chainedExec()) };
   const restaurantModel = {
     findById: jest.fn(() => chainedExec()),
     findOne: jest.fn(() => chainedExec()),
   };
-  const userModel = { findOne: jest.fn(() => chainedExec()) };
+  const userModel = {
+    findOne: jest.fn(() => chainedExec()),
+    findById: jest.fn(() => chainedExec()),
+  };
   const chainedExec = () => ({ exec: jest.fn() });
   const addressModel = {
     countDocuments: jest.fn().mockReturnValue(chainedExec()),
@@ -39,8 +46,51 @@ describe('OrdersService', () => {
   };
   const orderEventsService = { publish: jest.fn() };
   const notificationsService = { sendEmail: jest.fn() };
+  const dbglService = { createOrder: jest.fn(), quote: jest.fn() };
 
   beforeEach(async () => {
+    orderSave.mockReset();
+    orderModelMock.findOne.mockReset();
+    orderModelMock.findOne.mockImplementation(() => chainedExec());
+    orderModelMock.findOneAndUpdate.mockReset();
+    orderModelMock.findOneAndUpdate.mockImplementation(() => chainedExec());
+    cartModel.findOne.mockReset();
+    cartModel.findOne.mockImplementation(() => chainedExec());
+    cartModel.findOneAndUpdate.mockReset();
+    cartModel.findOneAndUpdate.mockImplementation(() => chainedExec());
+    vendorModel.findOne.mockReset();
+    vendorModel.findOne.mockImplementation(() => chainedExec());
+    vendorModel.findById.mockReset();
+    vendorModel.findById.mockImplementation(() => chainedExec());
+    riderModel.findOne.mockReset();
+    riderModel.findOne.mockImplementation(() => chainedExec());
+    restaurantModel.findById.mockReset();
+    restaurantModel.findById.mockImplementation(() => ({
+      exec: jest.fn().mockResolvedValue({
+        name: 'Test Restaurant',
+        address: '10 Vendor Road, Lagos',
+        location: { coordinates: [3.4, 6.5] },
+      }),
+    }));
+    restaurantModel.findOne.mockReset();
+    restaurantModel.findOne.mockImplementation(() => chainedExec());
+    userModel.findOne.mockReset();
+    userModel.findOne.mockImplementation(() => chainedExec());
+    userModel.findById.mockReset();
+    userModel.findById.mockImplementation(() => chainedExec());
+    addressModel.countDocuments.mockReset();
+    addressModel.countDocuments.mockImplementation(() => chainedExec());
+    addressModel.create.mockReset();
+    addressModel.create.mockResolvedValue(undefined);
+    orderEventsService.publish.mockReset();
+    orderEventsService.publish.mockResolvedValue(undefined);
+    notificationsService.sendEmail.mockReset();
+    notificationsService.sendEmail.mockResolvedValue(undefined);
+    dbglService.createOrder.mockReset();
+    dbglService.createOrder.mockResolvedValue(undefined);
+    dbglService.quote.mockReset();
+    dbglService.quote.mockResolvedValue({ total_amount: 2750 });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -56,6 +106,7 @@ describe('OrdersService', () => {
         { provide: getModelToken(User.name), useValue: userModel },
         { provide: OrderEventsService, useValue: orderEventsService },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: DbglService, useValue: dbglService },
         { provide: ConfigService, useValue: { get: jest.fn(() => undefined) } },
       ],
     }).compile();
@@ -158,14 +209,12 @@ describe('OrdersService', () => {
     orderSave.mockResolvedValue(savedOrder);
     userModel.findOne
       .mockReturnValueOnce({
-        exec: jest
-          .fn()
-          .mockResolvedValue({
-            _id: 'consumer1',
-            firstName: 'Jane',
-            lastName: 'Doe',
-            phoneNumber: '+2348012345678',
-          }),
+        exec: jest.fn().mockResolvedValue({
+          _id: 'consumer1',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          phoneNumber: '+2348012345678',
+        }),
       })
       .mockReturnValueOnce({
         exec: jest
@@ -175,9 +224,18 @@ describe('OrdersService', () => {
     cartModel.findOne.mockReturnValueOnce({
       exec: jest.fn().mockResolvedValue({ items: [] }),
     });
-    restaurantModel.findById.mockReturnValueOnce({
-      exec: jest.fn().mockResolvedValue({ vendorId: 'vendor1' }),
-    });
+    restaurantModel.findById
+      .mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({
+          vendorId: 'vendor1',
+          name: 'Test Restaurant',
+          address: '10 Vendor Road, Lagos',
+          location: { coordinates: [3.4, 6.5] },
+        }),
+      })
+      .mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ vendorId: 'vendor1' }),
+      });
     vendorModel.findOne.mockReturnValueOnce({
       exec: jest.fn().mockResolvedValue({ userId: 'vendor1' }),
     });
@@ -195,6 +253,73 @@ describe('OrdersService', () => {
       expect.objectContaining({
         to: 'vendor@example.com',
         subject: expect.stringContaining('New order'),
+      }),
+    );
+  });
+
+  it('uses the DBGL quote total as the delivery fee when creating an order', async () => {
+    const savedOrder = {
+      _id: 'order-quoted',
+      orderReference: 'ORD-QUOTED',
+      serialNumber: 12,
+      user: { userId: 'consumer1', firstName: 'Jane', lastName: 'Doe' },
+      items: [{ productId: 'prod1', quantity: 1, price: 1000, name: 'Meal' }],
+      subtotal: 1000,
+      serviceFee: 100,
+      deliveryFee: 2750,
+      total: 3850,
+      deliveryAddress: {
+        addressLine: '5 Test Road, Lagos',
+        city: 'Lagos',
+        state: 'Lagos',
+      },
+      status: OrderStatus.PENDING,
+      paymentStatus: 'pending',
+    };
+    orderSave.mockResolvedValue(savedOrder);
+    userModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phoneNumber: '+2348012345678',
+      }),
+    });
+    cartModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ items: [] }),
+    });
+    restaurantModel.findById.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        name: 'Test Restaurant',
+        address: '10 Vendor Road, Lagos',
+        location: { coordinates: [3.4, 6.5] },
+      }),
+    });
+    dbglService.quote.mockResolvedValueOnce({ total_amount: 2750 });
+    addressModel.countDocuments.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue(1),
+    });
+
+    await service.create('consumer1', {
+      restaurantId: 'restaurant1',
+      items: [{ productId: 'prod1', quantity: 1, price: 1000, name: 'Meal' }],
+      deliveryAddress: {
+        addressLine: '5 Test Road, Lagos',
+        city: 'Lagos',
+        state: 'Lagos',
+      },
+    } as any);
+
+    expect(dbglService.quote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vendor_address: '10 Vendor Road, Lagos',
+        delivery_address: '5 Test Road, Lagos',
+      }),
+    );
+    expect(orderModelMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryFee: 2750,
+        total: 3850,
       }),
     );
   });
@@ -220,6 +345,13 @@ describe('OrdersService', () => {
         paymentStatus: 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
+      }),
+    });
+    orderModelMock.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'order1',
+        status: OrderStatus.PENDING,
+        restaurantId: 'restaurant1',
       }),
     });
     orderModelMock.findOneAndUpdate.mockReturnValueOnce({
@@ -308,5 +440,206 @@ describe('OrdersService', () => {
         role: UserRole.VENDOR,
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('marks an accepted order as preparing and publishes the status event', async () => {
+    const order = {
+      _id: 'order1',
+      status: OrderStatus.ACCEPTED,
+      restaurantId: 'restaurant1',
+      user: { userId: 'consumer1', firstName: 'Jane', lastName: 'Doe' },
+      items: [],
+      subtotal: 1000,
+      serviceFee: 100,
+      deliveryFee: 400,
+      total: 1500,
+      deliveryAddress: {},
+    };
+    orderModelMock.findOne
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(order) })
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(order) });
+    vendorModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ id: 'vendor1' }),
+    });
+    restaurantModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: 'restaurant1' }),
+    });
+    orderModelMock.findOneAndUpdate.mockReturnValueOnce({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ ...order, status: OrderStatus.PREPARING }),
+    });
+
+    const result = await service.markPreparing('order1', {
+      sub: 'vendor1',
+      role: UserRole.VENDOR,
+    });
+
+    expect(result.status).toBe(OrderStatus.PREPARING);
+    expect(orderEventsService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'OrderPreparingEvent',
+        orderId: 'order1',
+      }),
+    );
+  });
+
+  it('does not create a delivery when the order is not preparing', async () => {
+    orderModelMock.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'order1',
+        status: OrderStatus.ACCEPTED,
+        restaurantId: 'restaurant1',
+      }),
+    });
+    vendorModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ id: 'vendor1' }),
+    });
+    restaurantModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: 'restaurant1' }),
+    });
+
+    await expect(
+      service.markReadyForPickup('order1', {
+        sub: 'vendor1',
+        role: UserRole.VENDOR,
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(dbglService.createOrder).not.toHaveBeenCalled();
+  });
+
+  it('keeps a prepared order unchanged when delivery booking fails', async () => {
+    const order = {
+      _id: 'order1',
+      orderReference: 'ORD-1',
+      status: OrderStatus.PREPARING,
+      restaurantId: 'restaurant1',
+      user: {
+        userId: 'consumer1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phoneNumber: '+2348000000000',
+      },
+      items: [],
+      subtotal: 1000,
+      serviceFee: 100,
+      deliveryFee: 400,
+      total: 1500,
+      deliveryAddress: {
+        addressLine: '5 Test Road, Lagos',
+        city: 'Lagos',
+        state: 'Lagos',
+      },
+    };
+    orderModelMock.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue(order),
+    });
+    vendorModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ id: 'vendor1' }),
+    });
+    restaurantModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: 'restaurant1' }),
+    });
+    restaurantModel.findById.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        name: 'Test Kitchen',
+        address: '10 Vendor Road, Lagos',
+        vendorId: 'vendor-doc-1',
+        location: { coordinates: [3.4, 6.5] },
+      }),
+    });
+    vendorModel.findById = jest.fn().mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ userId: 'vendor-user-1' }),
+    });
+    userModel.findById = jest.fn().mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ phoneNumber: '+2348111111111' }),
+    });
+    dbglService.createOrder.mockRejectedValueOnce(
+      new Error('DBGL unavailable'),
+    );
+
+    await expect(
+      service.markReadyForPickup('order1', {
+        sub: 'vendor1',
+        role: UserRole.VENDOR,
+      }),
+    ).rejects.toThrow('Delivery could not be booked');
+    expect(orderModelMock.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(orderEventsService.publish).not.toHaveBeenCalled();
+  });
+
+  it('books delivery before marking a prepared order ready for pickup', async () => {
+    const order = {
+      _id: 'order1',
+      orderReference: 'ORD-1',
+      status: OrderStatus.PREPARING,
+      restaurantId: 'restaurant1',
+      user: {
+        userId: 'consumer1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phoneNumber: '+2348000000000',
+      },
+      items: [],
+      subtotal: 1000,
+      serviceFee: 100,
+      deliveryFee: 400,
+      total: 1500,
+      deliveryAddress: {
+        addressLine: '5 Test Road, Lagos',
+        city: 'Lagos',
+        state: 'Lagos',
+      },
+    };
+    const updatedOrder = { ...order, status: OrderStatus.READY_FOR_PICKUP };
+    orderModelMock.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue(order),
+    });
+    vendorModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ id: 'vendor1' }),
+    });
+    restaurantModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: 'restaurant1' }),
+    });
+    restaurantModel.findById.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        name: 'Test Kitchen',
+        address: '10 Vendor Road, Lagos',
+        vendorId: 'vendor-doc-1',
+        location: { coordinates: [3.4, 6.5] },
+      }),
+    });
+    vendorModel.findById = jest.fn().mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ userId: 'vendor-user-1' }),
+    });
+    userModel.findById = jest.fn().mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ phoneNumber: '+2348111111111' }),
+    });
+    dbglService.createOrder.mockResolvedValueOnce({ orderId: 'DBGL-1' });
+    orderModelMock.findOneAndUpdate.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue(updatedOrder),
+    });
+
+    const result = await service.markReadyForPickup('order1', {
+      sub: 'vendor1',
+      role: UserRole.VENDOR,
+    });
+
+    expect(dbglService.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        partner_order_ref: 'ORD-1',
+        vendor_phone: '+2348111111111',
+        customer_phone: '+2348000000000',
+      }),
+    );
+    expect(orderModelMock.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'order1', isDeleted: false, status: OrderStatus.PREPARING },
+      { status: OrderStatus.READY_FOR_PICKUP },
+      { new: true },
+    );
+    expect(result.status).toBe(OrderStatus.READY_FOR_PICKUP);
+    expect(orderEventsService.publish).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'OrderReadyEvent', orderId: 'order1' }),
+    );
   });
 });

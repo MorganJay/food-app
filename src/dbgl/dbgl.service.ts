@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  BadGatewayException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -121,6 +122,12 @@ export class DbglService {
       payload,
       { headers: this.getHeaders() },
     );
+
+    if (!response.data?.order_id) {
+      throw new BadGatewayException(
+        'Delivery provider did not return an order id; the order was not marked ready for pickup.',
+      );
+    }
 
     return this.deliveryOrdersService.upsertFromProvider(
       this.toDeliveryOrderRecord(

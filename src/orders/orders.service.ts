@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
   OnModuleInit,
+  BadGatewayException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -48,27 +50,19 @@ export class OrdersService implements OnModuleInit {
   }
 
   // Calculate pricing breakdown including platform service fees and delivery costs
-  private async calculatePricing(input: {
-    subtotal: number;
-    restaurantId: string;
-  }) {
+  private calculatePricing(input: { subtotal: number; deliveryFee: number }) {
     const serviceFee = Math.round(input.subtotal * 0.1);
-    const deliveryFee = await this.calculateDeliveryFee(input.restaurantId);
-    const total = input.subtotal + serviceFee + deliveryFee;
+    const total = input.subtotal + serviceFee + input.deliveryFee;
 
-    return { serviceFee, deliveryFee, total };
-  }
-
-  // Determine delivery fee for the specified restaurant
-  private async calculateDeliveryFee(restaurantId: string) {
-    return 4000;
+    return { serviceFee, deliveryFee: input.deliveryFee, total };
   }
 
   // Calculate total line item price including optional choice add-ons
   private calculateItemSubtotal(item: any): number {
     const choicesCost = Array.isArray(item.selectedChoices)
       ? item.selectedChoices.reduce(
-          (sum, choice) => sum + (Number(choice.price) || 0),
+          (sum: number, choice: { price: any }) =>
+            sum + (Number(choice.price) || 0),
           0,
         )
       : 0;
@@ -119,10 +113,13 @@ export class OrdersService implements OnModuleInit {
 
     const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    const pricing = await this.calculatePricing({
-      subtotal,
+    const deliveryQuote = await this.getDeliveryFeeQuote({
       restaurantId: createDto.restaurantId,
+      deliveryAddress: createDto.deliveryAddress,
+      items: createDto.items,
     });
+    const deliveryFee = this.getQuotedDeliveryFee(deliveryQuote);
+    const pricing = this.calculatePricing({ subtotal, deliveryFee });
 
     // Populate order user payload directly from UserModel document fields, preserving snapshot email
     const orderData: Partial<Order> = {
@@ -147,59 +144,6 @@ export class OrdersService implements OnModuleInit {
     const order = new this.orderModel(orderData);
     const savedOrder = await order.save();
     const mappedOrder = this.mapOrderResponse(savedOrder);
-
-    try {
-      const restaurant = await this.restaurantModel
-        .findById(createDto.restaurantId)
-        .exec();
-      const payload = {
-        partner_order_ref: savedOrder.orderReference,
-        vendor_name: restaurant?.name || 'Food App Vendor',
-        vendor_phone: userProfile.phoneNumber || '08000000000',
-        vendor_address: restaurant?.address || 'Lagos, Nigeria',
-        vendor_city: this.extractCityFromAddress(
-          restaurant?.address || 'Lagos',
-        ),
-        vendor_state: this.extractStateFromAddress(
-          restaurant?.address || 'Lagos',
-        ),
-        customer_name:
-          `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() ||
-          'Customer',
-        customer_phone: userProfile.phoneNumber || '08000000000',
-        delivery_address:
-          createDto.deliveryAddress.addressLine || 'Lagos, Nigeria',
-        delivery_city:
-          createDto.deliveryAddress.city ||
-          this.extractCityFromAddress(
-            createDto.deliveryAddress.addressLine || 'Lagos',
-          ),
-        delivery_state:
-          createDto.deliveryAddress.state ||
-          this.extractStateFromAddress(
-            createDto.deliveryAddress.addressLine || 'Lagos',
-          ),
-        package_description: `Food order ${savedOrder.orderReference}`,
-        weight_kg: 1,
-        service_type: 'standard',
-        pickup_latitude: this.toLatitude(
-          restaurant?.location?.coordinates?.[1],
-        ),
-        pickup_longitude: this.toLongitude(
-          restaurant?.location?.coordinates?.[0],
-        ),
-        delivery_latitude: this.toLatitude(
-          createDto.deliveryAddress.location?.lat,
-        ),
-        delivery_longitude: this.toLongitude(
-          createDto.deliveryAddress.location?.lng,
-        ),
-      };
-
-      await this.dbglService.createOrder(payload);
-    } catch (error) {
-      console.error('DBGL order creation failed:', error);
-    }
 
     await this.orderEvents.publish({
       type: 'OrderPlacedEvent',
@@ -281,24 +225,89 @@ export class OrdersService implements OnModuleInit {
       : undefined;
   }
 
-  async getDeliveryFeeQuote(
-    userId: string,
-    dto: {
-      restaurantId: string;
-      deliveryAddress: {
-        addressLine?: string;
-        city?: string;
-        state?: string;
-        location?: { lat?: number; lng?: number };
-      };
-      items?: Array<{ name?: string; quantity?: number; price?: number }>;
-    },
-  ) {
-    const userProfile = await this.userModel.findById(userId).exec();
-    if (!userProfile) {
-      throw new NotFoundException('User not found');
+  private async buildDeliveryPartnerOrderPayload(order: OrderDocument) {
+    const restaurant = await this.restaurantModel
+      .findById(order.restaurantId)
+      .exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant for this order was not found');
     }
 
+    const vendor = restaurant.vendorId
+      ? await this.vendorModel.findById(restaurant.vendorId).exec()
+      : null;
+    const vendorUser = vendor?.userId
+      ? await this.userModel.findById(vendor.userId).exec()
+      : null;
+
+    const pickupAddress = restaurant.address?.trim();
+    const deliveryAddress = order.deliveryAddress?.addressLine?.trim();
+    const vendorPhone = vendorUser?.phoneNumber?.trim();
+    const customerPhone = order.user?.phoneNumber?.trim();
+    const vendorName = restaurant.name || vendor?.businessName;
+    const customerName =
+      `${order.user?.firstName || ''} ${order.user?.lastName || ''}`.trim();
+
+    if (!pickupAddress || !deliveryAddress) {
+      throw new BadRequestException(
+        'Pickup and delivery street addresses are required to create a delivery',
+      );
+    }
+    if (!vendorPhone || !customerPhone) {
+      throw new BadRequestException(
+        'Vendor and customer phone numbers are required to create a delivery',
+      );
+    }
+    if (!vendorName || !customerName) {
+      throw new BadRequestException(
+        'Vendor and customer names are required to create a delivery',
+      );
+    }
+
+    const pickupCoordinates = restaurant.location?.coordinates || [];
+    const deliveryCoordinates = order.deliveryAddress?.location;
+    const reference = order.orderReference || order._id.toString();
+
+    return {
+      partner_order_ref: reference,
+      vendor_name: vendorName,
+      vendor_phone: vendorPhone,
+      vendor_address: pickupAddress,
+      vendor_city:
+        (restaurant as any).city || this.extractCityFromAddress(pickupAddress),
+      vendor_state:
+        (restaurant as any).state ||
+        this.extractStateFromAddress(pickupAddress),
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      delivery_address: deliveryAddress,
+      delivery_city:
+        order.deliveryAddress.city ||
+        this.extractCityFromAddress(deliveryAddress),
+      delivery_state:
+        order.deliveryAddress.state ||
+        this.extractStateFromAddress(deliveryAddress),
+      package_description: `Food order ${reference}`,
+      special_instructions: order.notes,
+      weight_kg: 1,
+      service_type: 'standard',
+      pickup_latitude: this.toLatitude(pickupCoordinates[1]),
+      pickup_longitude: this.toLongitude(pickupCoordinates[0]),
+      delivery_latitude: this.toLatitude(deliveryCoordinates?.lat),
+      delivery_longitude: this.toLongitude(deliveryCoordinates?.lng),
+    };
+  }
+
+  async getDeliveryFeeQuote(dto: {
+    restaurantId: string;
+    deliveryAddress: {
+      addressLine?: string;
+      city?: string;
+      state?: string;
+      location?: { lat?: number; lng?: number };
+    };
+    items?: Array<{ name?: string; quantity?: number; price?: number }>;
+  }) {
     const restaurant = await this.restaurantModel
       .findById(dto.restaurantId)
       .exec();
@@ -306,31 +315,36 @@ export class OrdersService implements OnModuleInit {
       throw new NotFoundException('Restaurant not found');
     }
 
+    const vendorAddress = restaurant.address?.trim();
+    const dropoffAddress = dto.deliveryAddress.addressLine?.trim();
+    if (!vendorAddress || !dropoffAddress) {
+      throw new BadRequestException(
+        'Pickup and delivery street addresses are required to get a delivery quote',
+      );
+    }
+
+    const vendorCity =
+      (restaurant as any).city || this.extractCityFromAddress(vendorAddress);
+    const vendorState =
+      (restaurant as any).state || this.extractStateFromAddress(vendorAddress);
+    const deliveryCity =
+      dto.deliveryAddress.city || this.extractCityFromAddress(dropoffAddress);
+    const deliveryState =
+      dto.deliveryAddress.state || this.extractStateFromAddress(dropoffAddress);
+    if (!vendorCity || !vendorState || !deliveryCity || !deliveryState) {
+      throw new BadRequestException(
+        'Pickup and delivery city/state are required to get a delivery quote',
+      );
+    }
+
     const payload = {
       vendor_name: restaurant.name || 'Food App Vendor',
-      vendor_phone: '08000000000',
-      vendor_address: restaurant.address || 'Lagos, Nigeria',
-      vendor_city: this.extractCityFromAddress(
-        restaurant.address || 'Lagos, Nigeria',
-      ),
-      vendor_state: this.extractStateFromAddress(
-        restaurant.address || 'Lagos, Nigeria',
-      ),
-      customer_name:
-        `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() ||
-        'Customer',
-      customer_phone: userProfile.phoneNumber || '08000000000',
-      delivery_address: dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
-      delivery_city:
-        dto.deliveryAddress.city ||
-        this.extractCityFromAddress(
-          dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
-        ),
-      delivery_state:
-        dto.deliveryAddress.state ||
-        this.extractStateFromAddress(
-          dto.deliveryAddress.addressLine || 'Lagos, Nigeria',
-        ),
+      vendor_address: vendorAddress,
+      vendor_city: vendorCity,
+      vendor_state: vendorState,
+      delivery_address: dropoffAddress,
+      delivery_city: deliveryCity,
+      delivery_state: deliveryState,
       package_description: dto.items?.[0]?.name || 'Food order',
       weight_kg:
         dto.items?.reduce((sum, item) => sum + (item.quantity || 1) * 0.5, 0) ||
@@ -345,8 +359,18 @@ export class OrdersService implements OnModuleInit {
     return this.dbglService.quote(payload);
   }
 
+  private getQuotedDeliveryFee(quote: Record<string, any>): number {
+    const fee = Number(quote?.total_amount);
+    if (!Number.isFinite(fee) || fee < 0) {
+      throw new BadGatewayException(
+        'Delivery provider returned an invalid quote; no order was created.',
+      );
+    }
+    return fee;
+  }
+
   // Retrieve pricing and line-item breakdown for cart checkout verification
-  async getCheckoutSummary(userId: string) {
+  async getCheckoutSummary(userId: string, deliveryAddressId?: string) {
     const cart = await this.cartModel.findOne({ userId, isDeleted: false });
 
     if (!cart || !cart.items.length) {
@@ -358,13 +382,34 @@ export class OrdersService implements OnModuleInit {
       throw new NotFoundException('Restaurant not found');
     }
 
+    const deliveryAddress = await this.addressModel
+      .findOne({
+        consumerId: userId,
+        isDeleted: false,
+        ...(deliveryAddressId
+          ? { _id: deliveryAddressId }
+          : { isDefault: true }),
+      })
+      .exec();
+    if (!deliveryAddress) {
+      throw new BadRequestException(
+        'Choose a saved delivery address or set a default address before checkout',
+      );
+    }
+
     const calculatedSubtotal = cart.items.reduce((sum, item) => {
       return sum + (item.subtotal || this.calculateItemSubtotal(item));
     }, 0);
 
-    const pricing = await this.calculatePricing({
-      subtotal: calculatedSubtotal,
+    const deliveryQuote = await this.getDeliveryFeeQuote({
       restaurantId: cart.restaurantId,
+      deliveryAddress,
+      items: cart.items,
+    });
+    const deliveryFee = this.getQuotedDeliveryFee(deliveryQuote);
+    const pricing = this.calculatePricing({
+      subtotal: calculatedSubtotal,
+      deliveryFee,
     });
 
     return {
@@ -373,6 +418,7 @@ export class OrdersService implements OnModuleInit {
       serviceFee: pricing.serviceFee,
       deliveryFee: pricing.deliveryFee,
       total: pricing.total,
+      deliveryAddress,
       items: cart.items.map((item) => ({
         productId: item.productId.toString(),
         name: item.name,
@@ -576,7 +622,7 @@ export class OrdersService implements OnModuleInit {
     const isFirstTimeDelivered =
       status === OrderStatus.DELIVERED &&
       existingOrder.status !== OrderStatus.DELIVERED;
-    
+
     const order = await this.orderModel
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
@@ -652,6 +698,65 @@ export class OrdersService implements OnModuleInit {
   // Convenience wrapper for vendor order rejection
   async rejectOrder(id: string, requester: OrderRequester) {
     return this.updateStatus(id, OrderStatus.DECLINED, requester);
+  }
+
+  async markPreparing(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.PREPARING, requester);
+  }
+
+  async markReadyForPickup(id: string, requester: OrderRequester) {
+    if (requester.role !== UserRole.VENDOR) {
+      throw new ForbiddenException('Only a vendor can mark an order ready');
+    }
+
+    const order = await this.assertOrderAccessible(id, requester);
+    if (order.status === OrderStatus.READY_FOR_PICKUP) {
+      return this.mapOrderResponse(order);
+    }
+    if (order.status !== OrderStatus.PREPARING) {
+      throw new BadRequestException(
+        'Order must be in preparation before it can be marked ready for pickup',
+      );
+    }
+
+    const payload = await this.buildDeliveryPartnerOrderPayload(order);
+    try {
+      await this.dbglService.createOrder(payload);
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadGatewayException(
+        'Delivery could not be booked. The order remains in preparation; retry when the delivery provider is available.',
+      );
+    }
+
+    // Only advance local state after the provider has accepted the idempotent
+    // partner_order_ref. The conditional update also protects against races.
+    const updatedOrder = await this.orderModel
+      .findOneAndUpdate(
+        { _id: id, isDeleted: false, status: OrderStatus.PREPARING },
+        { status: OrderStatus.READY_FOR_PICKUP },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedOrder) {
+      throw new ConflictException(
+        'Delivery was booked, but the order changed concurrently. Refresh the order before retrying.',
+      );
+    }
+
+    const mappedOrder = this.mapOrderResponse(updatedOrder);
+    await this.orderEvents.publish({
+      type: 'OrderReadyEvent',
+      orderId: id,
+      order: mappedOrder,
+    });
+    return mappedOrder;
   }
 
   // Convenience wrapper for cancellation requests
