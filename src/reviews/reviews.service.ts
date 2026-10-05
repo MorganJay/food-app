@@ -16,12 +16,12 @@ export class ReviewsService {
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
-  ) { }
+  ) {}
 
-  async create(consumerId: string, reviewData: any) {
+  async create(userId: string, reviewData: any) {
     const review = new this.reviewModel({
       ...reviewData,
-      consumerId,
+      userId,
       reports: [],
     });
     const created = await review.save();
@@ -34,7 +34,7 @@ export class ReviewsService {
     return this.mapReviewResponse(created);
   }
 
-  async findByFood(productId: string, skip: number = 0, limit: number = 20) {
+  async findByProduct(productId: string, skip: number = 0, limit: number = 20) {
     const reviews = await this.reviewModel
       .find({ productId, isDeleted: false })
       .sort({ createdAt: -1 })
@@ -56,13 +56,9 @@ export class ReviewsService {
     return reviews.map((review) => this.mapReviewResponse(review));
   }
 
-  async findByConsumer(
-    consumerId: string,
-    skip: number = 0,
-    limit: number = 20,
-  ) {
+  async findByUser(userId: string, skip: number = 0, limit: number = 20) {
     const reviews = await this.reviewModel
-      .find({ consumerId, isDeleted: false })
+      .find({ userId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -71,12 +67,12 @@ export class ReviewsService {
     return reviews.map((review) => this.mapReviewResponse(review));
   }
 
-  async update(id: string, consumerId: string, updateData: any) {
+  async update(id: string, userId: string, updateData: any) {
     const review = await this.reviewModel.findById(id).exec();
     if (!review || review.isDeleted) {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }
-    if (review.consumerId !== consumerId) {
+    if (review.userId !== userId) {
       throw new ForbiddenException('You can only update your own reviews');
     }
     const ageMinutes =
@@ -107,7 +103,7 @@ export class ReviewsService {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }
     if (userRole !== 'admin') {
-      if (review.consumerId !== userId) {
+      if (review.userId !== userId) {
         throw new ForbiddenException('You can only delete your own reviews');
       }
       const ageMinutes =
@@ -189,7 +185,7 @@ export class ReviewsService {
     return {
       id: review._id.toString(),
       serialNumber: review.serialNumber,
-      consumerId: review.consumerId,
+      userId: review.userId,
       vendorId: review.vendorId,
       productId: review.productId,
 

@@ -15,6 +15,8 @@ import {
 import { mapToGeoLocation } from '../common/geojson';
 import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
+import { Order, OrderDocument, OrderStatus} from 'src/schemas/Order.schema';
+import { Restaurant, RestaurantDocument } from 'src/schemas/Restaurant.schema';
 
 @Injectable()
 export class VendorsService {
@@ -22,6 +24,8 @@ export class VendorsService {
 
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
+    @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
+    @InjectModel(Restaurant.name) private readonly restaurantModel: Model<RestaurantDocument>,
   ) {}
 
   async listAll(
@@ -197,17 +201,51 @@ export class VendorsService {
     return this.mapVendorResponse(vendor);
   }
 
-  async getVendorStats(userId: string) {
+  async getVendorMetrics(userId: string) {
+    // Find the vendor by user ID
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
       throw new NotFoundException('Vendor profile not found');
     }
 
+    const restaurant = await this.restaurantModel
+      .findOne({ vendorId: vendor._id })
+      .exec();
+
+    if (!restaurant) {
+      return {
+        totalOrders: 0,
+        totalEarnings: 0,
+        avgRating: vendor.avgRating || 0,
+        reviewsCount: vendor.reviewsCount || 0,
+      };
+    }
+
+    // Aggregate orders for this vendor's restaurant where status is DELIVERED
+    const stats = await this.orderModel.aggregate([
+      {
+        $match: {
+          restaurantId: restaurant._id.toString(),
+          status: OrderStatus.DELIVERED,
+          isDeleted: false,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalEarnings: { $sum: '$subtotal' }, // Summing food subtotal
+        },
+      },
+    ]);
+
+    const metrics = stats[0] || { totalOrders: 0, totalEarnings: 0 };
+
     return {
-      vendorId: vendor._id.toString(),
-      totalOrders: vendor.totalOrders || 0,
-      totalEarnings: vendor.totalEarnings || 0,
+      totalOrders: metrics.totalOrders,
+      totalEarnings: metrics.totalEarnings,
       avgRating: vendor.avgRating || 0,
+      reviewsCount: vendor.reviewsCount || 0,
     };
   }
 

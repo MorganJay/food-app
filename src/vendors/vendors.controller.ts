@@ -81,14 +81,14 @@ export class VendorsController {
     );
   }
 
-  @Get('stats')
+  @Get('metrics')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Get logged-in vendor statistics and earnings' })
   @ApiResponse({ status: 200, description: 'Vendor statistics retrieved' })
-  async getMyStats(@Req() req) {
-    return this.vendorsService.getVendorStats(req.user.sub);
+  async getVendorMetrics(@Req() req) {
+    return this.vendorsService.getVendorMetrics(req.user.sub);
   }
 
   @Get(':id')

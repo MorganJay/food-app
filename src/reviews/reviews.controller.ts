@@ -40,12 +40,12 @@ export class ReviewsController {
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
   @ApiResponse({ status: 200, description: 'Product reviews' })
-  async findByFood(
+  async findByProduct(
     @Param('productId') productId: string,
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
-    return this.reviewsService.findByFood(
+    return this.reviewsService.findByProduct(
       productId,
       parseInt(skip),
       parseInt(limit),
@@ -79,12 +79,12 @@ export class ReviewsController {
   @ApiOperation({ summary: 'Get my reviews' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
-  async findByConsumer(
+  async findByUser(
     @Req() req,
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '20',
   ) {
-    return this.reviewsService.findByConsumer(
+    return this.reviewsService.findByUser(
       req.user.sub,
       parseInt(skip),
       parseInt(limit),

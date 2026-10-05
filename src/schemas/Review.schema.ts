@@ -7,7 +7,7 @@ export type ReviewDocument = HydratedDocument<Review>;
 @Schema({ timestamps: true })
 export class Review extends BaseEntity {
   @Prop({ required: true })
-  consumerId: string;
+  userId: string;
 
   @Prop({ required: true })
   vendorId: string;
@@ -53,6 +53,6 @@ ReviewSchema.pre('save', async function (next) {
   }
   next();
 });
-ReviewSchema.index({ consumerId: 1 });
+ReviewSchema.index({ userId: 1 });
 ReviewSchema.index({ vendorId: 1 });
 ReviewSchema.index({ productId: 1 });
