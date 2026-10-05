@@ -63,7 +63,6 @@ export class User extends BaseEntity {
     secure_url: string;
     public_id: string;
   };
-  
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -10,7 +10,9 @@ describe('AuthService register', () => {
       findByPhoneNumber: jest.fn().mockResolvedValue(null),
     };
 
-    const vendorsService: any = { createVendor: jest.fn().mockResolvedValue({}) };
+    const vendorsService: any = {
+      createVendor: jest.fn().mockResolvedValue({}),
+    };
 
     const jwtService: any = {};
 
@@ -21,7 +23,9 @@ describe('AuthService register', () => {
 
     // We'll swap this per-test by overriding the instance method when needed
     const otpDelivery: any = {
-      sendOtp: jest.fn().mockResolvedValue({ mode: 'RESPONSE', code: '555555' }),
+      sendOtp: jest
+        .fn()
+        .mockResolvedValue({ mode: 'RESPONSE', code: '555555' }),
     };
 
     auth = new AuthService(
@@ -47,7 +51,9 @@ describe('AuthService register', () => {
       createByPhoneNumber: jest.fn().mockResolvedValue({ id: 'u1' }),
     };
 
-    const vendorsService: any = { createVendor: jest.fn().mockResolvedValue({}) };
+    const vendorsService: any = {
+      createVendor: jest.fn().mockResolvedValue({}),
+    };
     const jwtService: any = {};
     const otpService: any = {
       lastSentWithin: jest.fn().mockResolvedValue(false),
@@ -58,8 +64,19 @@ describe('AuthService register', () => {
       sendOtp: jest.fn().mockResolvedValue([{ channel: 'sms', success: true }]),
     };
 
-    const auth2 = new AuthService(usersService, vendorsService, jwtService, otpService, otpDelivery);
-    const dto: any = { phoneNumber: '+200', username: 'v', email: 'c@d.com', role: undefined };
+    const auth2 = new AuthService(
+      usersService,
+      vendorsService,
+      jwtService,
+      otpService,
+      otpDelivery,
+    );
+    const dto: any = {
+      phoneNumber: '+200',
+      username: 'v',
+      email: 'c@d.com',
+      role: undefined,
+    };
     const result = await auth2.register(dto);
     expect(result).toEqual({ message: 'OTP sent' });
   });

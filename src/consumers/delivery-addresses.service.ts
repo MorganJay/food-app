@@ -22,7 +22,10 @@ export class DeliveryAddressesService {
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
 
-  async create(consumerId: string, dto: CreateDeliveryAddressDto): Promise<DeliveryAddressResponseDto> {
+  async create(
+    consumerId: string,
+    dto: CreateDeliveryAddressDto,
+  ): Promise<DeliveryAddressResponseDto> {
     if (!dto.addressLine) {
       throw new BadRequestException('addressLine is required');
     }
@@ -37,20 +40,21 @@ export class DeliveryAddressesService {
     return this.mapDeliveryAddressResponse(saved);
   }
 
-  async findByConsumer(consumerId: string): Promise<DeliveryAddressResponseDto[]> {
+  async findByConsumer(
+    consumerId: string,
+  ): Promise<DeliveryAddressResponseDto[]> {
     const addresses = await this.addressModel
       .find({ consumerId, isDeleted: false })
       .sort({ isDefault: -1, updatedAt: -1 })
       .exec();
 
-    return addresses.map(address =>
-      this.mapDeliveryAddressResponse(
-        address,
-      ),
-    );
+    return addresses.map((address) => this.mapDeliveryAddressResponse(address));
   }
 
-  async findById(id: string, consumerId: string): Promise<DeliveryAddressResponseDto> {
+  async findById(
+    id: string,
+    consumerId: string,
+  ): Promise<DeliveryAddressResponseDto> {
     const addr = await this.addressModel
       .findOne({ _id: id, consumerId, isDeleted: false })
       .exec();
@@ -58,7 +62,11 @@ export class DeliveryAddressesService {
     return this.mapDeliveryAddressResponse(addr);
   }
 
-  async update(id: string, consumerId: string, dto: UpdateDeliveryAddressDto): Promise<DeliveryAddressResponseDto> {
+  async update(
+    id: string,
+    consumerId: string,
+    dto: UpdateDeliveryAddressDto,
+  ): Promise<DeliveryAddressResponseDto> {
     if (dto.isDefault) {
       await this.addressModel
         .updateMany({ consumerId }, { isDefault: false })
@@ -73,7 +81,10 @@ export class DeliveryAddressesService {
     return this.mapDeliveryAddressResponse(updated);
   }
 
-  async remove(id: string, consumerId: string): Promise<DeliveryAddressResponseDto> {
+  async remove(
+    id: string,
+    consumerId: string,
+  ): Promise<DeliveryAddressResponseDto> {
     const removed = await this.addressModel
       .findOneAndUpdate(
         { _id: id, consumerId, isDeleted: false },
@@ -91,7 +102,9 @@ export class DeliveryAddressesService {
       .exec();
   }
 
-  private mapDeliveryAddressResponse(address: DeliveryAddressDocument): DeliveryAddressResponseDto {
+  private mapDeliveryAddressResponse(
+    address: DeliveryAddressDocument,
+  ): DeliveryAddressResponseDto {
     return {
       id: address._id.toString(),
       consumerId: address.consumerId,

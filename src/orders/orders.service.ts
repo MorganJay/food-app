@@ -612,12 +612,12 @@ export class OrdersService implements OnModuleInit {
     additionalFields: Partial<Order> = {},
   ) {
     const order = await this.orderModel
-    .findOneAndUpdate(
-      { _id: id, isDeleted: false },
-      { status, ...additionalFields },
-      { new: true },
-    )
-    .exec();
+      .findOneAndUpdate(
+        { _id: id, isDeleted: false },
+        { status, ...additionalFields },
+        { new: true },
+      )
+      .exec();
 
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);

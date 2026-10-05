@@ -9,7 +9,11 @@ import { randomBytes } from 'crypto';
 
 import { RegisterDto } from '../auth/dto/register.dto';
 import { User, UserDocument } from '../schemas/User.schema';
-import { UpdateAvatarDto, UpdateUserProfileDto, UserResponseDto } from './dto/users.dto';
+import {
+  UpdateAvatarDto,
+  UpdateUserProfileDto,
+  UserResponseDto,
+} from './dto/users.dto';
 import { hashPassword, verifyPassword } from '../common/password.util';
 import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 
@@ -137,7 +141,7 @@ export class UsersService {
         throw new BadRequestException('Email already exists');
       }
     }
-    
+
     // phone check
     if (dto.phoneNumber && dto.phoneNumber !== user.phoneNumber) {
       const existingPhone = await this.userModel.findOne({
@@ -148,7 +152,6 @@ export class UsersService {
         throw new BadRequestException('Phone number already exists');
       }
     }
-
 
     // username check
     if (dto.username && dto.username !== user.username) {
@@ -161,12 +164,10 @@ export class UsersService {
       }
     }
 
-    const updatedUser = await this.userModel.findByIdAndUpdate(userId, dto,
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, dto, {
+      new: true,
+      runValidators: true,
+    });
 
     return this.mapUserResponse(updatedUser);
   }
@@ -197,7 +198,9 @@ export class UsersService {
         avatar: user.avatar.secure_url,
       };
     } catch (error) {
-      throw new BadRequestException('Failed to process user avatar update payload.');
+      throw new BadRequestException(
+        'Failed to process user avatar update payload.',
+      );
     }
   }
 

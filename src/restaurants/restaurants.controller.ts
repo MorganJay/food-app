@@ -79,7 +79,8 @@ export class RestaurantsController {
 
   @Get('search')
   @ApiOperation({
-    summary: 'Search active marketplace restaurants via full-text index parameters',
+    summary:
+      'Search active marketplace restaurants via full-text index parameters',
   })
   @ApiQuery({ name: 'q', required: true, example: 'Amala' })
   @ApiQuery({ name: 'skip', required: false, example: 0 })
@@ -105,8 +106,13 @@ export class RestaurantsController {
   @Roles(UserRole.VENDOR)
   @Get('vendor')
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Get all restaurants owned by the logged-in vendor' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved vendor restaurants' })
+  @ApiOperation({
+    summary: 'Get all restaurants owned by the logged-in vendor',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved vendor restaurants',
+  })
   async getMyRestaurants(@Req() req) {
     return this.restaurantsService.getRestaurantsByVendor(req.user.sub);
   }
@@ -123,12 +129,14 @@ export class RestaurantsController {
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
   @Patch(':id/toggle-status')
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Toggle restaurant availability status (Admin or Vendor)' })
-  @ApiResponse({ status: 200, description: 'Returns the updated availability state' })
-  async toggleStatus(
-    @Param('id') restaurantId: string,
-    @Req() req,
-  ) {
+  @ApiOperation({
+    summary: 'Toggle restaurant availability status (Admin or Vendor)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the updated availability state',
+  })
+  async toggleStatus(@Param('id') restaurantId: string, @Req() req) {
     return this.restaurantsService.toggleStatus(restaurantId, req.user);
   }
 
@@ -159,7 +167,8 @@ export class RestaurantsController {
     type: UpdateRestaurantDto,
   })
   @ApiOperation({
-    summary: 'Update an existing vendor restaurant configuration settings profile',
+    summary:
+      'Update an existing vendor restaurant configuration settings profile',
   })
   @ApiParam({ name: 'id', example: '64f123abc...' })
   @ApiResponse({
@@ -172,7 +181,11 @@ export class RestaurantsController {
     @Body() updateDto: UpdateRestaurantDto,
     @Req() req,
   ) {
-    return this.restaurantsService.update(restaurantId, req.user.sub, updateDto);
+    return this.restaurantsService.update(
+      restaurantId,
+      req.user.sub,
+      updateDto,
+    );
   }
 
   @Delete(':id')

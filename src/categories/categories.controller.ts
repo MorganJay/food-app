@@ -1,5 +1,22 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiProperty, ApiBody, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiParam,
+  ApiProperty,
+  ApiBody,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { RolesGuard } from '../auth/roles.guard';
@@ -8,9 +25,9 @@ import { UserRole } from '../schemas/User.schema';
 import { IsNotEmpty, IsString } from 'class-validator';
 
 class CreateCategoryDto {
-  @ApiProperty({ 
-    example: 'Soups', 
-    description: 'Add food category (e.g., Soups, Swallows, Drinks)' 
+  @ApiProperty({
+    example: 'Soups',
+    description: 'Add food category (e.g., Soups, Swallows, Drinks)',
   })
   @IsString()
   @IsNotEmpty()
@@ -18,9 +35,9 @@ class CreateCategoryDto {
 }
 
 class UpdateCategoryDto {
-  @ApiProperty({ 
-    example: 'Swallows', 
-    description: 'The updated name for the category profile record' 
+  @ApiProperty({
+    example: 'Swallows',
+    description: 'The updated name for the category profile record',
   })
   @IsString()
   @IsNotEmpty()
@@ -28,7 +45,10 @@ class UpdateCategoryDto {
 }
 
 class CategoryResponseDto {
-  @ApiProperty({ example: '64f123abc1234567890efabc', description: 'The MongoDB Hex ObjectId' })
+  @ApiProperty({
+    example: '64f123abc1234567890efabc',
+    description: 'The MongoDB Hex ObjectId',
+  })
   id: string;
 
   @ApiProperty({ example: 'Soups' })
@@ -45,7 +65,11 @@ export class CategoriesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all categories for selection dropdowns' })
-  @ApiResponse({ status: 200, type: [CategoryResponseDto], description: 'List of active categories' })
+  @ApiResponse({
+    status: 200,
+    type: [CategoryResponseDto],
+    description: 'List of active categories',
+  })
   async getAll() {
     return this.categoriesService.findAll();
   }
@@ -56,7 +80,11 @@ export class CategoriesController {
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Add a new category name' })
   @ApiBody({ type: CreateCategoryDto })
-  @ApiResponse({ status: 201, type: CategoryResponseDto, description: 'Category created successfully' })
+  @ApiResponse({
+    status: 201,
+    type: CategoryResponseDto,
+    description: 'Category created successfully',
+  })
   async create(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto.name);
   }
@@ -68,7 +96,11 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Update an existing category name' })
   @ApiParam({ name: 'id', example: '64f123abc...' })
   @ApiBody({ type: UpdateCategoryDto })
-  @ApiResponse({ status: 200, type: CategoryResponseDto, description: 'Category updated successfully' })
+  @ApiResponse({
+    status: 200,
+    type: CategoryResponseDto,
+    description: 'Category updated successfully',
+  })
   async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(id, dto.name);
   }
@@ -79,7 +111,11 @@ export class CategoriesController {
   @ApiBearerAuth('jwt')
   @ApiOperation({ summary: 'Remove a category from the global directory' })
   @ApiParam({ name: 'id', example: '64f123abc...' })
-  @ApiResponse({ status: 200, description: 'Category successfully cleared from the collection tree schema' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Category successfully cleared from the collection tree schema',
+  })
   async remove(@Param('id') id: string) {
     return this.categoriesService.remove(id);
   }

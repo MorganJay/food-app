@@ -113,10 +113,7 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Approve refund (admin only)' })
   @ApiBody({ type: RefundPaymentDto, required: false })
   @ApiResponse({ status: 200, type: PaymentResponseDto })
-  async refund(
-    @Param('id') id: string,
-    @Body() dto?: RefundPaymentDto,
-  ) {
+  async refund(@Param('id') id: string, @Body() dto?: RefundPaymentDto) {
     return this.paymentsService.refund(id, dto?.amount, dto?.merchantNote);
   }
 

@@ -19,7 +19,10 @@ describe('OtpDeliveryService', () => {
       .mockResolvedValue({ success: true, messageId: 'm1' } as any);
 
     const svc = new OtpDeliveryService(mockConfig);
-    const result: any = await svc.sendOtp({ phoneNumber: '+1000000000', email: 'a@b.com' }, '123456');
+    const result: any = await svc.sendOtp(
+      { phoneNumber: '+1000000000', email: 'a@b.com' },
+      '123456',
+    );
 
     expect(result).toEqual({ mode: 'RESPONSE', code: '123456' });
     expect(spy).not.toHaveBeenCalled();
@@ -39,7 +42,10 @@ describe('OtpDeliveryService', () => {
       .mockResolvedValue({ success: true, messageId: 'msg-1' });
 
     const svc = new OtpDeliveryService(mockConfig);
-    const result: any = await svc.sendOtp({ phoneNumber: '+1000000000', email: 'a@b.com' }, '999999');
+    const result: any = await svc.sendOtp(
+      { phoneNumber: '+1000000000', email: 'a@b.com' },
+      '999999',
+    );
 
     expect(Array.isArray(result)).toBe(true);
     const smsResult = (result as any[]).find((r: any) => r?.channel === 'sms');

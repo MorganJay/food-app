@@ -62,7 +62,7 @@ export class CreateVendorDto {
   location?: LocationDto;
 }
 
-export class UpdateVendorDto extends PartialType(CreateVendorDto) { }
+export class UpdateVendorDto extends PartialType(CreateVendorDto) {}
 
 export class VendorResponseDto {
   @ApiProperty({

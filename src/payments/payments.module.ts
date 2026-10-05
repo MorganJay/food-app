@@ -14,7 +14,7 @@ import { User, UserSchema } from 'src/schemas/User.schema';
     MongooseModule.forFeature([
       { name: Payment.name, schema: PaymentSchema },
       { name: Order.name, schema: OrderSchema },
-      { name: User.name, schema: UserSchema }
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   providers: [PaymentsService],

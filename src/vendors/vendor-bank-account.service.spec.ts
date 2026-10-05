@@ -16,7 +16,10 @@ describe('VendorBankAccountService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VendorBankAccountService,
-        { provide: getModelToken(VendorBankAccount.name), useValue: mockAccountModel },
+        {
+          provide: getModelToken(VendorBankAccount.name),
+          useValue: mockAccountModel,
+        },
         { provide: getModelToken(Bank.name), useValue: mockBankModel },
         { provide: getModelToken(Vendor.name), useValue: mockVendorModel },
       ],

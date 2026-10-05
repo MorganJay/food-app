@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -68,7 +74,8 @@ export class UpdateUserProfileDto {
 export class ImagePayloadDto {
   @ApiProperty({
     description: 'Secure image URL returned by the upload utility',
-    example: 'https://res.cloudinary.com/demo/image/upload/v1234/avatars/user_1.jpg',
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1234/avatars/user_1.jpg',
   })
   @IsString()
   @IsNotEmpty()

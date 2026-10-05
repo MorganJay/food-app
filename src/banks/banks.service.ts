@@ -1,4 +1,11 @@
-import { Injectable, OnModuleInit, Logger, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Logger,
+  ConflictException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Bank, BankDocument } from '../schemas/Bank.schema';
@@ -15,16 +22,23 @@ export class BanksService implements OnModuleInit {
   async onModuleInit() {
     const count = await this.bankModel.countDocuments().exec();
     if (count === 0) {
-      this.logger.log('Banks collection is empty. Initializing Nigerian banks seed entries...');
+      this.logger.log(
+        'Banks collection is empty. Initializing Nigerian banks seed entries...',
+      );
       for (const bankData of NIGERIAN_BANKS_SEED) {
         await this.bankModel.create(bankData);
       }
-      this.logger.log(`Successfully seeded ${NIGERIAN_BANKS_SEED.length} banks into the database.`);
+      this.logger.log(
+        `Successfully seeded ${NIGERIAN_BANKS_SEED.length} banks into the database.`,
+      );
     }
   }
 
   async findAll() {
-    const banks = await this.bankModel.find({ isDeleted: false }).sort({ name: 1 }).exec();
+    const banks = await this.bankModel
+      .find({ isDeleted: false })
+      .sort({ name: 1 })
+      .exec();
     return banks.map((bank) => this.mapBankResponse(bank));
   }
 
@@ -32,15 +46,25 @@ export class BanksService implements OnModuleInit {
     const cleanName = name.trim();
     const cleanCode = code.trim();
 
-    const existing = await this.bankModel.findOne({ 
-      $or: [{ name: { $regex: new RegExp(`^${cleanName}$`, 'i') } }, { code: cleanCode }] 
-    }).exec();
-    
+    const existing = await this.bankModel
+      .findOne({
+        $or: [
+          { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+          { code: cleanCode },
+        ],
+      })
+      .exec();
+
     if (existing) {
-      throw new ConflictException('A bank with this name or bank code already exists.');
+      throw new ConflictException(
+        'A bank with this name or bank code already exists.',
+      );
     }
-    
-    const newBank = await this.bankModel.create({ name: cleanName, code: cleanCode });
+
+    const newBank = await this.bankModel.create({
+      name: cleanName,
+      code: cleanCode,
+    });
     return this.mapBankResponse(newBank);
   }
 
@@ -71,11 +95,13 @@ export class BanksService implements OnModuleInit {
   async syncWithPaystack() {
     try {
       const response = await axios.get('https://api.paystack.co/bank', {
-        params: { country: 'nigeria' }
+        params: { country: 'nigeria' },
       });
 
       if (!response.data || !response.data.status) {
-        throw new InternalServerErrorException('Invalid response structure from Paystack');
+        throw new InternalServerErrorException(
+          'Invalid response structure from Paystack',
+        );
       }
 
       const externalBanks = response.data.data;
@@ -85,15 +111,20 @@ export class BanksService implements OnModuleInit {
         const cleanName = externalBank.name.trim();
         const cleanCode = externalBank.code.trim();
 
-        const duplicate = await this.bankModel.findOne({
-          $or: [{ code: cleanCode }, { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } }]
-        }).exec();
+        const duplicate = await this.bankModel
+          .findOne({
+            $or: [
+              { code: cleanCode },
+              { name: { $regex: new RegExp(`^${cleanName}$`, 'i') } },
+            ],
+          })
+          .exec();
 
         if (!duplicate) {
           await this.bankModel.create({
             name: cleanName,
             code: cleanCode,
-            isDeleted: !externalBank.active
+            isDeleted: !externalBank.active,
           });
           newlyAdded++;
         }
@@ -103,7 +134,7 @@ export class BanksService implements OnModuleInit {
         status: 'success',
         processed: externalBanks.length,
         added: newlyAdded,
-        message: 'Bank directory synced successfully with Paystack'
+        message: 'Bank directory synced successfully with Paystack',
       };
     } catch (error: any) {
       throw new InternalServerErrorException(`Sync failed: ${error.message}`);

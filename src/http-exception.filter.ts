@@ -22,15 +22,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       const res = exception.getResponse();
 
-      message =
-        typeof res === 'string'
-          ? res
-          : (res as any)?.message ?? res;
-          
+      message = typeof res === 'string' ? res : ((res as any)?.message ?? res);
     } else if ((exception as any)?.name === 'CastError') {
       status = HttpStatus.BAD_REQUEST;
       message = `Invalid ${(exception as any).path || 'id'}`;
-
     } else if (exception instanceof Error) {
       message = exception.message;
     }

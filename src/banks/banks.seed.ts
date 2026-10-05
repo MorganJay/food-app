@@ -66,5 +66,5 @@ export const NIGERIAN_BANKS_SEED = [
   { name: 'CEMCS Microfinance Bank', code: '50823' },
   { name: 'Ibile Microfinance Bank', code: '51244' },
   { name: 'Links MFB', code: '50549' },
-  { name: 'Mint MFB', code: '50304' }
+  { name: 'Mint MFB', code: '50304' },
 ];

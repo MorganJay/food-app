@@ -99,7 +99,9 @@ describe('RestaurantsService', () => {
     );
 
     // response bannerImage is an object with url/publicId
-    expect(result.bannerImage).toMatchObject({ url: 'https://example.com/banner.jpg' });
+    expect(result.bannerImage).toMatchObject({
+      url: 'https://example.com/banner.jpg',
+    });
     expect(restaurantModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
         bannerImage: {

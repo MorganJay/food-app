@@ -50,8 +50,14 @@ export class RestaurantsService {
     }
 
     // Accept an `imageUrl` fallback for legacy clients: convert to bannerImage
-    if ((!createDto.bannerImage || !createDto.bannerImage.url) && (createDto as any).imageUrl) {
-      createDto.bannerImage = { url: (createDto as any).imageUrl, publicId: (createDto as any).imageUrl } as any;
+    if (
+      (!createDto.bannerImage || !createDto.bannerImage.url) &&
+      (createDto as any).imageUrl
+    ) {
+      createDto.bannerImage = {
+        url: (createDto as any).imageUrl,
+        publicId: (createDto as any).imageUrl,
+      } as any;
     }
 
     if (!createDto.bannerImage || !createDto.bannerImage.url) {
@@ -182,7 +188,11 @@ export class RestaurantsService {
     return this.findByVendor(vendorId);
   }
 
-  async update(restaurantId: string, userId: string, updateDto: UpdateRestaurantDto) {
+  async update(
+    restaurantId: string,
+    userId: string,
+    updateDto: UpdateRestaurantDto,
+  ) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
       throw new ForbiddenException('No active vendor profile found.');
@@ -191,9 +201,11 @@ export class RestaurantsService {
 
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+      throw new NotFoundException(
+        `Restaurant with ID ${restaurantId} not found`,
+      );
     }
-    
+
     if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only update your own restaurants');
     }
@@ -275,7 +287,10 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(restaurantId: string, userId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    restaurantId: string,
+    userId: string,
+  ): Promise<{ status: string; message: string }> {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
       throw new ForbiddenException('No active vendor profile found.');
@@ -284,9 +299,11 @@ export class RestaurantsService {
 
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+      throw new NotFoundException(
+        `Restaurant with ID ${restaurantId} not found`,
+      );
     }
-    
+
     if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only delete your own restaurants');
     }
@@ -305,7 +322,10 @@ export class RestaurantsService {
     return { status: 'ok', message: 'Restaurant deleted successfully' };
   }
 
-  async toggleStatus(restaurantId: string, user: { sub: string; role: string }) {
+  async toggleStatus(
+    restaurantId: string,
+    user: { sub: string; role: string },
+  ) {
     // Find the restaurant first
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
@@ -314,11 +334,13 @@ export class RestaurantsService {
 
     // If they are NOT an admin, enforce the vendor ownership check
     if (user.role !== UserRole.ADMIN) {
-      const vendor = await this.vendorModel.findOne({ userId: user.sub }).exec();
+      const vendor = await this.vendorModel
+        .findOne({ userId: user.sub })
+        .exec();
       if (!vendor) {
         throw new ForbiddenException('No active vendor profile found.');
       }
-      
+
       const vendorId = vendor.id || vendor._id.toString();
       if (restaurant.vendorId.toString() !== vendorId.toString()) {
         throw new ForbiddenException('You do not own this restaurant');
@@ -347,7 +369,7 @@ export class RestaurantsService {
       workingDays: restaurant.workingDays || [],
       orderType: restaurant.orderType,
       categories: restaurant.categories || [],
-      
+
       bannerImage: restaurant.bannerImage?.secure_url
         ? {
             url: restaurant.bannerImage.secure_url,

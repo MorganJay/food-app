@@ -20,14 +20,17 @@ import { Vendor, VendorDocument } from 'src/schemas/Vendor.schema';
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
 
   private async getVendorIdByUserId(userId: string): Promise<string> {
     const vendorProfile = await this.vendorModel.findOne({ userId }).exec();
     if (!vendorProfile) {
-      throw new ForbiddenException('No active vendor profile record found for this user context.');
+      throw new ForbiddenException(
+        'No active vendor profile record found for this user context.',
+      );
     }
     return vendorProfile.id || vendorProfile._id.toString();
   }
@@ -40,7 +43,7 @@ export class ProductsService {
     if (!restaurant) {
       throw new NotFoundException('Restaurant not found');
     }
-    
+
     // Safely compare raw strings instead of mismatched types
     if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You do not own this restaurant');
@@ -49,9 +52,9 @@ export class ProductsService {
 
   private parseChoiceGroups(choiceGroupsInput: any[]): any[] {
     if (!choiceGroupsInput) return [];
-    
+
     let parsed = choiceGroupsInput;
-    
+
     if (typeof choiceGroupsInput === 'string') {
       try {
         parsed = JSON.parse(choiceGroupsInput);
@@ -76,11 +79,8 @@ export class ProductsService {
 
   async create(createDto: CreateProductDto, userId: string) {
     const vendorId = await this.getVendorIdByUserId(userId);
-    
-    await this.assertRestaurantOwnedByVendor(
-      createDto.restaurantId,
-      vendorId,
-    );
+
+    await this.assertRestaurantOwnedByVendor(createDto.restaurantId, vendorId);
 
     const name = createDto.name.trim();
 
@@ -169,12 +169,12 @@ export class ProductsService {
 
   async update(productId: string, userId: string, updateDto: UpdateProductDto) {
     const vendorId = await this.getVendorIdByUserId(userId);
-    
+
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
-    
+
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
       vendorId,
@@ -182,16 +182,23 @@ export class ProductsService {
 
     const updatePayload: Record<string, any> = {};
 
-    if (updateDto.name !== undefined) updatePayload.name = updateDto.name.trim();
-    if (updateDto.description !== undefined) updatePayload.description = updateDto.description;
+    if (updateDto.name !== undefined)
+      updatePayload.name = updateDto.name.trim();
+    if (updateDto.description !== undefined)
+      updatePayload.description = updateDto.description;
     if (updateDto.price !== undefined) updatePayload.price = updateDto.price;
     if (updateDto.unit !== undefined) updatePayload.unit = updateDto.unit;
-    if (updateDto.prepTime !== undefined) updatePayload.prepTime = updateDto.prepTime;
-    if (updateDto.category !== undefined) updatePayload.category = updateDto.category;
-    if (updateDto.isAvailable !== undefined) updatePayload.isAvailable = updateDto.isAvailable;
-    
+    if (updateDto.prepTime !== undefined)
+      updatePayload.prepTime = updateDto.prepTime;
+    if (updateDto.category !== undefined)
+      updatePayload.category = updateDto.category;
+    if (updateDto.isAvailable !== undefined)
+      updatePayload.isAvailable = updateDto.isAvailable;
+
     if (updateDto.choiceGroups !== undefined) {
-      updatePayload.choiceGroups = this.parseChoiceGroups(updateDto.choiceGroups);
+      updatePayload.choiceGroups = this.parseChoiceGroups(
+        updateDto.choiceGroups,
+      );
     }
 
     // Map the pre-uploaded image update safely if provided
@@ -199,7 +206,10 @@ export class ProductsService {
       if (updateDto.image.publicId && product.image?.public_id) {
         // Only run deletion if there's an existing image publicId to clean up
         await deleteFromCloudinary(product.image.public_id).catch((err) =>
-          console.error('Failed to delete old product image from Cloudinary:', err),
+          console.error(
+            'Failed to delete old product image from Cloudinary:',
+            err,
+          ),
         );
 
         updatePayload.image = {
@@ -217,21 +227,24 @@ export class ProductsService {
     const updatedProduct = await this.productModel
       .findByIdAndUpdate(productId, updatePayload, { new: true })
       .exec();
-    
+
     if (!updatedProduct) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
     return this.mapProductResponse(updatedProduct);
   }
 
-  async delete(productId: string, userId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    productId: string,
+    userId: string,
+  ): Promise<{ status: string; message: string }> {
     const vendorId = await this.getVendorIdByUserId(userId);
-    
+
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
-    
+
     // Safety verification check prior to cloud asset clearing
     await this.assertRestaurantOwnedByVendor(
       product.restaurantId.toString(),
@@ -240,10 +253,10 @@ export class ProductsService {
 
     if (product.image?.public_id) {
       await deleteFromCloudinary(product.image.public_id).catch((err) =>
-        console.error('Failed to remove image from Cloudinary:', err)
+        console.error('Failed to remove image from Cloudinary:', err),
       );
     }
-    
+
     await this.productModel.findByIdAndDelete(productId).exec();
 
     return { status: 'ok', message: 'Product deleted successfully' };

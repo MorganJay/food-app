@@ -31,4 +31,4 @@ import { VendorsModule } from 'src/vendors/vendors.module';
   controllers: [AuthController],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

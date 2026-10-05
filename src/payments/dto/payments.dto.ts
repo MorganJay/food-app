@@ -1,6 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNumber, IsOptional, IsString, IsNotEmpty } from 'class-validator';
-import { PaymentMethod, PaymentGateway, PaymentStatus } from '../../schemas/Payment.schema';
+import {
+  IsEnum,
+  IsMongoId,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsNotEmpty,
+} from 'class-validator';
+import {
+  PaymentMethod,
+  PaymentGateway,
+  PaymentStatus,
+} from '../../schemas/Payment.schema';
 
 export class InitializePaymentDto {
   @ApiProperty()

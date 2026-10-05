@@ -15,7 +15,7 @@ import {
 import { mapToGeoLocation } from '../common/geojson';
 import { deleteFromCloudinary } from 'src/common/utils/cloudinary.util';
 import { NinVerificationDto } from './dto/nin-verification-vendor.dto';
-import { Order, OrderDocument, OrderStatus} from 'src/schemas/Order.schema';
+import { Order, OrderDocument, OrderStatus } from 'src/schemas/Order.schema';
 import { Restaurant, RestaurantDocument } from 'src/schemas/Restaurant.schema';
 
 @Injectable()
@@ -25,7 +25,8 @@ export class VendorsService {
   constructor(
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
     @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
-    @InjectModel(Restaurant.name) private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name)
+    private readonly restaurantModel: Model<RestaurantDocument>,
   ) {}
 
   async listAll(
@@ -65,7 +66,10 @@ export class VendorsService {
     }
 
     const geo = createVendor.location
-      ? mapToGeoLocation(createVendor.location.longitude, createVendor.location.latitude)
+      ? mapToGeoLocation(
+          createVendor.location.longitude,
+          createVendor.location.latitude,
+        )
       : null;
 
     const vendorData: any = {
@@ -84,7 +88,9 @@ export class VendorsService {
   async updateProfile(userId: string, updateData: UpdateVendorDto) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
-      throw new NotFoundException('Vendor profile not found for this user account context.');
+      throw new NotFoundException(
+        'Vendor profile not found for this user account context.',
+      );
     }
 
     // Check business name uniqueness if it's being updated
@@ -101,7 +107,10 @@ export class VendorsService {
     }
 
     const geo = updateData.location
-      ? mapToGeoLocation(updateData.location.longitude, updateData.location.latitude)
+      ? mapToGeoLocation(
+          updateData.location.longitude,
+          updateData.location.latitude,
+        )
       : undefined;
 
     const updatePayload: any = {};
@@ -137,21 +146,30 @@ export class VendorsService {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
 
     if (!vendor) {
-      throw new NotFoundException(`Vendor profile tracking context not found for user ID ${userId}`);
+      throw new NotFoundException(
+        `Vendor profile tracking context not found for user ID ${userId}`,
+      );
     }
 
     if (!dto.ninDocument || !dto.ninDocument.url) {
-      throw new BadRequestException('A pre-uploaded NIN document verification payload is required.');
+      throw new BadRequestException(
+        'A pre-uploaded NIN document verification payload is required.',
+      );
     }
 
     if (!dto.selfie || !dto.selfie.url) {
-      throw new BadRequestException('A pre-uploaded face live selfie verification payload is required.');
+      throw new BadRequestException(
+        'A pre-uploaded face live selfie verification payload is required.',
+      );
     }
 
     // Clean up older verification artifacts from Cloudinary
     if (vendor.ninDocument?.public_id) {
       await deleteFromCloudinary(vendor.ninDocument.public_id).catch((err) =>
-        this.logger.error('Failed to clear old verification image artifact:', err),
+        this.logger.error(
+          'Failed to clear old verification image artifact:',
+          err,
+        ),
       );
     }
     if (vendor.selfie?.public_id) {

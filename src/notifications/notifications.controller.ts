@@ -71,7 +71,7 @@ class SendPushDto {
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) { }
+  constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post('send-sms')
   @Roles(UserRole.ADMIN)
