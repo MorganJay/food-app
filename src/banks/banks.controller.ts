@@ -10,13 +10,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBearerAuth, 
-  ApiProperty, 
-  ApiBody 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiProperty,
+  ApiBody,
 } from '@nestjs/swagger';
 import { BanksService } from './banks.service';
 import { UserRole } from 'src/schemas/User.schema';
@@ -25,10 +25,16 @@ import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 class CreateBankDto {
-  @ApiProperty({ example: 'Zenith Bank', description: 'The official name of the financial institution' })
+  @ApiProperty({
+    example: 'Zenith Bank',
+    description: 'The official name of the financial institution',
+  })
   name: string;
 
-  @ApiProperty({ example: '057', description: 'The unique Paystack-compliant routing settlement code' })
+  @ApiProperty({
+    example: '057',
+    description: 'The unique Paystack-compliant routing settlement code',
+  })
   code: string;
 }
 
@@ -67,14 +73,15 @@ export class BanksController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
-    summary: 'Fetch all supported banks', 
-    description: 'Returns a sorted list of all banks and their Paystack routing codes. Publicly accessible for frontend dropdown select elements.' 
+  @ApiOperation({
+    summary: 'Fetch all supported banks',
+    description:
+      'Returns a sorted list of all banks and their Paystack routing codes. Publicly accessible for frontend dropdown select elements.',
   })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Bank list successfully retrieved.',
-    type: [BankResponseDto] 
+    type: [BankResponseDto],
   })
   async getAllBanks() {
     return this.banksService.findAll();
@@ -85,21 +92,22 @@ export class BanksController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('jwt')
-  @ApiOperation({ 
-    summary: 'Sync bank directory with Paystack (Admin Only)', 
-    description: 'Fetches the live list of banks from Paystack and adds any missing entries to the database.' 
+  @ApiOperation({
+    summary: 'Sync bank directory with Paystack (Admin Only)',
+    description:
+      'Fetches the live list of banks from Paystack and adds any missing entries to the database.',
   })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Bank directory successfully synced.',
     schema: {
       example: {
         status: 'success',
         processed: 142,
         added: 5,
-        message: 'Bank directory synced successfully with Paystack'
-      }
-    }
+        message: 'Bank directory synced successfully with Paystack',
+      },
+    },
   })
   async syncWithPaystack() {
     return this.banksService.syncWithPaystack();
@@ -110,12 +118,29 @@ export class BanksController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Add a new bank (Admin Only)', description: 'Creates a new supported bank entry. Requires admin privileges.' })
+  @ApiOperation({
+    summary: 'Add a new bank (Admin Only)',
+    description:
+      'Creates a new supported bank entry. Requires admin privileges.',
+  })
   @ApiBody({ type: CreateBankDto })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Bank entry successfully added.', type: BankResponseDto })
-  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'A bank with this name or code already exists.' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid authentication token.' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'User does not possess administrative privileges.' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Bank entry successfully added.',
+    type: BankResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'A bank with this name or code already exists.',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid authentication token.',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'User does not possess administrative privileges.',
+  })
   async createBank(@Body() body: CreateBankDto) {
     return this.banksService.create(body.name, body.code);
   }
@@ -125,14 +150,21 @@ export class BanksController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Modify an existing bank (Admin Only)', description: 'Updates details of a bank record by its MongoDB ObjectId.' })
+  @ApiOperation({
+    summary: 'Modify an existing bank (Admin Only)',
+    description: 'Updates details of a bank record by its MongoDB ObjectId.',
+  })
   @ApiBody({ type: UpdateBankDto })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Bank details successfully updated.', type: BankResponseDto })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Requested bank record could not be found.' })
-  async updateBank(
-    @Param('id') id: string,
-    @Body() body: UpdateBankDto,
-  ) {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Bank details successfully updated.',
+    type: BankResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Requested bank record could not be found.',
+  })
+  async updateBank(@Param('id') id: string, @Body() body: UpdateBankDto) {
     return this.banksService.update(id, body);
   }
 
@@ -141,13 +173,20 @@ export class BanksController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('jwt')
-  @ApiOperation({ summary: 'Soft-delete a bank (Admin Only)', description: 'Flags a bank record as deleted so it no longer appears in public lists.' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Bank successfully deactivated.',
-    schema: { example: { message: 'Bank successfully deactivated' } }
+  @ApiOperation({
+    summary: 'Soft-delete a bank (Admin Only)',
+    description:
+      'Flags a bank record as deleted so it no longer appears in public lists.',
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Requested bank record could not be found.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Bank successfully deactivated.',
+    schema: { example: { message: 'Bank successfully deactivated' } },
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Requested bank record could not be found.',
+  })
   async deleteBank(@Param('id') id: string) {
     return this.banksService.remove(id);
   }

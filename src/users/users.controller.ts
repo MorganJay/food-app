@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/strategies/jwt.strategy';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { UpdateAvatarDto, UpdateUserProfileDto } from './dto/users.dto';
@@ -22,10 +30,7 @@ export class UsersController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('jwt')
-  updateProfile(
-    @Req() req,
-    @Body() dto: UpdateUserProfileDto,
-  ) {
+  updateProfile(@Req() req, @Body() dto: UpdateUserProfileDto) {
     return this.usersService.updateProfile(req.user.sub, dto);
   }
 
@@ -37,10 +42,7 @@ export class UsersController {
     type: UpdateAvatarDto,
   })
   @ApiOperation({ summary: 'Update user avatar reference links (pure JSON)' })
-  async uploadAvatar(
-    @Req() req,
-    @Body() dto: UpdateAvatarDto,
-  ) {
+  async uploadAvatar(@Req() req, @Body() dto: UpdateAvatarDto) {
     return this.usersService.uploadAvatar(req.user.sub, dto);
   }
 }

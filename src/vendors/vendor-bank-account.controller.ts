@@ -31,26 +31,22 @@ import { Roles } from '../auth/roles.decorator';
 @Controller('vendors/accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VendorBankAccountController {
-  constructor(
-    private readonly accountService: VendorBankAccountService,
-  ) {}
+  constructor(private readonly accountService: VendorBankAccountService) {}
 
   @Post()
   @Roles(UserRole.VENDOR)
   @ApiBearerAuth('jwt')
   @ApiOperation({
     summary: 'Create vendor bank account payout channel',
-    description: 'Adds a new bank account profile for settlements. The bankCode property must be a valid code fetched from the main GET /banks directory endpoint.',
+    description:
+      'Adds a new bank account profile for settlements. The bankCode property must be a valid code fetched from the main GET /banks directory endpoint.',
   })
   @ApiResponse({
     status: 201,
     description: 'Bank account added successfully.',
     type: VendorBankAccountResponseDto,
   })
-  async create(
-    @Req() req,
-    @Body() dto: CreateVendorBankAccountDto,
-  ) {
+  async create(@Req() req, @Body() dto: CreateVendorBankAccountDto) {
     return this.accountService.create(req.user.sub, dto);
   }
 
@@ -65,9 +61,7 @@ export class VendorBankAccountController {
     description: 'Vendor bank accounts retrieved successfully.',
     type: [VendorBankAccountResponseDto],
   })
-  async findAll(
-    @Req() req,
-  ) {
+  async findAll(@Req() req) {
     return this.accountService.findAll(req.user.sub);
   }
 
@@ -82,10 +76,7 @@ export class VendorBankAccountController {
     description: 'Bank account details successfully fetched.',
     type: VendorBankAccountResponseDto,
   })
-  async findOne(
-    @Req() req,
-    @Param('accountId') accountId: string,
-  ) {
+  async findOne(@Req() req, @Param('accountId') accountId: string) {
     return this.accountService.getOne(req.user.sub, accountId);
   }
 
@@ -94,7 +85,8 @@ export class VendorBankAccountController {
   @ApiBearerAuth('jwt')
   @ApiOperation({
     summary: 'Update saved vendor bank account information fields',
-    description: 'Modifies profile routing attributes. Note that providing a updated bankCode will automatically recalculate and reassign the internal bankName property label.',
+    description:
+      'Modifies profile routing attributes. Note that providing a updated bankCode will automatically recalculate and reassign the internal bankName property label.',
   })
   @ApiResponse({
     status: 200,
@@ -120,10 +112,7 @@ export class VendorBankAccountController {
     description: 'Account deactivated and flagged as deleted successfully.',
     schema: { example: { message: 'Account deleted successfully' } },
   })
-  async remove(
-    @Req() req,
-    @Param('accountId') accountId: string,
-  ) {
+  async remove(@Req() req, @Param('accountId') accountId: string) {
     return this.accountService.remove(req.user.sub, accountId);
   }
 
@@ -132,17 +121,16 @@ export class VendorBankAccountController {
   @ApiBearerAuth('jwt')
   @ApiOperation({
     summary: 'Designate a specific bank account as the default payout target',
-    description: 'Sets the targeted account target flag to true and switches all other associated accounts to false.',
+    description:
+      'Sets the targeted account target flag to true and switches all other associated accounts to false.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Default payout settlement configurations successfully updated.',
+    description:
+      'Default payout settlement configurations successfully updated.',
     type: VendorBankAccountResponseDto,
   })
-  async setDefault(
-    @Req() req,
-    @Param('accountId') accountId: string,
-  ) {
+  async setDefault(@Req() req, @Param('accountId') accountId: string) {
     return this.accountService.setDefault(req.user.sub, accountId);
   }
 }

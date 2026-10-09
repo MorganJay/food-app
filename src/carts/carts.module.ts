@@ -9,7 +9,7 @@ import { Product, ProductSchema } from 'src/schemas/Product.schema';
   imports: [
     MongooseModule.forFeature([
       { name: Cart.name, schema: CartSchema },
-      { name: Product.name, schema: ProductSchema }
+      { name: Product.name, schema: ProductSchema },
     ]),
   ],
   providers: [CartsService],

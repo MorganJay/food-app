@@ -25,7 +25,9 @@ export class OrderEventsService {
           await handler(event);
         } catch (error) {
           const err = error as Error;
-          console.error(`Error running event handler for "${event.type}": ${err.message}`);
+          console.error(
+            `Error running event handler for "${event.type}": ${err.message}`,
+          );
         }
       }),
     );

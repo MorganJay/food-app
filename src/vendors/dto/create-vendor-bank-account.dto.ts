@@ -1,8 +1,4 @@
-import {
-  ApiProperty,
-  ApiPropertyOptional,
-  PartialType,
-} from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -13,7 +9,8 @@ import {
 
 export class CreateVendorBankAccountDto {
   @ApiProperty({
-    description: 'Name of the bank account holder (Should match the verified BVN/NIN name)',
+    description:
+      'Name of the bank account holder (Should match the verified BVN/NIN name)',
     example: 'John Doe',
   })
   @IsString()
@@ -31,7 +28,8 @@ export class CreateVendorBankAccountDto {
   accountNumber: string;
 
   @ApiProperty({
-    description: 'The official routing code of the bank fetched from the GET /banks endpoint',
+    description:
+      'The official routing code of the bank fetched from the GET /banks endpoint',
     example: '058',
   })
   @IsString()
@@ -39,7 +37,8 @@ export class CreateVendorBankAccountDto {
   bankCode: string;
 
   @ApiPropertyOptional({
-    description: 'Whether this account should be set as the vendor default payout account',
+    description:
+      'Whether this account should be set as the vendor default payout account',
     example: true,
     default: false,
   })
@@ -78,7 +77,8 @@ export class VendorBankAccountResponseDto {
   accountNumber: string;
 
   @ApiProperty({
-    description: 'The official name of the bank mapped internally from your seed database',
+    description:
+      'The official name of the bank mapped internally from your seed database',
     example: 'Guaranty Trust Bank',
   })
   bankName: string;

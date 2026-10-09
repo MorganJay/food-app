@@ -1,6 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
-import { IsArray, IsOptional, IsString } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class SetupStoreDto {
   @ApiProperty({ example: ['Monday', 'Tuesday', 'Wednesday'] })
@@ -23,6 +23,10 @@ export class SetupStoreDto {
   @IsOptional()
   orderType?: string;
 
-  @ApiProperty({ type: 'string', format: 'binary', description: 'Store banner image file' })
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Store banner image file',
+  })
   image?: any;
 }

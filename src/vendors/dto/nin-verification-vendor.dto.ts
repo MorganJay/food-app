@@ -5,7 +5,8 @@ import { Type } from 'class-transformer';
 export class ImagePayloadDto {
   @ApiProperty({
     description: 'Secure Cloudinary URL of the image',
-    example: 'https://res.cloudinary.com/demo/image/upload/v1234/verification/nin.jpg',
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1234/verification/nin.jpg',
   })
   @IsString()
   @IsNotEmpty()
@@ -30,7 +31,8 @@ export class NinVerificationDto {
   nin: string;
 
   @ApiProperty({
-    description: 'Pre-uploaded image properties for the physical NIN card document',
+    description:
+      'Pre-uploaded image properties for the physical NIN card document',
     type: ImagePayloadDto,
   })
   @ValidateNested()

@@ -19,12 +19,12 @@ export class CreateReviewDto {
   vendorId: string;
 
   @ApiPropertyOptional({
-    example: 'food_67890',
-    description: 'ID of the food item being reviewed (if applicable)',
+    example: 'product_67890',
+    description: 'ID of the product item being reviewed (if applicable)',
   })
   @IsOptional()
   @IsString()
-  foodId?: string;
+  productId?: string;
 
   @ApiProperty({
     example: 4,
@@ -67,13 +67,13 @@ export class UpdateReviewDto {
 }
 
 class ReviewReportResponseDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'vendor_12345' })
   vendorId: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Spam or inappropriate content' })
   reason: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2026-05-15T12:00:00.000Z' })
   createdAt: Date;
 }
 
@@ -90,10 +90,10 @@ export class ReviewResponseDto {
   serialNumber: number;
 
   @ApiProperty({
-    example: 'consumer_12345',
-    description: 'ID of the consumer who created the review',
+    example: 'user_12345',
+    description: 'ID of the user who created the review',
   })
-  consumerId: string;
+  userId: string; // Changed from consumerId to userId
 
   @ApiProperty({
     example: 'vendor_12345',

@@ -120,7 +120,11 @@ export class AuthService {
     );
 
     // If the delivery service indicates RESPONSE mode, include the OTP
-    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+    if (
+      deliveryResult &&
+      !Array.isArray(deliveryResult) &&
+      (deliveryResult as any).mode === 'RESPONSE'
+    ) {
       return { message: 'OTP sent', otp: code };
     }
 
@@ -146,7 +150,11 @@ export class AuthService {
       code,
     );
 
-    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+    if (
+      deliveryResult &&
+      !Array.isArray(deliveryResult) &&
+      (deliveryResult as any).mode === 'RESPONSE'
+    ) {
       return { message: 'OTP resent', otp: code };
     }
 
@@ -172,7 +180,11 @@ export class AuthService {
       code,
     );
 
-    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+    if (
+      deliveryResult &&
+      !Array.isArray(deliveryResult) &&
+      (deliveryResult as any).mode === 'RESPONSE'
+    ) {
       return { message: 'Verification code sent', otp: code };
     }
 
@@ -211,7 +223,11 @@ export class AuthService {
       code,
     );
 
-    if (deliveryResult && !Array.isArray(deliveryResult) && (deliveryResult as any).mode === 'RESPONSE') {
+    if (
+      deliveryResult &&
+      !Array.isArray(deliveryResult) &&
+      (deliveryResult as any).mode === 'RESPONSE'
+    ) {
       return { message: 'Password reset code sent', otp: code };
     }
 

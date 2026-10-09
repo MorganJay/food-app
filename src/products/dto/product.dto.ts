@@ -12,17 +12,17 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class SelectionOptionDto {
-  @ApiProperty({ 
-    example: 'Beef', 
-    description: 'Name of the option field input' 
+  @ApiProperty({
+    example: 'Beef',
+    description: 'Name of the option field input',
   })
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @ApiProperty({ 
-    example: 1500, 
-    description: 'The extra price added to the base meal cost' 
+  @ApiProperty({
+    example: 1500,
+    description: 'The extra price added to the base meal cost',
   })
   @IsNotEmpty()
   @IsNumber()
@@ -31,24 +31,24 @@ export class SelectionOptionDto {
 }
 
 export class ChoiceGroupDto {
-  @ApiProperty({ 
-    example: 'Choose your protein', 
-    description: 'The customization header field input' 
+  @ApiProperty({
+    example: 'Choose your protein',
+    description: 'The customization header field input',
   })
   @IsNotEmpty()
   @IsString()
   groupName: string;
 
-  @ApiProperty({ 
-    example: true, 
-    description: 'Toggle switch indicating if selection is mandatory' 
+  @ApiProperty({
+    example: true,
+    description: 'Toggle switch indicating if selection is mandatory',
   })
   @IsNotEmpty()
   @IsBoolean()
   isRequired: boolean;
 
-  @ApiProperty({ 
-    type: () => [SelectionOptionDto], 
+  @ApiProperty({
+    type: () => [SelectionOptionDto],
     description: 'Array of the customizable sub-option list',
   })
   @IsArray()
@@ -60,7 +60,8 @@ export class ChoiceGroupDto {
 export class ProductImageDto {
   @ApiProperty({
     description: 'Secure Cloudinary URL of the product photo',
-    example: 'https://res.cloudinary.com/demo/image/upload/v1234/products/burger.jpg',
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1234/products/burger.jpg',
   })
   @IsString()
   @IsNotEmpty()
@@ -140,7 +141,8 @@ export class CreateProductDto {
   isAvailable?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Pre-uploaded product image details matching utility service layout',
+    description:
+      'Pre-uploaded product image details matching utility service layout',
     type: ProductImageDto,
   })
   @IsOptional()
@@ -156,7 +158,7 @@ export class CreateProductDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ChoiceGroupDto)
-  choiceGroups?: ChoiceGroupDto[]; 
+  choiceGroups?: ChoiceGroupDto[];
 }
 
 export class UpdateProductDto {

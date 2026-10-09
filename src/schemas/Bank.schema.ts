@@ -21,8 +21,8 @@ export const BankSchema = SchemaFactory.createForClass(Bank);
 BankSchema.pre('save', async function (next) {
   if (this.isNew && !this.serialNumber) {
     try {
-      const counter = await this.model('Bank').db
-        .collection('counters')
+      const counter = await this.model('Bank')
+        .db.collection('counters')
         .findOneAndUpdate(
           { name: 'banks' },
           { $inc: { value: 1 } },

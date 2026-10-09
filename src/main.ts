@@ -10,7 +10,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.setGlobalPrefix('api/v1');
-  
+
   cloudinaryConfig(); // initailize cloudinary config for image uploads
 
   const config = new DocumentBuilder()

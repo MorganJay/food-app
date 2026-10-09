@@ -6,7 +6,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
-import { AddToCartDto, CartResponseDto, UpdateCartItemDto } from './dto/cart.dto';
+import {
+  AddToCartDto,
+  CartResponseDto,
+  UpdateCartItemDto,
+} from './dto/cart.dto';
 import { Product } from 'src/schemas/Product.schema';
 
 @Injectable()
@@ -21,7 +25,12 @@ export class CartsService {
       .findOne({ userId, isDeleted: false })
       .exec();
     if (!cart) {
-      cart = new this.cartModel({ userId, items: [], total: 0, restaurantId: null });
+      cart = new this.cartModel({
+        userId,
+        items: [],
+        total: 0,
+        restaurantId: null,
+      });
       await cart.save();
     }
     return this.mapCartResponse(cart);
@@ -53,7 +62,10 @@ export class CartsService {
       });
     }
 
-    if (cart.restaurantId && cart.restaurantId.toString() !== restaurantId.toString()) {
+    if (
+      cart.restaurantId &&
+      cart.restaurantId.toString() !== restaurantId.toString()
+    ) {
       throw new BadRequestException(
         'Cannot add items from different restaurants to the same cart',
       );
@@ -67,14 +79,15 @@ export class CartsService {
 
     const existingItem = cart.items.find((item) => {
       if (item.productId.toString() !== addDto.productId) return false;
-      
+
       const itemChoices = (item as any).selectedChoices || [];
       if (itemChoices.length !== incomingChoices.length) return false;
 
       return incomingChoices.every((incoming) =>
         itemChoices.some(
           (existing: any) =>
-            existing.name === incoming.name && existing.price === incoming.price,
+            existing.name === incoming.name &&
+            existing.price === incoming.price,
         ),
       );
     });
@@ -105,7 +118,7 @@ export class CartsService {
 
     // Accumulate total from each calculated item subtotal
     cart.total = this.calculateTotal(cart.items);
-    
+
     const savedCart = await cart.save();
     return this.mapCartResponse(savedCart);
   }
@@ -115,7 +128,9 @@ export class CartsService {
     productId: string,
     updateDto: UpdateCartItemDto,
   ) {
-    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
+    const cart = await this.cartModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
     if (!cart) {
       throw new NotFoundException('Cart not found');
     }
@@ -137,13 +152,15 @@ export class CartsService {
     }
 
     cart.total = this.calculateTotal(cart.items);
-    
+
     const savedCart = await cart.save();
     return this.mapCartResponse(savedCart);
   }
 
   async removeItem(userId: string, productId: string) {
-    const cart = await this.cartModel.findOne({ userId, isDeleted: false }).exec();
+    const cart = await this.cartModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
     if (!cart) {
       throw new NotFoundException('Cart not found');
     }
@@ -178,14 +195,21 @@ export class CartsService {
   // Helper method to calculate an individual item subtotal
   private calculateItemSubtotal(item: any): number {
     const choicesCost = Array.isArray(item.selectedChoices)
-      ? item.selectedChoices.reduce((choiceSum: number, choice: any) => choiceSum + (Number(choice.price) || 0), 0)
+      ? item.selectedChoices.reduce(
+          (choiceSum: number, choice: any) =>
+            choiceSum + (Number(choice.price) || 0),
+          0,
+        )
       : 0;
     return (item.price + choicesCost) * item.quantity;
   }
 
   // Calculates overall total based on previously resolved individual subtotals
   private calculateTotal(items: any[]): number {
-    return items.reduce((sum, item) => sum + (item.subtotal || this.calculateItemSubtotal(item)), 0);
+    return items.reduce(
+      (sum, item) => sum + (item.subtotal || this.calculateItemSubtotal(item)),
+      0,
+    );
   }
 
   private mapCartResponse(cart: CartDocument): CartResponseDto {
@@ -206,11 +230,13 @@ export class CartsService {
               publicId: item.image.publicId,
             }
           : undefined,
-        selectedChoices: ((item as any).selectedChoices || []).map((choice: any) => ({
-          groupName: choice.groupName || 'Options',
-          name: choice.name,
-          price: choice.price,
-        })),
+        selectedChoices: ((item as any).selectedChoices || []).map(
+          (choice: any) => ({
+            groupName: choice.groupName || 'Options',
+            name: choice.name,
+            price: choice.price,
+          }),
+        ),
       })),
 
       total: cart.total,

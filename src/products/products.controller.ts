@@ -38,7 +38,10 @@ export class ProductsController {
     @Query('skip') skip: string = '0',
     @Query('limit') limit: string = '10',
   ) {
-    return this.productsService.findAll(parseInt(skip, 10), parseInt(limit, 10));
+    return this.productsService.findAll(
+      parseInt(skip, 10),
+      parseInt(limit, 10),
+    );
   }
 
   @Get('search')
@@ -54,7 +57,11 @@ export class ProductsController {
     if (!query) {
       throw new BadRequestException('Search query is required');
     }
-    return this.productsService.search(query, parseInt(skip, 10), parseInt(limit, 10));
+    return this.productsService.search(
+      query,
+      parseInt(skip, 10),
+      parseInt(limit, 10),
+    );
   }
 
   @Get('restaurant/:restaurantId')
@@ -85,11 +92,10 @@ export class ProductsController {
   @Post('restaurant')
   @ApiBearerAuth('jwt')
   @ApiBody({ type: CreateProductDto })
-  @ApiOperation({ summary: 'Create a new product for a restaurant (pure JSON)' })
-  async create(
-    @Body() createProductDto: CreateProductDto,
-    @Req() req,
-  ) {
+  @ApiOperation({
+    summary: 'Create a new product for a restaurant (pure JSON)',
+  })
+  async create(@Body() createProductDto: CreateProductDto, @Req() req) {
     return this.productsService.create(createProductDto, req.user.sub);
   }
 

@@ -43,7 +43,8 @@ export class LocationDto {
 export class ImagePayloadDto {
   @ApiProperty({
     description: 'Secure Cloudinary URL of the image',
-    example: 'https://res.cloudinary.com/demo/image/upload/v1234/restaurants/banner.jpg',
+    example:
+      'https://res.cloudinary.com/demo/image/upload/v1234/restaurants/banner.jpg',
   })
   @IsString()
   @IsNotEmpty()
@@ -130,7 +131,8 @@ export class CreateRestaurantDto {
   orderType?: string;
 
   @ApiProperty({
-    description: 'The uploaded banner image asset parameters returned from the utility upload API',
+    description:
+      'The uploaded banner image asset parameters returned from the utility upload API',
     type: ImagePayloadDto,
   })
   @ValidateNested()

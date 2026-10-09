@@ -1,19 +1,37 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsString, IsNumber, IsPositive, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsPositive,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  Min,
+} from 'class-validator';
 
 export class SelectedCartChoiceDto {
-  @ApiProperty({ example: 'Protein', description: 'The heading/group name for the customization' })
+  @ApiProperty({
+    example: 'Protein',
+    description: 'The heading/group name for the customization',
+  })
   @IsNotEmpty()
   @IsString()
   groupName: string;
-  
-  @ApiProperty({ example: 'Beef', description: 'Name of the selected customization' })
+
+  @ApiProperty({
+    example: 'Beef',
+    description: 'Name of the selected customization',
+  })
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 1500, description: 'Extra cost upcharge for this item selection' })
+  @ApiProperty({
+    example: 1500,
+    description: 'Extra cost upcharge for this item selection',
+  })
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
@@ -42,7 +60,7 @@ export class AddToCartDto {
   @ApiPropertyOptional({
     type: [SelectedCartChoiceDto],
     description: 'Array of custom selected buyer modifications or side choices',
-    example: [{ groupName: 'Protein', name: 'Beef', price: 1500 }]
+    example: [{ groupName: 'Protein', name: 'Beef', price: 1500 }],
   })
   @IsOptional()
   @IsArray()
@@ -64,10 +82,16 @@ export class UpdateCartItemDto {
 
 // Subdocument DTO definition for Swagger and strict typing
 export class CartItemImageDto {
-  @ApiProperty({ example: 'https://cloudinary.com/image.png', description: 'Secure URL of the image asset' })
+  @ApiProperty({
+    example: 'https://cloudinary.com/image.png',
+    description: 'Secure URL of the image asset',
+  })
   url: string;
 
-  @ApiPropertyOptional({ example: 'cloudinary_id_abc123', description: 'Cloudinary storage unique resource identifier' })
+  @ApiPropertyOptional({
+    example: 'cloudinary_id_abc123',
+    description: 'Cloudinary storage unique resource identifier',
+  })
   publicId?: string;
 }
 
@@ -92,7 +116,8 @@ class CartItemResponseDto {
 
   @ApiProperty({
     example: 3500,
-    description: 'Aggregated subtotal calculation for this line item (base price + customized choices) multiplied by quantity',
+    description:
+      'Aggregated subtotal calculation for this line item (base price + customized choices) multiplied by quantity',
   })
   subtotal: number; // Added field
 
@@ -108,7 +133,10 @@ class CartItemResponseDto {
   })
   name: string;
 
-  @ApiProperty({ type: [SelectedCartChoiceDto], description: 'List of item modifications' })
+  @ApiProperty({
+    type: [SelectedCartChoiceDto],
+    description: 'List of item modifications',
+  })
   selectedChoices: SelectedCartChoiceDto[];
 }
 

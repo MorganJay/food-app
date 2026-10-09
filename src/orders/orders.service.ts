@@ -611,18 +611,6 @@ export class OrdersService implements OnModuleInit {
     status: OrderStatus,
     additionalFields: Partial<Order> = {},
   ) {
-    const existingOrder = await this.orderModel
-      .findOne({ _id: id, isDeleted: false })
-      .exec();
-
-    if (!existingOrder) {
-      throw new NotFoundException(`Order with ID ${id} not found`);
-    }
-
-    const isFirstTimeDelivered =
-      status === OrderStatus.DELIVERED &&
-      existingOrder.status !== OrderStatus.DELIVERED;
-
     const order = await this.orderModel
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
@@ -630,27 +618,9 @@ export class OrdersService implements OnModuleInit {
         { new: true },
       )
       .exec();
+
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
-    }
-
-    // Increment Vendor stats ONLY on the initial state transition to DELIVERED
-    if (isFirstTimeDelivered && order) {
-      const restaurant = await this.restaurantModel
-        .findById(order.restaurantId)
-        .exec();
-
-      if (restaurant?.vendorId) {
-        await this.vendorModel.updateOne(
-          { _id: restaurant.vendorId },
-          {
-            $inc: {
-              totalOrders: 1,
-              totalEarnings: order.subtotal || 0, // Food amount only
-            },
-          },
-        );
-      }
     }
 
     const mappedOrder = this.mapOrderResponse(order);

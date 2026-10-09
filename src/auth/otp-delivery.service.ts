@@ -32,8 +32,7 @@ export class OtpDeliveryService {
 
     // New: determine delivery mode. Default to RESPONSE when unset.
     this.deliveryMode = (
-      this.configService.get<string>('OTP_DELIVERY_MODE') ||
-      'RESPONSE'
+      this.configService.get<string>('OTP_DELIVERY_MODE') || 'RESPONSE'
     )
       .toString()
       .trim()

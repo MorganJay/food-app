@@ -10,7 +10,9 @@ import {
 } from 'src/schemas/VendorBankAccount.schema';
 import { VendorBankAccountService } from './vendor-bank-account.service';
 import { Bank, BankSchema } from 'src/schemas/Bank.schema';
-import { OrdersModule } from '../orders/orders.module';
+import { Order, OrderSchema } from 'src/schemas/Order.schema';
+import { Restaurant, RestaurantSchema } from 'src/schemas/Restaurant.schema';
+import { OrdersModule } from 'src/orders/orders.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { OrdersModule } from '../orders/orders.module';
       { name: Vendor.name, schema: VendorSchema },
       { name: VendorBankAccount.name, schema: VendorBankAccountSchema },
       { name: Bank.name, schema: BankSchema },
+      { name: Order.name, schema: OrderSchema },
+      { name: Restaurant.name, schema: RestaurantSchema },
     ]),
     OrdersModule,
   ],

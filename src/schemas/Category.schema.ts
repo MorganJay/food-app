@@ -15,8 +15,8 @@ export const CategorySchema = SchemaFactory.createForClass(Category);
 CategorySchema.pre('save', async function (next) {
   if (this.isNew && !this.serialNumber) {
     try {
-      const counter = await this.model('Category').db
-        .collection('counters')
+      const counter = await this.model('Category')
+        .db.collection('counters')
         .findOneAndUpdate(
           { name: 'categories' },
           { $inc: { value: 1 } },
@@ -24,7 +24,10 @@ CategorySchema.pre('save', async function (next) {
         );
       this.serialNumber = counter ? counter.value : 1;
     } catch (error) {
-      console.error('Error auto-incrementing serialNumber for Category:', error);
+      console.error(
+        'Error auto-incrementing serialNumber for Category:',
+        error,
+      );
     }
   }
   next();

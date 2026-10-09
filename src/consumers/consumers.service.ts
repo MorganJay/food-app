@@ -18,7 +18,8 @@ export class ConsumersService {
   constructor(
     @InjectModel(Consumer.name) private consumerModel: Model<ConsumerDocument>,
     // @InjectModel(Vendor.name) private vendorModel: Model<Vendor>,
-    @InjectModel(Restaurant.name) private restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(DeliveryAddress.name)
     private addressModel: Model<DeliveryAddressDocument>,
   ) {}
@@ -47,7 +48,6 @@ export class ConsumersService {
     return this.mapConsumerResponse(consumer);
   }
 
-
   async toggleFavorite(userId: string, restaurantId: string) {
     const consumer = await this.consumerModel.findOne({ userId }).exec();
     if (!consumer) {
@@ -63,14 +63,18 @@ export class ConsumersService {
       throw new BadRequestException('Invalid restaurantId');
     }
 
-    const restaurantExists = await this.restaurantModel.findById(restaurantId).exec();
+    const restaurantExists = await this.restaurantModel
+      .findById(restaurantId)
+      .exec();
     if (!restaurantExists) {
       throw new NotFoundException('Restaurant not found');
     }
 
     const isFavorited = consumer.favorites.includes(restaurantId);
     if (isFavorited) {
-      consumer.favorites = consumer.favorites.filter((id) => id !== restaurantId);
+      consumer.favorites = consumer.favorites.filter(
+        (id) => id !== restaurantId,
+      );
     } else {
       consumer.favorites.push(restaurantId);
     }
