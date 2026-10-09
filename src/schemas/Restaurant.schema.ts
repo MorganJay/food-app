@@ -84,4 +84,5 @@ RestaurantSchema.pre('save', async function (next) {
   next();
 });
 RestaurantSchema.index({ location: '2dsphere' });
+RestaurantSchema.index({ isActive: 1, vendorId: 1 });
 RestaurantSchema.index({ name: 'text', description: 'text' });

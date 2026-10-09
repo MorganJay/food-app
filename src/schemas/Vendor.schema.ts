@@ -84,6 +84,7 @@ export class Vendor extends BaseEntity {
 
 export const VendorSchema = SchemaFactory.createForClass(Vendor);
 VendorSchema.index({ location: '2dsphere' });
+VendorSchema.index({ isVerified: 1 });
 
 VendorSchema.pre('save', async function (next) {
   if (this.isNew && !this.serialNumber) {

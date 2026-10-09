@@ -14,16 +14,18 @@ import { Vendor } from '../schemas/Vendor.schema';
 
 describe('RestaurantsService', () => {
   let service: RestaurantsService;
-  let restaurantModel: { create: jest.Mock };
-  let vendorModel: { findOne: jest.Mock };
+  let restaurantModel: { create: jest.Mock; find: jest.Mock };
+  let vendorModel: { findOne: jest.Mock; find: jest.Mock };
 
   beforeEach(async () => {
     restaurantModel = {
       create: jest.fn(),
+      find: jest.fn(),
     };
 
     vendorModel = {
       findOne: jest.fn(),
+      find: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -99,7 +101,9 @@ describe('RestaurantsService', () => {
     );
 
     // response bannerImage is an object with url/publicId
-    expect(result.bannerImage).toMatchObject({ url: 'https://example.com/banner.jpg' });
+    expect(result.bannerImage).toMatchObject({
+      url: 'https://example.com/banner.jpg',
+    });
     expect(restaurantModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
         bannerImage: {
@@ -108,5 +112,83 @@ describe('RestaurantsService', () => {
         },
       }),
     );
+  });
+
+  it('should only list restaurants owned by verified vendors', async () => {
+    vendorModel.find.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue([{ _id: 'vendor-1', isVerified: true }]),
+    });
+    const restaurantQuery = {
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([
+        {
+          _id: 'restaurant-1',
+          name: 'Verified Restaurant',
+          description: 'Visible to customers',
+          vendorId: 'vendor-1',
+          isActive: true,
+          openHours: '08:00',
+          closeHours: '22:00',
+          workingDays: ['Monday'],
+          orderType: 'delivery',
+          categories: ['African'],
+          bannerImage: {
+            secure_url: 'https://example.com/banner.jpg',
+            public_id: 'banner',
+          },
+          address: 'Lagos',
+          location: { coordinates: [3.4, 6.5] },
+          rating: 4.5,
+          reviewCount: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          serialNumber: 1,
+        },
+      ]),
+    };
+    restaurantModel.find.mockReturnValue(restaurantQuery);
+
+    const result = await service.findAll(0, 10);
+
+    expect(vendorModel.find).toHaveBeenCalledWith(
+      { isVerified: true },
+      { _id: 1 },
+    );
+    expect(restaurantModel.find).toHaveBeenCalledWith({
+      isActive: true,
+      vendorId: { $in: ['vendor-1'] },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Verified Restaurant');
+  });
+
+  it('should exclude unverified vendors from customer search results', async () => {
+    vendorModel.find.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue([{ _id: 'vendor-1', isVerified: true }]),
+    });
+    const searchQuery = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+    restaurantModel.find.mockReturnValue(searchQuery);
+
+    const result = await service.search('amala', 0, 10);
+
+    expect(restaurantModel.find).toHaveBeenCalledWith(
+      {
+        $text: { $search: 'amala' },
+        isActive: true,
+        vendorId: { $in: ['vendor-1'] },
+      },
+      { score: { $meta: 'textScore' } },
+    );
+    expect(result).toEqual([]);
   });
 });

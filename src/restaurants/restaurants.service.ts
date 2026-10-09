@@ -50,8 +50,14 @@ export class RestaurantsService {
     }
 
     // Accept an `imageUrl` fallback for legacy clients: convert to bannerImage
-    if ((!createDto.bannerImage || !createDto.bannerImage.url) && (createDto as any).imageUrl) {
-      createDto.bannerImage = { url: (createDto as any).imageUrl, publicId: (createDto as any).imageUrl } as any;
+    if (
+      (!createDto.bannerImage || !createDto.bannerImage.url) &&
+      (createDto as any).imageUrl
+    ) {
+      createDto.bannerImage = {
+        url: (createDto as any).imageUrl,
+        publicId: (createDto as any).imageUrl,
+      } as any;
     }
 
     if (!createDto.bannerImage || !createDto.bannerImage.url) {
@@ -103,9 +109,33 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(restaurant);
   }
 
+  private async getVerifiedVendorIds(): Promise<string[]> {
+    const verifiedVendors = await this.vendorModel
+      .find({ isVerified: true }, { _id: 1 })
+      .exec();
+
+    return verifiedVendors
+      .map((vendor) =>
+        vendor._id ? vendor._id.toString() : vendor.id?.toString(),
+      )
+      .filter((vendorId): vendorId is string => Boolean(vendorId));
+  }
+
+  private async buildVerifiedRestaurantFilter(
+    baseFilter: Record<string, any> = {},
+  ): Promise<Record<string, any>> {
+    const verifiedVendorIds = await this.getVerifiedVendorIds();
+
+    return {
+      ...baseFilter,
+      vendorId: { $in: verifiedVendorIds },
+    };
+  }
+
   async findAll(skip: number = 0, limit: number = 10) {
+    const filter = await this.buildVerifiedRestaurantFilter({ isActive: true });
     const restaurants = await this.restaurantModel
-      .find({ isActive: true })
+      .find(filter)
       .skip(skip)
       .limit(limit)
       .exec();
@@ -120,24 +150,30 @@ export class RestaurantsService {
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${id} not found`);
     }
+
+    const verifiedVendorIds = await this.getVerifiedVendorIds();
+    if (!verifiedVendorIds.includes(restaurant.vendorId.toString())) {
+      throw new NotFoundException(`Restaurant with ID ${id} not found`);
+    }
+
     return this.mapRestaurantResponse(restaurant);
   }
 
   async findNearby(latitude: number, longitude: number, radiusKm: number = 5) {
-    const restaurants = await this.restaurantModel
-      .find({
-        isActive: true,
-        location: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [longitude, latitude],
-            },
-            $maxDistance: radiusKm * 1000,
+    const filter = await this.buildVerifiedRestaurantFilter({
+      isActive: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
           },
+          $maxDistance: radiusKm * 1000,
         },
-      })
-      .exec();
+      },
+    });
+
+    const restaurants = await this.restaurantModel.find(filter).exec();
 
     return restaurants.map((restaurant) =>
       this.mapRestaurantResponse(restaurant),
@@ -145,11 +181,13 @@ export class RestaurantsService {
   }
 
   async search(query: string, skip: number = 0, limit: number = 10) {
+    const filter = await this.buildVerifiedRestaurantFilter({
+      $text: { $search: query },
+      isActive: true,
+    });
+
     const restaurants = await this.restaurantModel
-      .find(
-        { $text: { $search: query }, isActive: true },
-        { score: { $meta: 'textScore' } },
-      )
+      .find(filter, { score: { $meta: 'textScore' } })
       .sort({ score: { $meta: 'textScore' } })
       .skip(skip)
       .limit(limit)
@@ -182,7 +220,11 @@ export class RestaurantsService {
     return this.findByVendor(vendorId);
   }
 
-  async update(restaurantId: string, userId: string, updateDto: UpdateRestaurantDto) {
+  async update(
+    restaurantId: string,
+    userId: string,
+    updateDto: UpdateRestaurantDto,
+  ) {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
       throw new ForbiddenException('No active vendor profile found.');
@@ -191,9 +233,11 @@ export class RestaurantsService {
 
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+      throw new NotFoundException(
+        `Restaurant with ID ${restaurantId} not found`,
+      );
     }
-    
+
     if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only update your own restaurants');
     }
@@ -275,7 +319,10 @@ export class RestaurantsService {
     return this.mapRestaurantResponse(updatedRestaurant);
   }
 
-  async delete(restaurantId: string, userId: string): Promise<{ status: string; message: string }> {
+  async delete(
+    restaurantId: string,
+    userId: string,
+  ): Promise<{ status: string; message: string }> {
     const vendor = await this.vendorModel.findOne({ userId }).exec();
     if (!vendor) {
       throw new ForbiddenException('No active vendor profile found.');
@@ -284,9 +331,11 @@ export class RestaurantsService {
 
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
-      throw new NotFoundException(`Restaurant with ID ${restaurantId} not found`);
+      throw new NotFoundException(
+        `Restaurant with ID ${restaurantId} not found`,
+      );
     }
-    
+
     if (restaurant.vendorId.toString() !== vendorId.toString()) {
       throw new ForbiddenException('You can only delete your own restaurants');
     }
@@ -305,7 +354,10 @@ export class RestaurantsService {
     return { status: 'ok', message: 'Restaurant deleted successfully' };
   }
 
-  async toggleStatus(restaurantId: string, user: { sub: string; role: string }) {
+  async toggleStatus(
+    restaurantId: string,
+    user: { sub: string; role: string },
+  ) {
     // Find the restaurant first
     const restaurant = await this.restaurantModel.findById(restaurantId).exec();
     if (!restaurant) {
@@ -314,11 +366,13 @@ export class RestaurantsService {
 
     // If they are NOT an admin, enforce the vendor ownership check
     if (user.role !== UserRole.ADMIN) {
-      const vendor = await this.vendorModel.findOne({ userId: user.sub }).exec();
+      const vendor = await this.vendorModel
+        .findOne({ userId: user.sub })
+        .exec();
       if (!vendor) {
         throw new ForbiddenException('No active vendor profile found.');
       }
-      
+
       const vendorId = vendor.id || vendor._id.toString();
       if (restaurant.vendorId.toString() !== vendorId.toString()) {
         throw new ForbiddenException('You do not own this restaurant');
@@ -347,7 +401,7 @@ export class RestaurantsService {
       workingDays: restaurant.workingDays || [],
       orderType: restaurant.orderType,
       categories: restaurant.categories || [],
-      
+
       bannerImage: restaurant.bannerImage?.secure_url
         ? {
             url: restaurant.bannerImage.secure_url,
