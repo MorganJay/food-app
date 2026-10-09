@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
   IsString,
@@ -18,12 +19,12 @@ export class CreateReviewDto {
   vendorId: string;
 
   @ApiPropertyOptional({
-    example: 'food_67890',
-    description: 'ID of the food item being reviewed (if applicable)',
+    example: 'product_67890',
+    description: 'ID of the product item being reviewed (if applicable)',
   })
   @IsOptional()
   @IsString()
-  foodId?: string;
+  productId?: string;
 
   @ApiProperty({
     example: 4,
@@ -50,6 +51,7 @@ export class UpdateReviewDto {
     description: 'Updated rating (1-5)',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -62,4 +64,75 @@ export class UpdateReviewDto {
   @IsOptional()
   @IsString()
   comment?: string;
+}
+
+class ReviewReportResponseDto {
+  @ApiProperty({ example: 'vendor_12345' })
+  vendorId: string;
+
+  @ApiProperty({ example: 'Spam or inappropriate content' })
+  reason: string;
+
+  @ApiProperty({ example: '2026-05-15T12:00:00.000Z' })
+  createdAt: Date;
+}
+
+export class ReviewResponseDto {
+  @ApiProperty({
+    example: '66c1f1a2b11d4e5f67891234',
+  })
+  id: string;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Auto-increment serial number',
+  })
+  serialNumber: number;
+
+  @ApiProperty({
+    example: 'user_12345',
+    description: 'ID of the user who created the review',
+  })
+  userId: string; // Changed from consumerId to userId
+
+  @ApiProperty({
+    example: 'vendor_12345',
+    description: 'Vendor being reviewed',
+  })
+  vendorId: string;
+
+  @ApiProperty({
+    example: 'product_67890',
+    required: false,
+    description: 'Optional product being reviewed',
+  })
+  productId?: string;
+
+  @ApiProperty({
+    example: 4,
+    description: 'Rating (1 to 5)',
+  })
+  rating: number;
+
+  @ApiProperty({
+    example: 'Great food and fast delivery',
+    required: false,
+  })
+  comment?: string;
+
+  @ApiProperty({
+    type: [ReviewReportResponseDto],
+    description: 'Reports submitted on this review',
+  })
+  reports: ReviewReportResponseDto[];
+
+  @ApiProperty({
+    example: '2026-05-15T12:00:00.000Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2026-05-15T12:30:00.000Z',
+  })
+  updatedAt: Date;
 }

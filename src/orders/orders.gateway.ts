@@ -1,3 +1,4 @@
+import { OnModuleInit } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -9,21 +10,36 @@ import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { UserRole } from '../schemas/User.schema';
 import { OrdersService } from './orders.service';
+import { OrderEventsService, OrderEventPayload } from './order-events.service';
 
 @WebSocketGateway({ namespace: 'orders', cors: { origin: '*' } })
-export class OrdersGateway {
+export class OrdersGateway implements OnModuleInit {
   @WebSocketServer()
   server: Server;
 
   constructor(
     private readonly jwt: JwtService,
     private readonly ordersService: OrdersService,
+    private readonly orderEvents: OrderEventsService,
   ) {}
 
-  /**
-   * Clients must join with a valid JWT and an orderId they are allowed to see.
-   * Server emits order events only to room `order:<orderId>`.
-   */
+  onModuleInit() {
+    // Subscribe gateway to internal event bus on startup
+    this.orderEvents.subscribe((event) => this.handleOrderEvent(event));
+  }
+
+  private handleOrderEvent(event: OrderEventPayload) {
+    if (!event.order) return;
+
+    // Emit rider assignment payload if rider event occurs
+    if (event.type === 'OrderOutForDeliveryEvent') {
+      this.emitRiderAssignment(event.order);
+    }
+
+    // Emit order updates to room subscribers for ALL status transitions (accepted, preparing, paid, etc.)
+    this.emitOrderStatus(event.order);
+  }
+
   @SubscribeMessage('subscribeOrder')
   async subscribeOrder(
     @ConnectedSocket() client: Socket,
@@ -50,15 +66,13 @@ export class OrdersGateway {
     return { ok: true };
   }
 
-  emitOrderStatus(order: { _id: { toString(): string } }) {
-    this.server
-      .to(`order:${order._id.toString()}`)
-      .emit('orderStatusUpdated', order);
+  emitOrderStatus(order: any) {
+    const orderId = order._id?.toString() || order.id;
+    this.server.to(`order:${orderId}`).emit('orderStatusUpdated', order);
   }
 
-  emitRiderAssignment(order: { _id: { toString(): string } }) {
-    this.server
-      .to(`order:${order._id.toString()}`)
-      .emit('orderRiderAssigned', order);
+  emitRiderAssignment(order: any) {
+    const orderId = order._id?.toString() || order.id;
+    this.server.to(`order:${orderId}`).emit('orderRiderAssigned', order);
   }
 }

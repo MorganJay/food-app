@@ -3,83 +3,463 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  OnModuleInit,
+  BadGatewayException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
-import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
 import { Rider, RiderDocument } from '../schemas/Rider.schema';
 import { Order, OrderDocument, OrderStatus } from '../schemas/Order.schema';
-import { UserRole } from '../schemas/User.schema';
-import { CreateOrderDto } from './dto/order.dto';
+import {
+  DeliveryAddress,
+  DeliveryAddressDocument,
+} from '../schemas/DeliveryAddress.schema';
+import { User, UserDocument, UserRole } from '../schemas/User.schema';
+import { CreateOrderDto, OrderResponseDto } from './dto/order.dto';
+import { Restaurant, RestaurantDocument } from '../schemas/Restaurant.schema';
+import { Vendor, VendorDocument } from '../schemas/Vendor.schema';
+import { OrderEventPayload, OrderEventsService } from './order-events.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { DbglService } from '../dbgl/dbgl.service';
 
 export type OrderRequester = { sub: string; role: UserRole };
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
-    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
+    @InjectModel(Restaurant.name)
+    private restaurantModel: Model<RestaurantDocument>,
     @InjectModel(Rider.name) private riderModel: Model<RiderDocument>,
+    @InjectModel(DeliveryAddress.name)
+    private addressModel: Model<DeliveryAddressDocument>,
+    @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly orderEvents: OrderEventsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly dbglService: DbglService,
   ) {}
 
+  // Subscribe to internal order event bus upon module initialization
+  onModuleInit() {
+    this.orderEvents.subscribe((event) => this.handleOrderEvent(event));
+    console.log('[OrdersService] Subscribed to OrderEventsService');
+  }
+
+  // Calculate pricing breakdown including platform service fees and delivery costs
+  private calculatePricing(input: { subtotal: number; deliveryFee: number }) {
+    const serviceFee = Math.round(input.subtotal * 0.1);
+    const total = input.subtotal + serviceFee + input.deliveryFee;
+
+    return { serviceFee, deliveryFee: input.deliveryFee, total };
+  }
+
+  // Calculate total line item price including optional choice add-ons
+  private calculateItemSubtotal(item: any): number {
+    const choicesCost = Array.isArray(item.selectedChoices)
+      ? item.selectedChoices.reduce(
+          (sum: number, choice: { price: any }) =>
+            sum + (Number(choice.price) || 0),
+          0,
+        )
+      : 0;
+    return (item.price + choicesCost) * item.quantity;
+  }
+
+  // Create a new order document and clear active consumer cart items
   async create(userId: string, createDto: CreateOrderDto) {
-    let orderData: Partial<Order> = {
-      userId,
+    if (!createDto.items?.length || !createDto.restaurantId) {
+      throw new BadRequestException(
+        'Orders require either a cartId or full item/total/restaurant details',
+      );
+    }
+
+    // Query identity user record directly from UserModel for names and contact details
+    const userProfile = await this.userModel
+      .findOne({ _id: userId, isActive: true })
+      .exec();
+
+    if (!userProfile) {
+      throw new NotFoundException(
+        'User account not found or is currently deactivated',
+      );
+    }
+
+    const cart = await this.cartModel
+      .findOne({ userId, isDeleted: false })
+      .exec();
+
+    // Map order items and attach product image references if available from cart
+    const orderItems = createDto.items.map((item) => {
+      const cartItem = cart?.items.find(
+        (cItem) => cItem.productId.toString() === item.productId,
+      );
+
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+        selectedChoices: item.selectedChoices || [],
+        subtotal: this.calculateItemSubtotal(item),
+        image: cartItem?.image
+          ? { url: cartItem.image.url, publicId: cartItem.image.publicId }
+          : undefined,
+      };
+    });
+
+    const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+    const deliveryQuote = await this.getDeliveryFeeQuote({
+      restaurantId: createDto.restaurantId,
+      deliveryAddress: createDto.deliveryAddress,
+      items: createDto.items,
+    });
+    const deliveryFee = this.getQuotedDeliveryFee(deliveryQuote);
+    const pricing = this.calculatePricing({ subtotal, deliveryFee });
+
+    // Populate order user payload directly from UserModel document fields, preserving snapshot email
+    const orderData: Partial<Order> = {
+      restaurantId: createDto.restaurantId,
+      user: {
+        userId: userProfile._id.toString(),
+        email: userProfile.email || '',
+        lastName: userProfile.lastName || '',
+        firstName: userProfile.firstName || '',
+        phoneNumber: userProfile.phoneNumber || '',
+      },
+      items: orderItems,
       deliveryAddress: createDto.deliveryAddress,
       notes: createDto.notes,
       paymentStatus: 'pending',
+      subtotal,
+      serviceFee: pricing.serviceFee,
+      deliveryFee: pricing.deliveryFee,
+      total: pricing.total,
     };
 
-    if (createDto.cartId) {
-      const cart = await this.cartModel
-        .findOne({ _id: createDto.cartId, userId, isDeleted: false })
-        .exec();
-      if (!cart || !cart.items.length) {
-        throw new BadRequestException('Cart not found or empty');
-      }
-      orderData = {
-        ...orderData,
-        vendorId: cart.vendorId,
-        items: cart.items,
-        total: cart.total,
-        orderReference: createDto.orderReference,
-      };
-      await this.cartModel.findByIdAndUpdate(cart._id, {
-        items: [],
-        total: 0,
-        vendorId: null,
-      });
-    } else {
-      if (!createDto.items?.length || !createDto.total || !createDto.vendorId) {
-        throw new BadRequestException(
-          'Orders require either a cartId or full item/total/vendor details',
-        );
-      }
-      orderData = {
-        ...orderData,
-        vendorId: createDto.vendorId,
-        items: createDto.items,
-        total: createDto.total,
-        orderReference: createDto.orderReference,
-      };
-    }
-
     const order = new this.orderModel(orderData);
-    return order.save();
-  }
+    const savedOrder = await order.save();
+    const mappedOrder = this.mapOrderResponse(savedOrder);
 
-  private async getVendorIdForUser(userId: string) {
-    const vendor = await this.vendorModel
-      .findOne({ userId, isDeleted: false })
+    await this.orderEvents.publish({
+      type: 'OrderPlacedEvent',
+      orderId: savedOrder._id.toString(),
+      order: mappedOrder,
+    });
+
+    await this.handleOrderEvent({
+      type: 'OrderPlacedEvent',
+      orderId: savedOrder._id.toString(),
+      order: mappedOrder,
+    });
+
+    // Reset active cart items after successfully creating the order
+    await this.cartModel
+      .findOneAndUpdate(
+        { userId, isDeleted: false },
+        { items: [], total: 0, restaurantId: null },
+      )
       .exec();
-    if (!vendor) {
-      throw new NotFoundException('Vendor profile not found');
+
+    // Auto-save delivery address to consumer profile if no previous address exists
+    try {
+      const addr = createDto.deliveryAddress;
+      if (addr && typeof addr === 'object') {
+        const count = await this.addressModel
+          .countDocuments({ consumerId: userId, isDeleted: false })
+          .exec();
+
+        if (!count) {
+          await this.addressModel.create({
+            consumerId: userId,
+            label: addr.label || 'Home',
+            addressLine: addr.addressLine || '',
+            city: addr.city,
+            state: addr.state,
+            postalCode: addr.postalCode,
+            country: addr.country,
+            location: addr.location,
+            instructions: addr.instructions,
+            isDefault: true,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error saving first delivery address:', e);
     }
-    return vendor._id.toString();
+
+    return this.mapOrderResponse(savedOrder);
   }
 
+  private extractCityFromAddress(address: string): string {
+    if (!address) return 'Lagos';
+    const parts = address
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[parts.length - 2] || parts[parts.length - 1] || 'Lagos';
+  }
+
+  private extractStateFromAddress(address: string): string {
+    if (!address) return 'Lagos';
+    const parts = address
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts[parts.length - 1] || 'Lagos';
+  }
+
+  private toLatitude(value?: number): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  private toLongitude(value?: number): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  private async buildDeliveryPartnerOrderPayload(order: OrderDocument) {
+    const restaurant = await this.restaurantModel
+      .findById(order.restaurantId)
+      .exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant for this order was not found');
+    }
+
+    const vendor = restaurant.vendorId
+      ? await this.vendorModel.findById(restaurant.vendorId).exec()
+      : null;
+    const vendorUser = vendor?.userId
+      ? await this.userModel.findById(vendor.userId).exec()
+      : null;
+
+    const pickupAddress = restaurant.address?.trim();
+    const deliveryAddress = order.deliveryAddress?.addressLine?.trim();
+    const vendorPhone = vendorUser?.phoneNumber?.trim();
+    const customerPhone = order.user?.phoneNumber?.trim();
+    const vendorName = restaurant.name || vendor?.businessName;
+    const customerName =
+      `${order.user?.firstName || ''} ${order.user?.lastName || ''}`.trim();
+
+    if (!pickupAddress || !deliveryAddress) {
+      throw new BadRequestException(
+        'Pickup and delivery street addresses are required to create a delivery',
+      );
+    }
+    if (!vendorPhone || !customerPhone) {
+      throw new BadRequestException(
+        'Vendor and customer phone numbers are required to create a delivery',
+      );
+    }
+    if (!vendorName || !customerName) {
+      throw new BadRequestException(
+        'Vendor and customer names are required to create a delivery',
+      );
+    }
+
+    const pickupCoordinates = restaurant.location?.coordinates || [];
+    const deliveryCoordinates = order.deliveryAddress?.location;
+    const reference = order.orderReference || order._id.toString();
+
+    return {
+      partner_order_ref: reference,
+      vendor_name: vendorName,
+      vendor_phone: vendorPhone,
+      vendor_address: pickupAddress,
+      vendor_city:
+        (restaurant as any).city || this.extractCityFromAddress(pickupAddress),
+      vendor_state:
+        (restaurant as any).state ||
+        this.extractStateFromAddress(pickupAddress),
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      delivery_address: deliveryAddress,
+      delivery_city:
+        order.deliveryAddress.city ||
+        this.extractCityFromAddress(deliveryAddress),
+      delivery_state:
+        order.deliveryAddress.state ||
+        this.extractStateFromAddress(deliveryAddress),
+      package_description: `Food order ${reference}`,
+      special_instructions: order.notes,
+      weight_kg: 1,
+      service_type: 'standard',
+      pickup_latitude: this.toLatitude(pickupCoordinates[1]),
+      pickup_longitude: this.toLongitude(pickupCoordinates[0]),
+      delivery_latitude: this.toLatitude(deliveryCoordinates?.lat),
+      delivery_longitude: this.toLongitude(deliveryCoordinates?.lng),
+    };
+  }
+
+  async getDeliveryFeeQuote(dto: {
+    restaurantId: string;
+    deliveryAddress: {
+      addressLine?: string;
+      city?: string;
+      state?: string;
+      location?: { lat?: number; lng?: number };
+    };
+    items?: Array<{ name?: string; quantity?: number; price?: number }>;
+  }) {
+    const restaurant = await this.restaurantModel
+      .findById(dto.restaurantId)
+      .exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    const vendorAddress = restaurant.address?.trim();
+    const dropoffAddress = dto.deliveryAddress.addressLine?.trim();
+    if (!vendorAddress || !dropoffAddress) {
+      throw new BadRequestException(
+        'Pickup and delivery street addresses are required to get a delivery quote',
+      );
+    }
+
+    const vendorCity =
+      (restaurant as any).city || this.extractCityFromAddress(vendorAddress);
+    const vendorState =
+      (restaurant as any).state || this.extractStateFromAddress(vendorAddress);
+    const deliveryCity =
+      dto.deliveryAddress.city || this.extractCityFromAddress(dropoffAddress);
+    const deliveryState =
+      dto.deliveryAddress.state || this.extractStateFromAddress(dropoffAddress);
+    if (!vendorCity || !vendorState || !deliveryCity || !deliveryState) {
+      throw new BadRequestException(
+        'Pickup and delivery city/state are required to get a delivery quote',
+      );
+    }
+
+    const payload = {
+      vendor_name: restaurant.name || 'Food App Vendor',
+      vendor_address: vendorAddress,
+      vendor_city: vendorCity,
+      vendor_state: vendorState,
+      delivery_address: dropoffAddress,
+      delivery_city: deliveryCity,
+      delivery_state: deliveryState,
+      package_description: dto.items?.[0]?.name || 'Food order',
+      weight_kg:
+        dto.items?.reduce((sum, item) => sum + (item.quantity || 1) * 0.5, 0) ||
+        1,
+      service_type: 'standard',
+      pickup_latitude: this.toLatitude(restaurant.location?.coordinates?.[1]),
+      pickup_longitude: this.toLongitude(restaurant.location?.coordinates?.[0]),
+      delivery_latitude: this.toLatitude(dto.deliveryAddress.location?.lat),
+      delivery_longitude: this.toLongitude(dto.deliveryAddress.location?.lng),
+    };
+
+    return this.dbglService.quote(payload);
+  }
+
+  private getQuotedDeliveryFee(quote: Record<string, any>): number {
+    const fee = Number(quote?.total_amount);
+    if (!Number.isFinite(fee) || fee < 0) {
+      throw new BadGatewayException(
+        'Delivery provider returned an invalid quote; no order was created.',
+      );
+    }
+    return fee;
+  }
+
+  // Retrieve pricing and line-item breakdown for cart checkout verification
+  async getCheckoutSummary(userId: string, deliveryAddressId?: string) {
+    const cart = await this.cartModel.findOne({ userId, isDeleted: false });
+
+    if (!cart || !cart.items.length) {
+      throw new NotFoundException('Cart is empty');
+    }
+
+    const restaurant = await this.restaurantModel.findById(cart.restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    const deliveryAddress = await this.addressModel
+      .findOne({
+        consumerId: userId,
+        isDeleted: false,
+        ...(deliveryAddressId
+          ? { _id: deliveryAddressId }
+          : { isDefault: true }),
+      })
+      .exec();
+    if (!deliveryAddress) {
+      throw new BadRequestException(
+        'Choose a saved delivery address or set a default address before checkout',
+      );
+    }
+
+    const calculatedSubtotal = cart.items.reduce((sum, item) => {
+      return sum + (item.subtotal || this.calculateItemSubtotal(item));
+    }, 0);
+
+    const deliveryQuote = await this.getDeliveryFeeQuote({
+      restaurantId: cart.restaurantId,
+      deliveryAddress,
+      items: cart.items,
+    });
+    const deliveryFee = this.getQuotedDeliveryFee(deliveryQuote);
+    const pricing = this.calculatePricing({
+      subtotal: calculatedSubtotal,
+      deliveryFee,
+    });
+
+    return {
+      restaurantId: restaurant.id,
+      subtotal: calculatedSubtotal,
+      serviceFee: pricing.serviceFee,
+      deliveryFee: pricing.deliveryFee,
+      total: pricing.total,
+      deliveryAddress,
+      items: cart.items.map((item) => ({
+        productId: item.productId.toString(),
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.subtotal || this.calculateItemSubtotal(item),
+        image: item.image?.url
+          ? { url: item.image.url, publicId: item.image.publicId }
+          : undefined,
+        selectedChoices: ((item as any).selectedChoices || []).map(
+          (choice: any) => ({
+            groupName: choice.groupName || 'Options',
+            name: choice.name,
+            price: choice.price,
+          }),
+        ),
+      })),
+    };
+  }
+
+  // Resolve restaurant ID linked to a vendor user account
+  private async getRestaurantIdForUser(userId: string) {
+    const vendor = await this.vendorModel.findOne({ userId }).exec();
+    if (!vendor) {
+      throw new ForbiddenException(
+        'No active vendor profile associated with this account.',
+      );
+    }
+
+    const vendorId = vendor.id || vendor._id.toString();
+
+    const restaurant = await this.restaurantModel
+      .findOne({ vendorId: vendorId.toString(), isActive: true })
+      .exec();
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+    return restaurant._id.toString();
+  }
+
+  // Resolve rider ID linked to a rider user account
   private async getRiderIdForUser(userId: string) {
     const rider = await this.riderModel
       .findOne({ userId, isDeleted: false })
@@ -90,6 +470,7 @@ export class OrdersService {
     return rider._id.toString();
   }
 
+  // Enforce role-based permission checks for reading order documents
   private async canAccessOrder(
     order: OrderDocument,
     requester: OrderRequester,
@@ -98,11 +479,12 @@ export class OrdersService {
       return true;
     }
     if (requester.role === UserRole.CONSUMER) {
-      return order.userId === requester.sub;
+      const orderConsumerId = order.user?.userId || (order.user as any)?.id;
+      return orderConsumerId === requester.sub;
     }
     if (requester.role === UserRole.VENDOR) {
-      const vendorId = await this.getVendorIdForUser(requester.sub);
-      return order.vendorId === vendorId;
+      const restaurantId = await this.getRestaurantIdForUser(requester.sub);
+      return order.restaurantId === restaurantId;
     }
     if (requester.role === UserRole.RIDER) {
       if (!order.riderId) {
@@ -114,6 +496,7 @@ export class OrdersService {
     return false;
   }
 
+  // Validate order existence and user access control
   async assertOrderAccessible(
     orderId: string,
     requester: OrderRequester,
@@ -130,42 +513,66 @@ export class OrdersService {
     return order;
   }
 
+  // Fetch a single order by ID with access verification
   async findById(id: string, requester: OrderRequester) {
-    return this.assertOrderAccessible(id, requester);
+    const order = await this.assertOrderAccessible(id, requester);
+    return this.mapOrderResponse(order);
   }
 
+  // Fetch paginated orders placed by a specific consumer
   async findByUser(userId: string, skip: number = 0, limit: number = 20) {
-    return this.orderModel
-      .find({ userId, isDeleted: false })
+    const orders = await this.orderModel
+      .find({
+        $or: [{ 'user.userId': userId }, { 'user.id': userId }],
+        isDeleted: false,
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
-  async findByVendor(vendorId: string, skip: number = 0, limit: number = 20) {
-    return this.orderModel
-      .find({ vendorId, isDeleted: false })
+  // Fetch paginated orders assigned to a specific restaurant
+  async findByRestaurant(
+    restaurantId: string,
+    skip: number = 0,
+    limit: number = 20,
+  ) {
+    const orders = await this.orderModel
+      .find({ restaurantId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
-  async findByVendorUser(userId: string, skip: number = 0, limit: number = 20) {
-    const vendorId = await this.getVendorIdForUser(userId);
-    return this.findByVendor(vendorId, skip, limit);
+  // Fetch paginated orders for vendor management view
+  async findByRestaurantUser(
+    userId: string,
+    skip: number = 0,
+    limit: number = 20,
+  ) {
+    const restaurantId = await this.getRestaurantIdForUser(userId);
+    return this.findByRestaurant(restaurantId, skip, limit);
   }
 
+  // Fetch all orders for platform administration
   async findAll(skip: number = 0, limit: number = 20) {
-    return this.orderModel
+    const orders = await this.orderModel
       .find({ isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return orders.map((order) => this.mapOrderResponse(order));
   }
 
+  // Aggregate global order status counts
   async analytics() {
     const totalOrders = await this.orderModel.countDocuments({
       isDeleted: false,
@@ -178,38 +585,358 @@ export class OrdersService {
     return { totalOrders, byStatus };
   }
 
-  async vendorAnalytics(vendorId: string) {
+  // Aggregate order metrics for a single restaurant
+  async restaurantAnalytics(restaurantId: string) {
     const totalOrders = await this.orderModel.countDocuments({
-      vendorId,
+      restaurantId,
       isDeleted: false,
     });
     const byStatus = await this.orderModel.aggregate([
-      { $match: { vendorId, isDeleted: false } },
+      { $match: { restaurantId, isDeleted: false } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
 
-    return { vendorId, totalOrders, byStatus };
+    return { restaurantId, totalOrders, byStatus };
   }
 
-  async vendorAnalyticsByUser(userId: string) {
-    const vendorId = await this.getVendorIdForUser(userId);
-    return this.vendorAnalytics(vendorId);
+  // Fetch analytics metrics for a vendor user account
+  async restaurantAnalyticsByUser(userId: string) {
+    const restaurantId = await this.getRestaurantIdForUser(userId);
+    return this.restaurantAnalytics(restaurantId);
   }
 
-  private async applyStatusUpdate(id: string, status: OrderStatus) {
+  // Update order status in database and emit state transition event
+  private async applyStatusUpdate(
+    id: string,
+    status: OrderStatus,
+    additionalFields: Partial<Order> = {},
+  ) {
     const order = await this.orderModel
       .findOneAndUpdate(
         { _id: id, isDeleted: false },
-        { status },
+        { status, ...additionalFields },
         { new: true },
       )
       .exec();
+
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
     }
-    return order;
+
+    const mappedOrder = this.mapOrderResponse(order);
+
+    const eventType = this.getEventTypeForStatus(status);
+
+    // Publish event to trigger automated notification handler
+    await this.orderEvents.publish({
+      type: eventType,
+      orderId: id,
+      order: mappedOrder,
+    });
+
+    return mappedOrder;
   }
 
+  // Map database order status enum to event topics
+  private getEventTypeForStatus(status: OrderStatus) {
+    switch (status) {
+      case OrderStatus.ACCEPTED:
+        return 'OrderAcceptedEvent';
+      case OrderStatus.DECLINED:
+        return 'OrderRejectedEvent';
+      case OrderStatus.PREPARING:
+        return 'OrderPreparingEvent';
+      case OrderStatus.READY_FOR_PICKUP:
+        return 'OrderReadyEvent';
+      case OrderStatus.OUT_FOR_DELIVERY:
+        return 'OrderOutForDeliveryEvent';
+      case OrderStatus.DELIVERED:
+        return 'OrderDeliveredEvent';
+      case OrderStatus.CANCELLED_BY_CONSUMER:
+      case OrderStatus.CANCELLED_BY_VENDOR:
+        return 'OrderCancelledEvent';
+      default:
+        return 'OrderStatusUpdatedEvent';
+    }
+  }
+
+  // Convenience wrapper for vendor order acceptance
+  async acceptOrder(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.ACCEPTED, requester);
+  }
+
+  // Convenience wrapper for vendor order rejection
+  async rejectOrder(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.DECLINED, requester);
+  }
+
+  async markPreparing(id: string, requester: OrderRequester) {
+    return this.updateStatus(id, OrderStatus.PREPARING, requester);
+  }
+
+  async markReadyForPickup(id: string, requester: OrderRequester) {
+    if (requester.role !== UserRole.VENDOR) {
+      throw new ForbiddenException('Only a vendor can mark an order ready');
+    }
+
+    const order = await this.assertOrderAccessible(id, requester);
+    if (order.status === OrderStatus.READY_FOR_PICKUP) {
+      return this.mapOrderResponse(order);
+    }
+    if (order.status !== OrderStatus.PREPARING) {
+      throw new BadRequestException(
+        'Order must be in preparation before it can be marked ready for pickup',
+      );
+    }
+
+    const payload = await this.buildDeliveryPartnerOrderPayload(order);
+    try {
+      await this.dbglService.createOrder(payload);
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadGatewayException(
+        'Delivery could not be booked. The order remains in preparation; retry when the delivery provider is available.',
+      );
+    }
+
+    // Only advance local state after the provider has accepted the idempotent
+    // partner_order_ref. The conditional update also protects against races.
+    const updatedOrder = await this.orderModel
+      .findOneAndUpdate(
+        { _id: id, isDeleted: false, status: OrderStatus.PREPARING },
+        { status: OrderStatus.READY_FOR_PICKUP },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedOrder) {
+      throw new ConflictException(
+        'Delivery was booked, but the order changed concurrently. Refresh the order before retrying.',
+      );
+    }
+
+    const mappedOrder = this.mapOrderResponse(updatedOrder);
+    await this.orderEvents.publish({
+      type: 'OrderReadyEvent',
+      orderId: id,
+      order: mappedOrder,
+    });
+    return mappedOrder;
+  }
+
+  // Convenience wrapper for cancellation requests
+  async cancelOrder(id: string, requester: OrderRequester) {
+    const status =
+      requester.role === UserRole.VENDOR
+        ? OrderStatus.CANCELLED_BY_VENDOR
+        : OrderStatus.CANCELLED_BY_CONSUMER;
+    return this.updateStatus(id, status, requester);
+  }
+
+  // Handle incoming system events to send email notifications
+  private async handleOrderEvent(event: OrderEventPayload) {
+    try {
+      console.log(
+        `[EVENT RECEIVED IN ORDERS SERVICE]: ${event.type} for Order: ${event.orderId}`,
+      );
+
+      const order = event.order;
+      if (!order) {
+        console.warn(
+          `[Order Event Warning] No order payload passed for ID: ${event.orderId}`,
+        );
+        return;
+      }
+
+      // Vendor Email Logic
+      if (event.type === 'OrderPlacedEvent') {
+        const restaurant = await this.restaurantModel
+          .findById(order.restaurantId)
+          .exec();
+
+        if (restaurant?.vendorId) {
+          const vendor =
+            (await this.vendorModel
+              .findOne({ _id: restaurant.vendorId })
+              .exec()) ||
+            (await this.vendorModel
+              .findOne({ userId: restaurant.vendorId })
+              .exec());
+
+          // Query vendor user account directly from UserModel for email credential
+          const vendorUser = vendor
+            ? await this.userModel.findOne({ _id: vendor.userId }).exec()
+            : null;
+
+          const vendorEmail = vendorUser?.email;
+
+          if (vendorEmail) {
+            try {
+              const orderRef =
+                order.orderReference || order._id || event.orderId;
+              const customerName = order.user?.firstName
+                ? `${order.user.firstName} ${order.user.lastName || ''}`.trim()
+                : 'A customer';
+              const itemCount = order.items?.length || 0;
+
+              console.log(
+                `[Vendor Email] Notifying vendor at: ${vendorEmail} for Order Ref: ${orderRef}`,
+              );
+
+              await this.notificationsService.sendEmail({
+                to: vendorEmail,
+                subject: `New order received - Ref: ${orderRef}`,
+                body: `Hello,\n\nA new order has been paid and placed for your restaurant.\n\nOrder reference: ${orderRef}\nCustomer: ${customerName}\nItems: ${itemCount}\n\nPlease review and accept or decline it promptly.`,
+              });
+
+              console.log(
+                `[Vendor Email] Sent successfully to: ${vendorEmail}`,
+              );
+            } catch (rawError) {
+              console.error(
+                `[Vendor Email Error] Email sending failed during execution for Order Ref: ${order.orderReference}\n` +
+                  `  - Target Email: ${vendorEmail}\n` +
+                  `  - Raw Error:`,
+                rawError,
+              );
+            }
+          } else {
+            console.warn(
+              `[Vendor Email Warning] No email found for vendor on restaurant: ${order.restaurantId}`,
+            );
+          }
+        }
+      }
+
+      // Consumer Email Logic
+      const orderUser = order.user as any;
+      const userEmail = orderUser?.email;
+      const customerUserId =
+        orderUser?.userId || orderUser?.id || orderUser?._id;
+
+      let customerEmail = userEmail;
+      let customerFirstName = order.user?.firstName;
+
+      if (!customerEmail && customerUserId) {
+        const customerUser = await this.userModel
+          .findOne({ _id: customerUserId }, { email: 1, firstName: 1 })
+          .exec();
+
+        customerEmail = customerUser?.email;
+        customerFirstName = customerFirstName || customerUser?.firstName;
+      }
+
+      if (customerEmail) {
+        const orderRef = order.orderReference || order._id || event.orderId;
+        const greetingName = customerFirstName || 'Customer';
+
+        let emailSubject = `Update on your order ${orderRef}`;
+        let emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} status is now: ${order.status}.`;
+
+        switch (event.type) {
+          case 'OrderPlacedEvent':
+            emailSubject = `Order Placed Successfully - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} has been placed and payment confirmed. The restaurant will review it shortly!`;
+            break;
+          case 'OrderAcceptedEvent':
+            emailSubject = `Order Accepted - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nThe restaurant accepted your order and will start preparing it soon.`;
+            break;
+          case 'OrderPreparingEvent':
+            emailSubject = `Food is Being Prepared - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order is currently being prepared in the kitchen.`;
+            break;
+          case 'OrderReadyEvent':
+            emailSubject = `Order Ready for Pickup - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order is ready! A rider will pick it up soon.`;
+            break;
+          case 'OrderOutForDeliveryEvent':
+            emailSubject = `Order Out for Delivery - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order is on its way! A rider has picked up your food.`;
+            break;
+          case 'OrderDeliveredEvent':
+            emailSubject = `Order Delivered - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order has been delivered! Enjoy your meal.`;
+            break;
+          case 'OrderRejectedEvent':
+            emailSubject = `Order Declined - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nUnfortunately, the restaurant declined your order. Your payment will be refunded.`;
+            break;
+          case 'OrderCancelledEvent':
+            emailSubject = `Order Cancelled - ${orderRef}`;
+            emailBody = `Hello ${greetingName},\n\nYour order ${orderRef} has been cancelled.`;
+            break;
+        }
+
+        try {
+          console.log(
+            `[Consumer Email] Notifying consumer at: ${customerEmail} (Event: ${event.type})`,
+          );
+
+          await this.notificationsService.sendEmail({
+            to: customerEmail,
+            subject: emailSubject,
+            body: emailBody,
+          });
+
+          console.log(
+            `[Consumer Email] Sent successfully to: ${customerEmail}`,
+          );
+        } catch (rawError) {
+          // Captures runtime/network/service errors from the email service provider
+          console.error(
+            `[Consumer Email Error] Email sending failed during execution for Event: ${event.type}\n` +
+              `  - Target User ID: ${customerUserId}\n` +
+              `  - Target Email: ${customerEmail}\n` +
+              `  - Raw Error:`,
+            rawError,
+          );
+        }
+      } else {
+        // Captures missing/invalid email payload data before sending
+        console.warn(
+          `[Consumer Email Warning] Failed to send email for Event: ${event.type}\n` +
+            `  - Target User ID: ${customerUserId}\n` +
+            `  - Received Email Value: ${JSON.stringify(customerEmail)}\n` +
+            `  - Raw Order User Payload: ${JSON.stringify(event.order?.user || order?.user)}`,
+        );
+      }
+
+      // 3. Platform Admin Alerts
+      if (
+        event.type === 'OrderAcceptedEvent' ||
+        event.type === 'OrderRejectedEvent' ||
+        event.type === 'OrderCancelledEvent'
+      ) {
+        try {
+          const orderRef = order.orderReference || order._id || event.orderId;
+          await this.notificationsService.sendEmail({
+            to: 'support@chopbaze.com',
+            subject: `Order ${orderRef} update`,
+            body: `Order ${orderRef} moved to state: ${order.status}.`,
+          });
+        } catch (rawError) {
+          console.error(
+            `[Admin Email Error] Failed to send admin alert for Order ${order._id}:`,
+            rawError,
+          );
+        }
+      }
+    } catch (error) {
+      // Catch-all for outer logic errors (database queries, etc.)
+      console.error(
+        '[Event Handling Error] Failed to process order event notification',
+        error,
+      );
+    }
+  }
+
+  // Validate state transitions based on requester user roles
   async updateStatus(
     id: string,
     status: OrderStatus,
@@ -217,10 +944,12 @@ export class OrdersService {
   ) {
     const order = await this.assertOrderAccessible(id, requester);
 
+    // Administrative override permission
     if (requester.role === UserRole.ADMIN) {
       return this.applyStatusUpdate(id, status);
     }
 
+    // Consumer cancellation policy enforcement
     if (requester.role === UserRole.CONSUMER) {
       if (status !== OrderStatus.CANCELLED_BY_CONSUMER) {
         throw new ForbiddenException(
@@ -240,20 +969,40 @@ export class OrdersService {
       return this.applyStatusUpdate(id, status);
     }
 
+    // Vendor workflow transition validations
     if (requester.role === UserRole.VENDOR) {
-      const vendorAllowed = new Set<OrderStatus>([
-        OrderStatus.ACCEPTED,
-        OrderStatus.DECLINED,
-        OrderStatus.PREPARING,
-        OrderStatus.READY_FOR_PICKUP,
-        OrderStatus.CANCELLED_BY_VENDOR,
-      ]);
-      if (!vendorAllowed.has(status)) {
-        throw new ForbiddenException('Invalid status update for vendor');
+      const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+        [OrderStatus.PENDING]: [
+          OrderStatus.ACCEPTED,
+          OrderStatus.DECLINED,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.ACCEPTED]: [
+          OrderStatus.PREPARING,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.DECLINED]: [],
+        [OrderStatus.PREPARING]: [
+          OrderStatus.READY_FOR_PICKUP,
+          OrderStatus.CANCELLED_BY_VENDOR,
+        ],
+        [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.DELIVERED],
+        [OrderStatus.OUT_FOR_DELIVERY]: [OrderStatus.DELIVERED],
+        [OrderStatus.DELIVERED]: [],
+        [OrderStatus.CANCELLED_BY_CONSUMER]: [],
+        [OrderStatus.CANCELLED_BY_VENDOR]: [],
+      };
+
+      if (!allowedTransitions[order.status]?.includes(status)) {
+        throw new BadRequestException(
+          `Invalid transition from ${order.status} to ${status}`,
+        );
       }
+
       return this.applyStatusUpdate(id, status);
     }
 
+    // Rider fulfillment transition checks
     if (requester.role === UserRole.RIDER) {
       if (status !== OrderStatus.DELIVERED) {
         throw new ForbiddenException(
@@ -275,6 +1024,7 @@ export class OrdersService {
     throw new ForbiddenException();
   }
 
+  // Assign delivery rider and transition order state to out for delivery
   async assignRider(
     orderId: string,
     riderId: string,
@@ -295,10 +1045,11 @@ export class OrdersService {
     }
 
     if (requester.role === UserRole.VENDOR) {
-      const vendorId = await this.getVendorIdForUser(requester.sub);
-      if (order.vendorId !== vendorId) {
+      const restaurantId = await this.getRestaurantIdForUser(requester.sub);
+
+      if (order.restaurantId !== restaurantId) {
         throw new ForbiddenException(
-          'You can only assign riders to your orders',
+          'You can only assign riders to your restaurant orders',
         );
       }
     }
@@ -310,16 +1061,51 @@ export class OrdersService {
       throw new BadRequestException('Rider not found');
     }
 
-    const updated = await this.orderModel
-      .findOneAndUpdate(
-        { _id: orderId, isDeleted: false },
-        { riderId, status: OrderStatus.OUT_FOR_DELIVERY },
-        { new: true },
-      )
-      .exec();
-    if (!updated) {
-      throw new NotFoundException(`Order with ID ${orderId} not found`);
-    }
-    return updated;
+    return this.applyStatusUpdate(orderId, OrderStatus.OUT_FOR_DELIVERY, {
+      riderId,
+    });
+  }
+
+  // Sanitize database document into client response DTO omitting sensitive fields
+  private mapOrderResponse(order: OrderDocument): OrderResponseDto {
+    return {
+      _id: order._id.toString(),
+      serialNumber: order.serialNumber,
+      restaurantId: order.restaurantId,
+      orderReference: order.orderReference,
+      user: {
+        firstName: order.user?.firstName || '',
+        lastName: order.user?.lastName || '',
+        phoneNumber: order.user?.phoneNumber || '',
+      },
+      items: order.items.map((item) => ({
+        productId: item.productId.toString(),
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+        subtotal: item.subtotal || this.calculateItemSubtotal(item),
+        image: item.image?.url
+          ? { url: item.image.url, publicId: item.image.publicId }
+          : undefined,
+        selectedChoices: ((item as any).selectedChoices || []).map(
+          (choice: any) => ({
+            groupName: choice.groupName || 'Options',
+            name: choice.name,
+            price: choice.price,
+          }),
+        ),
+      })),
+      subtotal: order.subtotal,
+      serviceFee: order.serviceFee,
+      deliveryFee: order.deliveryFee,
+      total: order.total,
+      deliveryAddress: order.deliveryAddress,
+      status: order.status,
+      notes: order.notes,
+      riderId: order.riderId,
+      paymentStatus: order.paymentStatus,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
   }
 }
