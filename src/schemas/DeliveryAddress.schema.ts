@@ -7,7 +7,7 @@ export type DeliveryAddressDocument = HydratedDocument<DeliveryAddress>;
 @Schema({ timestamps: true })
 export class DeliveryAddress extends BaseEntity {
   @Prop({ required: true, index: true })
-  consumerId: string;
+  userId: string;
 
   @Prop({ required: true })
   label: string; // e.g., Home, Work

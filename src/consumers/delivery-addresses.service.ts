@@ -23,7 +23,7 @@ export class DeliveryAddressesService {
   ) {}
 
   async create(
-    consumerId: string,
+    userId: string,
     dto: CreateDeliveryAddressDto,
   ): Promise<DeliveryAddressResponseDto> {
     if (!dto.addressLine) {
@@ -31,20 +31,20 @@ export class DeliveryAddressesService {
     }
     if (dto.isDefault) {
       await this.addressModel
-        .updateMany({ consumerId }, { isDefault: false })
+        .updateMany({ userId }, { isDefault: false })
         .exec();
     }
-    const created = new this.addressModel({ ...dto, consumerId });
+    const created = new this.addressModel({ ...dto, userId });
     const saved = await created.save();
 
     return this.mapDeliveryAddressResponse(saved);
   }
 
-  async findByConsumer(
-    consumerId: string,
+  async findByUser(
+    userId: string,
   ): Promise<DeliveryAddressResponseDto[]> {
     const addresses = await this.addressModel
-      .find({ consumerId, isDeleted: false })
+      .find({ userId, isDeleted: false })
       .sort({ isDefault: -1, updatedAt: -1 })
       .exec();
 
@@ -53,10 +53,10 @@ export class DeliveryAddressesService {
 
   async findById(
     id: string,
-    consumerId: string,
+    userId: string,
   ): Promise<DeliveryAddressResponseDto> {
     const addr = await this.addressModel
-      .findOne({ _id: id, consumerId, isDeleted: false })
+      .findOne({ _id: id, userId, isDeleted: false })
       .exec();
     if (!addr) throw new NotFoundException('Address not found');
     return this.mapDeliveryAddressResponse(addr);
@@ -64,16 +64,16 @@ export class DeliveryAddressesService {
 
   async update(
     id: string,
-    consumerId: string,
+    userId: string,
     dto: UpdateDeliveryAddressDto,
   ): Promise<DeliveryAddressResponseDto> {
     if (dto.isDefault) {
       await this.addressModel
-        .updateMany({ consumerId }, { isDefault: false })
+        .updateMany({ userId }, { isDefault: false })
         .exec();
     }
     const updated = await this.addressModel
-      .findOneAndUpdate({ _id: id, consumerId, isDeleted: false }, dto, {
+      .findOneAndUpdate({ _id: id, userId, isDeleted: false }, dto, {
         new: true,
       })
       .exec();
@@ -83,11 +83,11 @@ export class DeliveryAddressesService {
 
   async remove(
     id: string,
-    consumerId: string,
+    userId: string,
   ): Promise<DeliveryAddressResponseDto> {
     const removed = await this.addressModel
       .findOneAndUpdate(
-        { _id: id, consumerId, isDeleted: false },
+        { _id: id, userId, isDeleted: false },
         { isDeleted: true },
         { new: true },
       )
@@ -96,9 +96,9 @@ export class DeliveryAddressesService {
     return this.mapDeliveryAddressResponse(removed);
   }
 
-  async countForConsumer(consumerId: string): Promise<number> {
+  async countForUser(userId: string): Promise<number> {
     return this.addressModel
-      .countDocuments({ consumerId, isDeleted: false })
+      .countDocuments({ userId, isDeleted: false })
       .exec();
   }
 
@@ -107,7 +107,7 @@ export class DeliveryAddressesService {
   ): DeliveryAddressResponseDto {
     return {
       id: address._id.toString(),
-      consumerId: address.consumerId,
+      userId: address.userId,
       label: address.label,
       addressLine: address.addressLine,
       city: address.city,

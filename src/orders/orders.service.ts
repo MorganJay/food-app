@@ -170,12 +170,12 @@ export class OrdersService implements OnModuleInit {
       const addr = createDto.deliveryAddress;
       if (addr && typeof addr === 'object') {
         const count = await this.addressModel
-          .countDocuments({ consumerId: userId, isDeleted: false })
+          .countDocuments({ userId, isDeleted: false })
           .exec();
 
         if (!count) {
           await this.addressModel.create({
-            consumerId: userId,
+            userId,
             label: addr.label || 'Home',
             addressLine: addr.addressLine || '',
             city: addr.city,
@@ -356,7 +356,13 @@ export class OrdersService implements OnModuleInit {
       delivery_longitude: this.toLongitude(dto.deliveryAddress.location?.lng),
     };
 
-    return this.dbglService.quote(payload);
+    try {
+      return await this.dbglService.quote(payload);
+    } catch (error:any) {
+      console.warn('[Delivery Quote Error] Failed to fetch external quote, using fallback:', error.message);
+      // Fallback response object so the endpoint doesn't crash:
+      return { total_amount: 4000 }; 
+    }
   }
 
   private getQuotedDeliveryFee(quote: Record<string, any>): number {
@@ -384,7 +390,7 @@ export class OrdersService implements OnModuleInit {
 
     const deliveryAddress = await this.addressModel
       .findOne({
-        consumerId: userId,
+        userId,
         isDeleted: false,
         ...(deliveryAddressId
           ? { _id: deliveryAddressId }

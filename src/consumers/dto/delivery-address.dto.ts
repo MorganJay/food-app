@@ -87,7 +87,7 @@ export class DeliveryAddressResponseDto {
   id: string;
 
   @ApiProperty({ example: 'consumer123' })
-  consumerId: string;
+  userId: string;
 
   @ApiProperty({ example: 'Home' })
   label: string;

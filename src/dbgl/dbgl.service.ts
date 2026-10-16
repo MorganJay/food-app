@@ -112,6 +112,7 @@ export class DbglService {
       payload,
       { headers: this.getHeaders() },
     );
+    console.log('DBGL quote response:', response.data);
 
     return response.data;
   }

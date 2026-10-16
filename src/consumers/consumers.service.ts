@@ -34,7 +34,7 @@ export class ConsumersService {
       });
     }
     const addresses = await this.addressModel
-      .find({ consumerId: userId, isDeleted: false })
+      .find({ userId, isDeleted: false })
       .sort({ isDefault: -1, updatedAt: -1 })
       .exec();
     return this.mapConsumerResponse(consumer, addresses);

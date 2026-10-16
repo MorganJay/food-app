@@ -34,8 +34,8 @@ export class DeliveryAddressesController {
   @ApiOperation({ summary: 'List consumer delivery addresses' })
   @ApiResponse({ status: 200, type: [DeliveryAddressResponseDto] })
   async list(@Request() req) {
-    const consumerId = req.user.sub;
-    return this.svc.findByConsumer(consumerId);
+    const userId = req.user.sub;
+    return this.svc.findByUser(userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -43,8 +43,8 @@ export class DeliveryAddressesController {
   @ApiOperation({ summary: 'Get an address by id' })
   @ApiResponse({ status: 200, type: DeliveryAddressResponseDto })
   async get(@Param('id') id: string, @Request() req) {
-    const consumerId = req.user.sub;
-    return this.svc.findById(id, consumerId);
+    const userId = req.user.sub;
+    return this.svc.findById(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -52,8 +52,8 @@ export class DeliveryAddressesController {
   @ApiOperation({ summary: 'Create a delivery address' })
   @ApiResponse({ status: 201, type: DeliveryAddressResponseDto })
   async create(@Body() dto: CreateDeliveryAddressDto, @Request() req) {
-    const consumerId = req.user.sub;
-    return this.svc.create(consumerId, dto);
+    const userId = req.user.sub;
+    return this.svc.create(userId, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -65,8 +65,8 @@ export class DeliveryAddressesController {
     @Body() dto: UpdateDeliveryAddressDto,
     @Request() req,
   ) {
-    const consumerId = req.user.sub;
-    return this.svc.update(id, consumerId, dto);
+    const userId = req.user.sub;
+    return this.svc.update(id, userId, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -74,7 +74,7 @@ export class DeliveryAddressesController {
   @ApiOperation({ summary: 'Delete a delivery address' })
   @ApiResponse({ status: 200, type: DeliveryAddressResponseDto })
   async remove(@Param('id') id: string, @Request() req) {
-    const consumerId = req.user.sub;
-    return this.svc.remove(id, consumerId);
+    const userId = req.user.sub;
+    return this.svc.remove(id, userId);
   }
 }
