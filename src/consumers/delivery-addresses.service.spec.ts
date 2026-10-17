@@ -50,17 +50,17 @@ describe('DeliveryAddressesService', () => {
     });
 
     expect(addressModel.updateMany).toHaveBeenCalledWith(
-      { consumerId: 'consumer1' },
+      { userId: 'consumer1' },
       { isDefault: false },
     );
     expect(addressModel).toHaveBeenCalledWith({
-      consumerId: 'consumer1',
+      userId: 'consumer1',
       label: 'Home',
       addressLine: '123 Ring Road',
       isDefault: true,
     });
     expect(result).toMatchObject({
-      consumerId: 'consumer1',
+      userId: 'consumer1',
       label: 'Home',
       addressLine: '123 Ring Road',
       isDefault: true,
@@ -70,7 +70,7 @@ describe('DeliveryAddressesService', () => {
 
   it('lists consumer delivery addresses', async () => {
     const addresses = [
-      { _id: 'addr1', consumerId: 'consumer1', label: 'Home' },
+      { _id: 'addr1', userId: 'consumer1', label: 'Home' },
     ];
     addressModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValue({
@@ -78,13 +78,13 @@ describe('DeliveryAddressesService', () => {
       }),
     });
 
-    const result = await service.findByConsumer('consumer1');
+    const result = await service.findByUser('consumer1');
 
     expect(addressModel.find).toHaveBeenCalledWith({
-      consumerId: 'consumer1',
+      userId: 'consumer1',
       isDeleted: false,
     });
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ consumerId: 'consumer1', label: 'Home' });
+    expect(result[0]).toMatchObject({ userId: 'consumer1', label: 'Home' });
   });
 });

@@ -164,11 +164,11 @@ describe('OrdersService', () => {
     } as any);
 
     expect(addressModel.countDocuments).toHaveBeenCalledWith({
-      consumerId: 'consumer1',
+      userId: 'consumer1',
       isDeleted: false,
     });
     expect(addressModel.create).toHaveBeenCalledWith({
-      consumerId: 'consumer1',
+      userId: 'consumer1',
       label: 'Home',
       addressLine: '123 Ring Road',
       city: undefined,

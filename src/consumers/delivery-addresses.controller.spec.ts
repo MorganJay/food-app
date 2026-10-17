@@ -5,7 +5,7 @@ import { DeliveryAddressesService } from './delivery-addresses.service';
 describe('DeliveryAddressesController', () => {
   let controller: DeliveryAddressesController;
   const service = {
-    findByConsumer: jest.fn(),
+    findByUser: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -28,11 +28,11 @@ describe('DeliveryAddressesController', () => {
   });
 
   it('lists addresses for the authenticated consumer', async () => {
-    service.findByConsumer.mockResolvedValue(['address1']);
+    service.findByUser.mockResolvedValue(['address1']);
 
     const result = await controller.list({ user: { sub: 'consumer1' } });
 
-    expect(service.findByConsumer).toHaveBeenCalledWith('consumer1');
+    expect(service.findByUser).toHaveBeenCalledWith('consumer1');
     expect(result).toEqual(['address1']);
   });
 
