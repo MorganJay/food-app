@@ -361,7 +361,9 @@ export class OrdersService implements OnModuleInit {
     } catch (error:any) {
       console.warn('[Delivery Quote Error] Failed to fetch external quote, using fallback:', error.message);
       // Fallback response object so the endpoint doesn't crash:
-      return { total_amount: 4000 }; 
+      throw new BadGatewayException(
+        'Unable to calculate delivery fee at the moment. Please try again later.',
+      );
     }
   }
 
