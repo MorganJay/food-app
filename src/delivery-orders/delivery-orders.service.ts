@@ -158,10 +158,7 @@ export class DeliveryOrdersService {
     // update the main order status
     if (partnerOrderRef || orderId) {
       const mainOrder = await this.orderModel.findOne({
-        $or: [
-          ...(partnerOrderRef ? [{ orderReference: partnerOrderRef }, { _id: orderId }] : []),
-          ...(orderId ? [{ 'rawPayload.order_id': orderId }] : []),
-        ],
+        orderReference: partnerOrderRef
       }).exec();
 
       if (mainOrder) {
