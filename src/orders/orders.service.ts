@@ -700,7 +700,9 @@ export class OrdersService implements OnModuleInit {
     const payload = await this.buildDeliveryPartnerOrderPayload(order);
     try {
       await this.dbglService.createOrder(payload);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[DBGL API Error]', error.response?.data || error.message || error);
+
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException
