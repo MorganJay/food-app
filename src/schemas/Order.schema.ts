@@ -126,6 +126,12 @@ export class Order extends BaseEntity {
   @Prop()
   riderId: string;
 
+  @Prop()
+  riderName: string;
+
+  @Prop()
+  riderPhone: string;
+
   @Prop({ default: 'pending' })
   paymentStatus: string;
 }

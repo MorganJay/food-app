@@ -6,6 +6,7 @@ import {
   DeliveryOrderDocument,
   DeliveryOrderRecordType,
 } from '../schemas/DeliveryOrder.schema';
+import { Order, OrderDocument, OrderStatus } from 'src/schemas/Order.schema';
 
 export interface DeliveryOrderFilters {
   recordType?: DeliveryOrderRecordType;
@@ -21,6 +22,8 @@ export class DeliveryOrdersService {
   constructor(
     @InjectModel(DeliveryOrder.name)
     private readonly deliveryOrderModel: Model<DeliveryOrderDocument>,
+    @InjectModel(Order.name)
+    private readonly orderModel: Model<OrderDocument>,
   ) {}
 
   async findAll(
@@ -120,6 +123,8 @@ export class DeliveryOrdersService {
       paymentStatus: payload.paymentStatus ?? existing?.paymentStatus,
       paymentLinkUrl: payload.paymentLinkUrl ?? existing?.paymentLinkUrl,
       deliveryPin: payload.deliveryPin ?? existing?.deliveryPin,
+      riderName: payload.riderName ?? existing?.riderName,
+      riderPhone: payload.riderPhone ?? existing?.riderPhone,
       totalAmount: payload.totalAmount ?? existing?.totalAmount,
       discountPercent: payload.discountPercent ?? existing?.discountPercent,
       discountAmount: payload.discountAmount ?? existing?.discountAmount,
@@ -150,6 +155,32 @@ export class DeliveryOrdersService {
       await this.deliveryOrderModel.create(normalized);
     }
 
+    // update the main order status
+    if (partnerOrderRef || orderId) {
+      const mainOrder = await this.orderModel.findOne({
+        $or: [
+          ...(partnerOrderRef ? [{ orderReference: partnerOrderRef }, { _id: partnerOrderRef }] : []),
+          ...(orderId ? [{ 'rawPayload.order_id': orderId }] : []),
+        ],
+      }).exec();
+
+      if (mainOrder) {
+        // Map DBGL shipment statuses to the OrderStatus enum
+        if (normalized.shipmentStatus === 'picked_up' || normalized.status === 'in_transit') {
+          mainOrder.status = OrderStatus.OUT_FOR_DELIVERY;
+        } else if (normalized.shipmentStatus === 'delivered' || normalized.status === 'delivered') {
+          mainOrder.status = OrderStatus.DELIVERED;
+        }
+
+        // Save rider details onto the main order if present
+        if (normalized.riderName) (mainOrder as any).riderName = normalized.riderName;
+        if (normalized.riderPhone) (mainOrder as any).riderPhone = normalized.riderPhone;
+
+        await mainOrder.save();
+        this.logger.log(`Successfully synced webhook data to main order ${mainOrder._id}`);
+      }
+    }
+
     if (recordType !== 'order' && orderId) {
       const canonicalOrder = await this.deliveryOrderModel
         .findOne({ orderId, recordType: 'order' })
@@ -162,6 +193,8 @@ export class DeliveryOrdersService {
           'paymentStatus',
           'paymentLinkUrl',
           'deliveryPin',
+          'riderName',
+          'riderPhone',
           'totalAmount',
           'discountPercent',
           'discountAmount',

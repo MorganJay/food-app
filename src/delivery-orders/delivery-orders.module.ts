@@ -7,11 +7,13 @@ import {
 import { DeliveryOrdersService } from './delivery-orders.service';
 import { DeliveryOrdersController } from './delivery-orders.controller';
 import { DbglService } from '../dbgl/dbgl.service';
+import { Order, OrderSchema } from 'src/schemas/Order.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: DeliveryOrder.name, schema: DeliveryOrderSchema },
+      { name: Order.name, schema: OrderSchema }
     ]),
   ],
   providers: [DeliveryOrdersService, DbglService],

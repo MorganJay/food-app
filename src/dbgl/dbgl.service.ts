@@ -96,6 +96,8 @@ export class DbglService {
       discountPercent: payload.discount_percent ?? payload.discountPercent,
       discountAmount: payload.discount_amount ?? payload.discountAmount,
       reviewRequired: payload.review_required ?? payload.reviewRequired,
+      riderName: payload.rider?.name ?? payload.rider_name ?? payload.riderName,
+      riderPhone: payload.rider?.phone ?? payload.rider_phone ?? payload.riderPhone,
       vendorCreatedAt: payload.created_at ?? payload.vendorCreatedAt,
       confirmedAt: payload.confirmed_at ?? payload.confirmedAt,
       pickedUpAt: payload.picked_up_at ?? payload.pickedUpAt,

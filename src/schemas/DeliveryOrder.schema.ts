@@ -72,6 +72,12 @@ export class DeliveryOrder extends BaseEntity {
   rawPayload: Record<string, any>;
 
   @Prop()
+  riderName?: string;
+
+  @Prop()
+  riderPhone?: string;
+
+  @Prop()
   vendorCreatedAt: Date;
 
   @Prop()
