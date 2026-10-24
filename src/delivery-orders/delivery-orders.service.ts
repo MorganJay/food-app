@@ -159,7 +159,7 @@ export class DeliveryOrdersService {
     if (partnerOrderRef || orderId) {
       const mainOrder = await this.orderModel.findOne({
         $or: [
-          ...(partnerOrderRef ? [{ orderReference: partnerOrderRef }, { _id: partnerOrderRef }] : []),
+          ...(partnerOrderRef ? [{ orderReference: partnerOrderRef }, { _id: orderId }] : []),
           ...(orderId ? [{ 'rawPayload.order_id': orderId }] : []),
         ],
       }).exec();
