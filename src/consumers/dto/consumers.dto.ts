@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsMongoId } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsMongoId, IsArray, IsOptional } from 'class-validator';
 
 export class ConsumerResponseDto {
   @ApiProperty({ example: '67ab12cd34ef56gh78ij90kl' })
@@ -8,9 +8,7 @@ export class ConsumerResponseDto {
   @ApiProperty({ example: 'user123' })
   userId: string;
 
-  @ApiProperty({
-    example: ['vendorId1', 'vendorId2'],
-  })
+  @ApiProperty()
   favorites: string[];
 
   @ApiProperty({
@@ -19,18 +17,34 @@ export class ConsumerResponseDto {
   })
   orderHistory: any[];
 
+  @ApiPropertyOptional({
+    description: 'Saved delivery addresses for the consumer',
+  })
+  addresses?: any[];
+
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ example: 1 })
+  serialNumber: number;
 }
 
 export class ToggleFavoriteDto {
   @ApiProperty({
     example: '64f1c2a9b1234567890abcd1',
-    description: 'ID of the vendor to toggle as favorite',
+    description: 'ID of the restaurant to toggle as favorite',
   })
   @IsMongoId()
-  vendorId: string;
+  restaurantId: string;
+}
+
+export class UpdateConsumerDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  favorites?: string[];
 }

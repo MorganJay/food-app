@@ -1,0 +1,174 @@
+### DBGL API Tests
+### Base URL: https://sandbox.dbgl.ng
+### Auth headers: X-Api-Key and X-Api-Secret
+
+@baseUrl = https://sandbox.dbgl.ng
+@apiKey =
+@apiSecret =
+@partnerOrderRef = chopbaze_order_{{$guid}}
+
+
+### 1) Register or update the webhook URL
+POST {{baseUrl}}/apip/api/webhook_config.php
+Content-Type: application/json
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+{
+  "webhook_url": "https://your-domain.example.com/api/v1/delivery-orders/webhook",
+  "regenerate_secret": false
+}
+
+###
+
+### 2) Get current webhook configuration
+GET {{baseUrl}}/apip/api/webhook_config.php
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+###
+
+### 3) Get a delivery quote (pre-checkout)
+POST {{baseUrl}}/apip/api/orders_quote.php
+Content-Type: application/json
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+{
+  "vendor_city": "Lagos",
+  "vendor_state": "Lagos",
+  "vendor_address": "12 Adeola Odeku St, Victoria Island",
+  "delivery_city": "Lekki",
+  "delivery_state": "Lagos",
+  "delivery_address": "5 Admiralty Way, Lekki Phase 1",
+  "service_type": "standard",
+  "weight_kg": 2.5
+}
+
+###
+
+### 4) Create a delivery order
+POST {{baseUrl}}/apip/api/orders_create.php
+Content-Type: application/json
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+{
+  "partner_order_ref": "{{partnerOrderRef}}",
+  "vendor_name": "Chopbaze Kitchen",
+  "vendor_phone": "08011112222",
+  "vendor_address": "12 Adeola Odeku St, Victoria Island",
+  "vendor_city": "Lagos",
+  "vendor_state": "Lagos",
+  "pickup_latitude": 6.4281,
+  "pickup_longitude": 3.4219,
+  "customer_name": "Jane Customer",
+  "customer_phone": "08033334444",
+  "delivery_address": "5 Admiralty Way, Lekki Phase 1",
+  "delivery_city": "Lekki",
+  "delivery_state": "Lagos",
+  "delivery_latitude": 6.4492,
+  "delivery_longitude": 3.4720,
+  "package_description": "Food order delivery",
+  "weight_kg": 2.5,
+  "service_type": "standard"
+}
+
+###
+@orderId = ORD146929652
+@waybillNo = WB033764695
+
+# {
+#   "order_id": "ORD146929652",
+#   "waybill_no": "WB033764695",
+#   "status": "confirmed",
+#   "total_amount": 3805,
+#   "discount_percent": 0,
+#   "discount_amount": 0,
+#   "currency": "NGN",
+#   "review_required": false,
+#   "delivery_pin": "579986"
+# }
+
+### 5) Check order status by DBGL order id
+GET {{baseUrl}}/apip/api/orders_status.php?order_id={{orderId}}
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+###
+
+### 6) Check order status by partner reference
+GET {{baseUrl}}/apip/api/orders_status.php?partner_order_ref=chopbaze_order_90c49177-280e-4f00-82d6-9f08a3c770a6
+X-Api-Key: {{apiKey}}
+X-Api-Secret: {{apiSecret}}
+
+###
+
+### 7) Example DBGL webhook body (for verification testing)
+# The real webhook should send X-Webhook-Signature: <hmac-sha256(raw-body, DBGL_WEBHOOK_SECRET)>
+POST https://your-domain.example.com/api/v1/delivery-orders/webhook
+Content-Type: application/json
+X-Webhook-Signature: replace_with_hmac_sha256_hex
+
+{
+  "event": "order.confirmed",
+  "order_id": "ORD293535848",
+  "partner_order_ref": "MKT-00123",
+  "status": "confirmed",
+  "shipment_status": "pending_assignment",
+  "delivery_pin": "384920",
+  "total_amount": 3687,
+  "currency": "NGN",
+  "timestamp": "2026-08-22T14:03:11+01:00"
+}
+
+###
+
+### 8) Local app endpoint equivalents
+POST http://localhost:3000/api/v1/delivery-orders/quote
+Content-Type: application/json
+Authorization: Bearer your_jwt_here
+
+{
+  "vendor_city": "Lagos",
+  "vendor_state": "Lagos",
+  "vendor_address": "12 Adeola Odeku St, Victoria Island",
+  "delivery_city": "Lekki",
+  "delivery_state": "Lagos",
+  "delivery_address": "5 Admiralty Way, Lekki Phase 1",
+  "service_type": "standard",
+  "weight_kg": 2.5
+}
+
+###
+
+POST http://localhost:3000/api/v1/delivery-orders
+Content-Type: application/json
+Authorization: Bearer your_jwt_here
+
+{
+  "partner_order_ref": "MKT-00123",
+  "vendor_name": "Chopbaze Kitchen",
+  "vendor_phone": "08011112222",
+  "vendor_address": "12 Adeola Odeku St, Victoria Island",
+  "vendor_city": "Lagos",
+  "vendor_state": "Lagos",
+  "customer_name": "Jane Customer",
+  "customer_phone": "08033334444",
+  "delivery_address": "5 Admiralty Way, Lekki Phase 1",
+  "delivery_city": "Lekki",
+  "delivery_state": "Lagos",
+  "package_description": "Food order delivery",
+  "weight_kg": 2.5,
+  "service_type": "standard"
+}
+
+###
+
+GET http://localhost:3000/api/v1/delivery-orders
+Authorization: Bearer your_jwt_here
+
+###
+
+GET http://localhost:3000/api/v1/delivery-orders/64f0c8d7b1a3c5f2d1e4a567
+Authorization: Bearer your_jwt_here
