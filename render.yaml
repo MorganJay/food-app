@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: food-app
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: yarn install --frozen-lockfile && yarn build
+    startCommand: yarn start:prod
+    healthCheckPath: /api/v1
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: CORS_ORIGIN
+        value: https://yourdomain.com
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OTP_DELIVERY_MODE
+        value: SMS
+      - key: OTP_CHANNELS
+        value: SMS
+      - key: INFOBIP_BASE_URL
+        value: https://api.infobip.com
+      - key: INFOBIP_API_KEY
+        sync: false
+      - key: INFOBIP_SMS_SENDER_ID
+        value: Chopbaze
+      - key: INFOBIP_EMAIL_FROM
+        value: info@yourdomain.com
+      - key: INFOBIP_EMAIL_FROM_ADDRESS
+        value: noreply@yourdomain.com
+      - key: INFOBIP_EMAIL_FROM_NAME
+        value: Chopbaze
+      - key: INFOBIP_WHATSAPP_SENDER_ID
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_BASE_URL
+        value: https://api.paystack.co
+      - key: BASE_URL
+        value: https://yourdomain.com

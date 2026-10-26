@@ -11,17 +11,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { OtpDeliveryService } from './otp-delivery.service';
 import { ConfigService } from '@nestjs/config';
+import { VendorsModule } from 'src/vendors/vendors.module';
 
 @Module({
   imports: [
     UsersModule,
     OtpModule,
     PassportModule,
-    // JwtModule.register({
-    //   secret: process.env.JWT_SECRET,
-    //   signOptions: { expiresIn: '60s' },
-    // }),
-    // Alternatively, you can use ConfigService to get the secret
+    VendorsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

@@ -18,10 +18,10 @@ export class ReviewsService {
     @InjectModel(Vendor.name) private vendorModel: Model<VendorDocument>,
   ) {}
 
-  async create(consumerId: string, reviewData: any) {
+  async create(userId: string, reviewData: any) {
     const review = new this.reviewModel({
       ...reviewData,
-      consumerId,
+      userId,
       reports: [],
     });
     const created = await review.save();
@@ -31,46 +31,48 @@ export class ReviewsService {
       created.rating,
       1,
     );
-    return created;
+    return this.mapReviewResponse(created);
   }
 
-  async findByFood(productId: string, skip: number = 0, limit: number = 20) {
-    return this.reviewModel
+  async findByProduct(productId: string, skip: number = 0, limit: number = 20) {
+    const reviews = await this.reviewModel
       .find({ productId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return reviews.map((review) => this.mapReviewResponse(review));
   }
 
   async findByVendor(vendorId: string, skip: number = 0, limit: number = 20) {
-    return this.reviewModel
+    const reviews = await this.reviewModel
       .find({ vendorId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return reviews.map((review) => this.mapReviewResponse(review));
   }
 
-  async findByConsumer(
-    consumerId: string,
-    skip: number = 0,
-    limit: number = 20,
-  ) {
-    return this.reviewModel
-      .find({ consumerId, isDeleted: false })
+  async findByUser(userId: string, skip: number = 0, limit: number = 20) {
+    const reviews = await this.reviewModel
+      .find({ userId, isDeleted: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return reviews.map((review) => this.mapReviewResponse(review));
   }
 
-  async update(id: string, consumerId: string, updateData: any) {
+  async update(id: string, userId: string, updateData: any) {
     const review = await this.reviewModel.findById(id).exec();
     if (!review || review.isDeleted) {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }
-    if (review.consumerId !== consumerId) {
+    if (review.userId !== userId) {
       throw new ForbiddenException('You can only update your own reviews');
     }
     const ageMinutes =
@@ -92,7 +94,7 @@ export class ReviewsService {
         0,
       );
     }
-    return updated;
+    return this.mapReviewResponse(updated);
   }
 
   async delete(id: string, userId: string, userRole: string) {
@@ -101,7 +103,7 @@ export class ReviewsService {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }
     if (userRole !== 'admin') {
-      if (review.consumerId !== userId) {
+      if (review.userId !== userId) {
         throw new ForbiddenException('You can only delete your own reviews');
       }
       const ageMinutes =
@@ -125,7 +127,7 @@ export class ReviewsService {
   }
 
   async report(id: string, vendorId: string, reason: string) {
-    return this.reviewModel
+    const updated = await this.reviewModel
       .findByIdAndUpdate(
         id,
         {
@@ -136,6 +138,11 @@ export class ReviewsService {
         { new: true },
       )
       .exec();
+
+    if (!updated) {
+      throw new NotFoundException('Review not found');
+    }
+    return this.mapReviewResponse(updated);
   }
 
   private async adjustAverages(
@@ -172,5 +179,27 @@ export class ReviewsService {
         avgRating: nextAvg,
       });
     }
+  }
+
+  private mapReviewResponse(review: ReviewDocument) {
+    return {
+      id: review._id.toString(),
+      serialNumber: review.serialNumber,
+      userId: review.userId,
+      vendorId: review.vendorId,
+      productId: review.productId,
+
+      rating: review.rating,
+      comment: review.comment,
+
+      reports: review.reports.map((r) => ({
+        vendorId: r.vendorId,
+        reason: r.reason,
+        createdAt: r.createdAt,
+      })),
+
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+    };
   }
 }
