@@ -187,6 +187,21 @@ export class OrderResponseDto {
   @ApiPropertyOptional({ example: '669a3b508d2f5a11b8c9e009' })
   riderId?: string;
 
+  @ApiPropertyOptional({ example: '120805', description: 'Delivery PIN code' })
+  @IsOptional()
+  @IsString()
+  deliveryPin?: string;
+
+  @ApiPropertyOptional({ example: 'John Rider', description: 'Assigned delivery rider name' })
+  @IsOptional()
+  @IsString()
+  riderName?: string;
+
+  @ApiPropertyOptional({ example: '+2348011112222', description: 'Assigned delivery rider phone' })
+  @IsOptional()
+  @IsString()
+  riderPhone?: string;
+
   @ApiProperty({ example: 'pending' })
   paymentStatus: string;
 

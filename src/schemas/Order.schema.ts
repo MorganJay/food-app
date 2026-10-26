@@ -127,6 +127,9 @@ export class Order extends BaseEntity {
   riderId: string;
 
   @Prop()
+  deliveryPin: string;
+
+  @Prop()
   riderName: string;
 
   @Prop()

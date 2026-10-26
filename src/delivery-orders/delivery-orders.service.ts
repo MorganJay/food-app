@@ -169,7 +169,8 @@ export class DeliveryOrdersService {
           mainOrder.status = OrderStatus.DELIVERED;
         }
 
-        // Save rider details onto the main order if present
+        // Save rider details and delivery pin onto the main order if present
+        if (normalized.deliveryPin) (mainOrder as any).deliveryPin = normalized.deliveryPin;
         if (normalized.riderName) (mainOrder as any).riderName = normalized.riderName;
         if (normalized.riderPhone) (mainOrder as any).riderPhone = normalized.riderPhone;
 
