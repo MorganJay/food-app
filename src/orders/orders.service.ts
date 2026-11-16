@@ -8,6 +8,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { Cart, CartDocument } from '../schemas/Cart.schema';
 import { Rider, RiderDocument } from '../schemas/Rider.schema';
@@ -41,6 +42,7 @@ export class OrdersService implements OnModuleInit {
     private readonly orderEvents: OrderEventsService,
     private readonly notificationsService: NotificationsService,
     private readonly dbglService: DbglService,
+    private readonly configService: ConfigService,
   ) {}
 
   // Subscribe to internal order event bus upon module initialization
@@ -146,12 +148,6 @@ export class OrdersService implements OnModuleInit {
     const mappedOrder = this.mapOrderResponse(savedOrder);
 
     await this.orderEvents.publish({
-      type: 'OrderPlacedEvent',
-      orderId: savedOrder._id.toString(),
-      order: mappedOrder,
-    });
-
-    await this.handleOrderEvent({
       type: 'OrderPlacedEvent',
       orderId: savedOrder._id.toString(),
       order: mappedOrder,
@@ -784,6 +780,8 @@ export class OrdersService implements OnModuleInit {
             : null;
 
           const vendorEmail = vendorUser?.email;
+          const vendorPhone = vendorUser?.phoneNumber;
+          const vendorUserId = vendorUser?._id?.toString() || vendor?.userId;
 
           if (vendorEmail) {
             try {
@@ -820,6 +818,29 @@ export class OrdersService implements OnModuleInit {
               `[Vendor Email Warning] No email found for vendor on restaurant: ${order.restaurantId}`,
             );
           }
+
+          if (vendorUser?.isPhoneVerified && vendorPhone) {
+            const orderRef = order.orderReference || order._id || event.orderId;
+            const restaurantName =
+              vendor?.businessName || restaurant.name || 'your restaurant';
+            try {
+              await this.notificationsService.sendSms({
+                to: vendorPhone,
+                recipientId: vendorUserId || 'unknown',
+                eventType: event.type,
+                message: `New order ${orderRef} received for ${restaurantName} (${order.items?.length || 0} items). Review it in the app.`,
+              });
+            } catch (error) {
+              console.error(
+                `[Vendor SMS Error] event=${event.type} recipientId=${vendorUserId || 'unknown'} orderId=${event.orderId}:`,
+                error instanceof Error ? error.message : 'Unknown error',
+              );
+            }
+          } else {
+            console.warn(
+              `[Vendor SMS Warning] Skipped: event=${event.type} recipientId=${vendorUserId || 'unknown'} reason=no_verified_phone`,
+            );
+          }
         }
       }
 
@@ -829,20 +850,28 @@ export class OrdersService implements OnModuleInit {
       const customerUserId =
         orderUser?.userId || orderUser?.id || orderUser?._id;
 
-      let customerEmail = userEmail;
-      let customerFirstName = order.user?.firstName;
-
-      if (!customerEmail && customerUserId) {
-        const customerUser = await this.userModel
-          .findOne({ _id: customerUserId }, { email: 1, firstName: 1 })
-          .exec();
-
-        customerEmail = customerUser?.email;
-        customerFirstName = customerFirstName || customerUser?.firstName;
-      }
+      const customerUser = customerUserId
+        ? await this.userModel
+            .findOne(
+              { _id: customerUserId },
+              {
+                email: 1,
+                firstName: 1,
+                phoneNumber: 1,
+                isPhoneVerified: 1,
+              },
+            )
+            .exec()
+        : null;
+      const customerEmail = userEmail || customerUser?.email;
+      const customerFirstName =
+        order.user?.firstName || customerUser?.firstName;
+      const customerPhone = customerUser?.phoneNumber || orderUser?.phoneNumber;
+      const customerPhoneVerified =
+        customerUser?.isPhoneVerified ?? orderUser?.isPhoneVerified;
+      const orderRef = order.orderReference || order._id || event.orderId;
 
       if (customerEmail) {
-        const orderRef = order.orderReference || order._id || event.orderId;
         const greetingName = customerFirstName || 'Customer';
 
         let emailSubject = `Update on your order ${orderRef}`;
@@ -917,6 +946,30 @@ export class OrdersService implements OnModuleInit {
         );
       }
 
+      if (customerPhoneVerified && customerPhone) {
+        try {
+          await this.notificationsService.sendSms({
+            to: customerPhone,
+            recipientId: customerUserId || 'unknown',
+            eventType: event.type,
+            message: this.getCustomerSmsMessage(
+              event.type,
+              orderRef,
+              order.status,
+            ),
+          });
+        } catch (error) {
+          console.error(
+            `[Customer SMS Error] event=${event.type} recipientId=${customerUserId || 'unknown'} orderId=${event.orderId}:`,
+            error instanceof Error ? error.message : 'Unknown error',
+          );
+        }
+      } else {
+        console.warn(
+          `[Customer SMS Warning] Skipped: event=${event.type} recipientId=${customerUserId || 'unknown'} reason=no_verified_phone`,
+        );
+      }
+
       // 3. Platform Admin Alerts
       if (
         event.type === 'OrderAcceptedEvent' ||
@@ -934,6 +987,32 @@ export class OrdersService implements OnModuleInit {
           console.error(
             `[Admin Email Error] Failed to send admin alert for Order ${order._id}:`,
             rawError,
+          );
+        }
+
+        const supportPhone =
+          this.configService.get<string>('ORDER_ALERT_SMS_TO');
+        if (supportPhone) {
+          try {
+            await this.notificationsService.sendSms({
+              to: supportPhone,
+              recipientId: 'support',
+              eventType: event.type,
+              message: `Order ${order.orderReference || order._id || event.orderId} update: ${String(
+                order.status || 'updated',
+              )
+                .replace(/_/g, ' ')
+                .toLowerCase()}.`,
+            });
+          } catch (error) {
+            console.error(
+              `[Admin SMS Error] event=${event.type} recipientId=support orderId=${event.orderId}:`,
+              error instanceof Error ? error.message : 'Unknown error',
+            );
+          }
+        } else {
+          console.warn(
+            `[Admin SMS Warning] Skipped: event=${event.type} recipientId=support reason=ORDER_ALERT_SMS_TO_not_configured`,
           );
         }
       }
@@ -1120,5 +1199,36 @@ export class OrdersService implements OnModuleInit {
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };
+  }
+
+  private getCustomerSmsMessage(
+    eventType: string,
+    orderRef: string,
+    status: string,
+  ) {
+    switch (eventType) {
+      case 'OrderPlacedEvent':
+        return `Order ${orderRef} is placed and payment is confirmed. The restaurant will review it shortly.`;
+      case 'OrderAcceptedEvent':
+        return `Order ${orderRef} was accepted by the restaurant and will be prepared soon.`;
+      case 'OrderPreparingEvent':
+        return `Order ${orderRef} is being prepared.`;
+      case 'OrderReadyEvent':
+        return `Order ${orderRef} is ready for pickup.`;
+      case 'OrderOutForDeliveryEvent':
+        return `Order ${orderRef} is on its way.`;
+      case 'OrderDeliveredEvent':
+        return `Order ${orderRef} has been delivered. Enjoy your meal.`;
+      case 'OrderRejectedEvent':
+        return `Order ${orderRef} was declined by the restaurant. Your payment will be refunded.`;
+      case 'OrderCancelledEvent':
+        return `Order ${orderRef} was cancelled.`;
+      default:
+        return `Order ${orderRef} update: status is ${String(
+          status || 'updated',
+        )
+          .replace(/_/g, ' ')
+          .toLowerCase()}.`;
+    }
   }
 }

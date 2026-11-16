@@ -44,8 +44,16 @@ describe('OrdersService', () => {
     countDocuments: jest.fn().mockReturnValue(chainedExec()),
     create: jest.fn(),
   };
-  const orderEventsService = { publish: jest.fn() };
-  const notificationsService = { sendEmail: jest.fn() };
+  const orderEventHandlers: Array<(event: any) => Promise<void> | void> = [];
+  const orderEventsService = {
+    subscribe: jest.fn((handler: (event: any) => Promise<void> | void) => {
+      orderEventHandlers.push(handler);
+    }),
+    publish: jest.fn(async (event: any) => {
+      await Promise.all(orderEventHandlers.map((handler) => handler(event)));
+    }),
+  };
+  const notificationsService = { sendEmail: jest.fn(), sendSms: jest.fn() };
   const dbglService = { createOrder: jest.fn(), quote: jest.fn() };
 
   beforeEach(async () => {
@@ -82,10 +90,13 @@ describe('OrdersService', () => {
     addressModel.countDocuments.mockImplementation(() => chainedExec());
     addressModel.create.mockReset();
     addressModel.create.mockResolvedValue(undefined);
-    orderEventsService.publish.mockReset();
-    orderEventsService.publish.mockResolvedValue(undefined);
+    orderEventHandlers.length = 0;
+    orderEventsService.subscribe.mockClear();
+    orderEventsService.publish.mockClear();
     notificationsService.sendEmail.mockReset();
     notificationsService.sendEmail.mockResolvedValue(undefined);
+    notificationsService.sendSms.mockReset();
+    notificationsService.sendSms.mockResolvedValue(undefined);
     dbglService.createOrder.mockReset();
     dbglService.createOrder.mockResolvedValue(undefined);
     dbglService.quote.mockReset();
@@ -112,6 +123,7 @@ describe('OrdersService', () => {
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
+    service.onModuleInit();
   });
 
   afterEach(() => {
@@ -217,9 +229,12 @@ describe('OrdersService', () => {
         }),
       })
       .mockReturnValueOnce({
-        exec: jest
-          .fn()
-          .mockResolvedValue({ _id: 'vendor1', email: 'vendor@example.com' }),
+        exec: jest.fn().mockResolvedValue({
+          _id: 'vendor1',
+          email: 'vendor@example.com',
+          phoneNumber: '+2348112345678',
+          isPhoneVerified: true,
+        }),
       });
     cartModel.findOne.mockReturnValueOnce({
       exec: jest.fn().mockResolvedValue({ items: [] }),
@@ -255,6 +270,125 @@ describe('OrdersService', () => {
         subject: expect.stringContaining('New order'),
       }),
     );
+    expect(notificationsService.sendSms).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: '+2348112345678',
+        eventType: 'OrderPlacedEvent',
+      }),
+    );
+  });
+
+  it('sends customer email and SMS independently for an order event', async () => {
+    userModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        email: 'customer@example.com',
+        phoneNumber: '+2348012345678',
+        isPhoneVerified: true,
+      }),
+    });
+
+    await (service as any).handleOrderEvent({
+      type: 'OrderAcceptedEvent',
+      orderId: 'order1',
+      order: {
+        _id: 'order1',
+        orderReference: 'ORD-1',
+        status: OrderStatus.ACCEPTED,
+        user: { userId: 'consumer1' },
+      },
+    });
+
+    expect(notificationsService.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'customer@example.com' }),
+    );
+    expect(notificationsService.sendSms).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: '+2348012345678',
+        recipientId: 'consumer1',
+        eventType: 'OrderAcceptedEvent',
+        message: expect.stringContaining('ORD-1'),
+      }),
+    );
+  });
+
+  it('continues attempting SMS when customer email delivery fails', async () => {
+    notificationsService.sendEmail.mockRejectedValueOnce(
+      new Error('Email unavailable'),
+    );
+    userModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        email: 'customer@example.com',
+        phoneNumber: '+2348012345678',
+        isPhoneVerified: true,
+      }),
+    });
+
+    await (service as any).handleOrderEvent({
+      type: 'OrderDeliveredEvent',
+      orderId: 'order1',
+      order: {
+        _id: 'order1',
+        orderReference: 'ORD-1',
+        status: OrderStatus.DELIVERED,
+        user: { userId: 'consumer1' },
+      },
+    });
+
+    expect(notificationsService.sendSms).toHaveBeenCalled();
+  });
+
+  it('does not let SMS delivery failure affect customer email', async () => {
+    notificationsService.sendSms.mockRejectedValueOnce(
+      new Error('Infobip unavailable'),
+    );
+    userModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        email: 'customer@example.com',
+        phoneNumber: '+2348012345678',
+        isPhoneVerified: true,
+      }),
+    });
+
+    await (service as any).handleOrderEvent({
+      type: 'OrderPreparingEvent',
+      orderId: 'order1',
+      order: {
+        _id: 'order1',
+        orderReference: 'ORD-1',
+        status: OrderStatus.PREPARING,
+        user: { userId: 'consumer1' },
+      },
+    });
+
+    expect(notificationsService.sendEmail).toHaveBeenCalled();
+  });
+
+  it('skips SMS for an unverified or missing phone number', async () => {
+    userModel.findOne.mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({
+        _id: 'consumer1',
+        email: 'customer@example.com',
+        phoneNumber: '+2348012345678',
+        isPhoneVerified: false,
+      }),
+    });
+
+    await (service as any).handleOrderEvent({
+      type: 'OrderCancelledEvent',
+      orderId: 'order1',
+      order: {
+        _id: 'order1',
+        orderReference: 'ORD-1',
+        status: OrderStatus.CANCELLED_BY_CONSUMER,
+        user: { userId: 'consumer1' },
+      },
+    });
+
+    expect(notificationsService.sendSms).not.toHaveBeenCalled();
+    expect(notificationsService.sendEmail).toHaveBeenCalled();
   });
 
   it('uses the DBGL quote total as the delivery fee when creating an order', async () => {

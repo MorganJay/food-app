@@ -5,6 +5,8 @@ import { InfobipProvider } from '../auth/sms/infobip.provider';
 export interface SmsNotification {
   to: string;
   message: string;
+  eventType?: string;
+  recipientId?: string;
 }
 
 export interface EmailNotification {
@@ -35,11 +37,40 @@ export class NotificationsService {
   }
 
   async sendSms(notification: SmsNotification) {
-    console.log(
-      `[SMS OUTGOING] To: ${notification.to} | Message: ${notification.message}`,
-    );
-    this.logger.log(`Sending SMS to ${notification.to}`);
-    return this.infobipProvider.sendSms(notification.to, notification.message);
+    const eventType = notification.eventType || 'unspecified';
+    const recipientId = notification.recipientId || 'unknown';
+    const phone = notification.to?.trim().replace(/[\s()-]/g, '');
+    const e164Phone = phone?.startsWith('+') ? phone : `+${phone || ''}`;
+
+    if (!/^\+[1-9]\d{7,14}$/.test(e164Phone)) {
+      this.logger.warn(
+        `SMS skipped: event=${eventType} recipientId=${recipientId} channel=sms reason=invalid_phone_number`,
+      );
+      return { success: false, reason: 'Invalid phone number' };
+    }
+
+    try {
+      const result = await this.infobipProvider.sendSms(
+        e164Phone,
+        notification.message,
+      );
+      if (result?.success) {
+        this.logger.log(
+          `SMS accepted by Infobip; delivery not confirmed: event=${eventType} recipientId=${recipientId} channel=sms messageId=${result.messageId || 'unavailable'}`,
+        );
+      } else {
+        this.logger.warn(
+          `SMS not accepted by Infobip: event=${eventType} recipientId=${recipientId} channel=sms reason=${result?.reason || 'unknown'}`,
+        );
+      }
+      return result;
+    } catch (error) {
+      const details = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `SMS failed: event=${eventType} recipientId=${recipientId} channel=sms error=${details}`,
+      );
+      throw error;
+    }
   }
 
   async sendEmail(notification: EmailNotification) {

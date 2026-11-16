@@ -55,7 +55,6 @@ export class InfobipProvider
 
   async sendSms(phone: string, message: string) {
     if (!this.apiKey) {
-      console.log(`[Infobip Mock] SMS to ${phone}: ${message}`);
       return { success: false, reason: 'No API key configured' };
     }
 
@@ -83,7 +82,6 @@ export class InfobipProvider
       });
 
       const result = await response.json();
-      console.log(`[Infobip SMS] Sent to ${normalizedPhone}:`, result);
 
       if (!response.ok) {
         throw new BadRequestException(
@@ -103,8 +101,6 @@ export class InfobipProvider
         messageId: firstMessage.messageId || firstMessage.status.id.toString(),
       };
     } catch (error) {
-      console.error('[Infobip SMS] Failed:', error);
-
       if (
         error instanceof BadRequestException ||
         error instanceof InternalServerErrorException

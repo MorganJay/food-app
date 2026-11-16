@@ -31,6 +31,7 @@ INFOBIP_WHATSAPP_SENDER_ID=123456789      # Phone number ID for WhatsApp
 INFOBIP_EMAIL_FROM_ADDRESS=noreply@chopbaze.com
 INFOBIP_EMAIL_FROM_NAME=Chopbaze
 OTP_CHANNELS=SMS,EMAIL,WHATSAPP           # Channels to use for OTP
+ORDER_ALERT_SMS_TO=<E.164 support-alert number> # Optional support-alert recipient
 ```
 
 ## Usage
@@ -200,6 +201,12 @@ Monitor application logs to track delivery status:
 [Infobip Email] Sent to user@example.com: { messageId: '456...' }
 [Infobip WhatsApp] Sent to +1234567890: { messageId: '789...' }
 ```
+
+For transactional order SMS, the recipient must have a verified phone number
+stored on their user account. Configure `ORDER_ALERT_SMS_TO` to also receive
+SMS copies of the existing support order alerts. Application logs report when
+Infobip accepts a request; this integration does not receive delivery reports,
+so acceptance is not confirmation that the message reached the handset.
 
 ## Next Steps
 
