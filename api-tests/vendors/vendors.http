@@ -1,6 +1,10 @@
 ### Vendors API Tests
 ### Base URL: http://localhost:3000
 
+@baseUrl = http://localhost:3000
+@orderId = order_id_here
+@token = vendor_access_token_here
+
 # List Vendors (public)
 GET {{baseURL}}/vendors?page=1&limit=10
 
@@ -52,4 +56,16 @@ Authorization: Bearer {{token}}
 
 # Get Vendor Order Analytics (vendor only)
 GET {{baseURL}}/vendors/orders/analytics?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer {{token}}
+
+###
+
+# Mark an accepted order as preparing (vendor only)
+POST {{baseURL}}/vendors/orders/{{orderId}}/preparing
+Authorization: Bearer {{token}}
+
+###
+
+# Book delivery and mark a prepared order ready for pickup (vendor only)
+POST {{baseURL}}/vendors/orders/{{orderId}}/ready-for-pickup
 Authorization: Bearer {{token}}

@@ -1,70 +1,79 @@
 ### Orders API Tests
 ### Base URL: http://localhost:3000
 
-# Create Order from Cart
+@orderId = order_id_here
+@riderId = rider_id_here
+@token=your_access_token_here
+
+# 1) Create an order from the current cart
 POST {{baseURL}}/orders
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "deliveryAddress": "123 Lagos Street, Victoria Island",
-  "deliveryDate": "2024-12-20"
+  "restaurantId": "restaurant_id_here",
+  "items": [
+    {
+      "productId": "product_id_here",
+      "quantity": 1,
+      "price": 1500,
+      "name": "Chicken Burger"
+    }
+  ],
+  "deliveryAddress": {
+    "label": "Home",
+    "addressLine": "123 Lagos Street",
+    "city": "Lagos",
+    "state": "Lagos",
+    "postalCode": "101233",
+    "country": "NG"
+  },
+  "notes": "Leave at the gate"
 }
 
 ###
 
-# Get Order by ID
-GET {{baseURL}}/orders/order_id_here
+# 2) Get a single order by ID
+GET {{baseURL}}/orders/{{orderId}}
 Authorization: Bearer {{token}}
 
 ###
 
-# Get My Orders
+# 3) Get the current user's orders
 GET {{baseURL}}/orders
 Authorization: Bearer {{token}}
 
 ###
 
-# Update Order Status (vendor/rider/admin)
-PATCH {{baseURL}}/orders/order_id_here/status
-Content-Type: application/json
+# 4) Vendor accepts the order
+POST {{baseURL}}/orders/{{orderId}}/accept
+Authorization: Bearer {{vendorToken}}
+
+{}
+
+###
+
+# 5) Vendor rejects the order
+POST {{baseURL}}/orders/{{orderId}}/reject
+Authorization: Bearer {{vendorToken}}
+
+{}
+
+###
+
+# 6) Consumer cancels the order
+POST {{baseURL}}/orders/{{orderId}}/cancel
 Authorization: Bearer {{token}}
+
+{}
+
+###
+
+# 7) Assign a rider to the order
+POST {{baseURL}}/orders/{{orderId}}/rider
+Content-Type: application/json
+Authorization: Bearer {{vendorToken}}
 
 {
-  "status": "CONFIRMED"
+  "riderId": "{{riderId}}"
 }
-
-###
-
-# Assign Rider to Order (admin)
-PATCH {{baseURL}}/orders/order_id_here/rider
-Content-Type: application/json
-Authorization: Bearer {{token}}
-
-{
-  "riderId": "rider_id_here"
-}
-
-###
-
-# Cancel Order (consumer)
-POST {{baseURL}}/orders/order_id_here/cancel
-Authorization: Bearer {{token}}
-
-{}
-
-###
-
-# Accept Order (vendor)
-POST {{baseURL}}/orders/order_id_here/accept
-Authorization: Bearer {{token}}
-
-{}
-
-###
-
-# Decline Order (vendor)
-POST {{baseURL}}/orders/order_id_here/decline
-Authorization: Bearer {{token}}
-
-{}

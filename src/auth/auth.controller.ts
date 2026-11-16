@@ -25,8 +25,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
-    description:
-      'User registered successfully and OTP sent. Response includes OTP for development/testing',
+    description: 'User registered successfully and OTP sent via SMS',
   })
   @ApiResponse({
     status: 400,
@@ -47,8 +46,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend OTP code' })
   @ApiResponse({
     status: 200,
-    description:
-      'OTP sent successfully; response includes the OTP for development/testing',
+    description: 'OTP resent successfully via SMS',
   })
   resend(@Body() dto: ResendOtpDto) {
     return this.auth.resendOtp(dto.phoneNumber);
@@ -60,8 +58,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Verification code sent; response includes the code for development/testing',
+    description: 'Verification code sent via SMS',
   })
   sendVerificationCode(@Body() dto: SendVerificationCodeDto) {
     return this.auth.sendVerificationCode(dto.phoneNumber);
@@ -99,8 +96,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset OTP' })
   @ApiResponse({
     status: 200,
-    description:
-      'Reset OTP sent; response includes OTP for development/testing',
+    description: 'Password reset OTP sent via SMS',
   })
   async requestPasswordReset(@Body() body: RequestPasswordResetDto) {
     return this.auth.requestPasswordReset(body.phoneNumber);

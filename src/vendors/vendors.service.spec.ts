@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { VendorsService } from './vendors.service';
-import { Vendor } from '../schemas/Vendor.schema';
+import { Order } from 'src/schemas/Order.schema';
+import { Restaurant } from 'src/schemas/Restaurant.schema';
+import { Vendor } from 'src/schemas/Vendor.schema';
 
 describe('VendorsService', () => {
   let service: VendorsService;
   let mockVendorModel: any;
+  let mockOrderModel: any;
 
   const mockVendor = {
     _id: 'vendor123',
@@ -35,11 +38,33 @@ describe('VendorsService', () => {
       findById: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
       }),
-      findOne: jest.fn().mockResolvedValue(null),
+      findOne: jest
+        .fn()
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }),
       create: jest.fn().mockResolvedValue(mockVendor),
       findByIdAndUpdate: jest.fn().mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockVendor),
       }),
+    };
+
+    mockOrderModel = {
+      find: jest
+        .fn()
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue([]) }),
+      findOne: jest
+        .fn()
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }),
+      countDocuments: jest
+        .fn()
+        .mockReturnValue({ exec: jest.fn().mockResolvedValue(0) }),
+    };
+
+    const mockRestaurantModel = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      findById: jest.fn(),
+      exec: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -48,6 +73,14 @@ describe('VendorsService', () => {
         {
           provide: getModelToken(Vendor.name),
           useValue: mockVendorModel,
+        },
+        {
+          provide: getModelToken(Order.name),
+          useValue: mockOrderModel,
+        },
+        {
+          provide: getModelToken(Restaurant.name), // or 'RestaurantModel' / 'Restaurant' depending on your injection token
+          useValue: mockRestaurantModel,
         },
       ],
     }).compile();
@@ -69,7 +102,7 @@ describe('VendorsService', () => {
 
   describe('findById', () => {
     it('should return a vendor by id', async () => {
-      const result = await service.findById('vendor123');
+      const result = await service.findById('507f1f77bcf86cd799439011');
       expect(result).toMatchObject({
         id: 'vendor123',
         businessName: 'Test Restaurant',
@@ -94,7 +127,11 @@ describe('VendorsService', () => {
 
   describe('updateProfile', () => {
     it('should update vendor profile', async () => {
-      await service.updateProfile('vendor123', 'user123', {
+      // Ensure vendor exists for updateProfile
+      mockVendorModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(mockVendor),
+      });
+      await service.updateProfile('user123', {
         businessName: 'Updated',
       });
       expect(mockVendorModel.findByIdAndUpdate).toHaveBeenCalled();
